@@ -33,13 +33,14 @@ const SplashScreen = ({ onFinish }: { onFinish: () => void }) => {
 
   return (
     <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-gradient-to-br from-[#0f172a] via-[#1e3a8a] to-[#1e40af] overflow-hidden">
-      {/* Logo */}
-      <div className="mb-12 animate-pulse">
-        <img 
-          src="/assets/pwa-icon.png" 
-          alt="EuroCar Connect" 
-          className="w-64 h-auto object-contain drop-shadow-2xl"
-        />
+      {/* Título EuroCar Connect */}
+      <div className="mb-12">
+        <h1 className="text-5xl font-bold text-white tracking-wider drop-shadow-2xl">
+          EUROCAR
+        </h1>
+        <p className="text-xl text-[#22c55e] text-center mt-2 tracking-widest">
+          CONNECT
+        </p>
       </div>
 
       {/* Loading Bar Container */}
