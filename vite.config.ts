@@ -35,34 +35,28 @@ export default defineConfig(({ mode }) => ({
         prefer_related_applications: false,
         icons: [
           {
-            src: "/assets/eurocar_logo.png",
+            src: "/assets/pwa-icon.png",
+            sizes: "48x48",
+            type: "image/png",
+            purpose: "any"
+          },
+          {
+            src: "/assets/pwa-icon.png",
             sizes: "72x72",
             type: "image/png",
-            purpose: "maskable"
+            purpose: "any"
           },
           {
-            src: "/assets/eurocar_logo.png",
+            src: "/assets/pwa-icon.png",
             sizes: "96x96",
             type: "image/png",
-            purpose: "maskable"
+            purpose: "any"
           },
           {
-            src: "/assets/eurocar_logo.png",
-            sizes: "128x128",
-            type: "image/png",
-            purpose: "maskable"
-          },
-          {
-            src: "/assets/eurocar_logo.png",
+            src: "/assets/pwa-icon.png",
             sizes: "144x144",
             type: "image/png",
-            purpose: "maskable"
-          },
-          {
-            src: "/assets/eurocar_logo.png",
-            sizes: "152x152",
-            type: "image/png",
-            purpose: "maskable"
+            purpose: "any"
           },
           {
             src: "/assets/pwa-icon.png",
@@ -71,17 +65,23 @@ export default defineConfig(({ mode }) => ({
             purpose: "any"
           },
           {
-            src: "/assets/eurocar_logo.png",
-            sizes: "384x384",
+            src: "/assets/pwa-icon.png",
+            sizes: "512x512",
             type: "image/png",
             purpose: "any"
           },
           {
             src: "/assets/pwa-icon.png",
+            sizes: "192x192",
+            type: "image/png",
+            purpose: "maskable"
+          },
+          {
+            src: "/assets/pwa-icon.png",
             sizes: "512x512",
             type: "image/png",
-            purpose: "any"
-          }
+            purpose: "maskable"
+          },
         ],
         screenshots: [
           {
