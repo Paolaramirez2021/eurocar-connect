@@ -1,0 +1,16 @@
+project_id = "cvedykineebibwwfqktm"
+
+[functions.gpt-availability]
+verify_jwt = false
+
+[functions.gpt-reserve]
+verify_jwt = false
+
+[functions.gpt-clientes]
+verify_jwt = false
+
+[functions.send-maintenance-alerts]
+verify_jwt = false
+
+[functions.export-table]
+verify_jwt = false
