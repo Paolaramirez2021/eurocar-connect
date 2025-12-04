@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import logoEurocar from '@/assets/logo-eurocar.png';
 
 const SplashScreen = ({ onFinish }: { onFinish: () => void }) => {
   const [progress, setProgress] = useState(0);
@@ -37,7 +36,7 @@ const SplashScreen = ({ onFinish }: { onFinish: () => void }) => {
       {/* Logo */}
       <div className="mb-12 animate-pulse">
         <img 
-          src={logoEurocar} 
+          src="/assets/pwa-icon.png" 
           alt="EuroCar Connect" 
           className="w-64 h-auto object-contain drop-shadow-2xl"
         />

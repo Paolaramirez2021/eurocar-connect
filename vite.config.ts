@@ -65,7 +65,7 @@ export default defineConfig(({ mode }) => ({
             purpose: "maskable"
           },
           {
-            src: "/assets/eurocar_logo.png",
+            src: "/assets/pwa-icon.png",
             sizes: "192x192",
             type: "image/png",
             purpose: "any"
@@ -77,7 +77,7 @@ export default defineConfig(({ mode }) => ({
             purpose: "any"
           },
           {
-            src: "/assets/eurocar_logo.png",
+            src: "/assets/pwa-icon.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "any"
