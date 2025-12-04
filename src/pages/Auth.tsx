@@ -63,7 +63,20 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
+      // Validar campos
+      if (!email || !password || !fullName) {
+        toast.error("Por favor completa todos los campos");
+        setIsLoading(false);
+        return;
+      }
+
+      if (password.length < 6) {
+        toast.error("La contraseña debe tener al menos 6 caracteres");
+        setIsLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -75,11 +88,36 @@ const Auth = () => {
       });
 
       if (error) throw error;
+
+      // Verificar si necesita confirmación de email
+      if (data?.user?.identities?.length === 0) {
+        toast.error("Este correo ya está registrado. Por favor inicia sesión.");
+        setIsLoading(false);
+        return;
+      }
+
+      if (data?.user && !data?.session) {
+        toast.success("¡Registro exitoso! Por favor verifica tu correo electrónico para confirmar tu cuenta.");
+        setIsLoading(false);
+        return;
+      }
       
-      toast.success("¡Cuenta creada exitosamente!");
-      navigate("/dashboard");
+      toast.success("¡Cuenta creada exitosamente! Redirigiendo...");
+      
+      // Log the signup action
+      setTimeout(() => {
+        logAudit({
+          actionType: 'USER_SIGNUP',
+          description: `Nuevo usuario registrado: ${email}`
+        }).catch(console.error);
+      }, 0);
+
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1500);
     } catch (error: any) {
-      toast.error(error.message || "Error al crear cuenta");
+      console.error("Error en registro:", error);
+      toast.error(error.message || "Error al crear cuenta. Por favor intenta nuevamente.");
     } finally {
       setIsLoading(false);
     }

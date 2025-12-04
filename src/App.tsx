@@ -1,8 +1,10 @@
+import { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import SplashScreen from "./components/SplashScreen";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
@@ -30,12 +32,37 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
+const App = () => {
+  const [showSplash, setShowSplash] = useState(true);
+  const [splashFinished, setSplashFinished] = useState(false);
+
+  useEffect(() => {
+    // Mostrar splash solo en la primera carga o en PWA
+    const hasSeenSplash = sessionStorage.getItem('hasSeenSplash');
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+    
+    if (hasSeenSplash && !isPWA) {
+      setShowSplash(false);
+      setSplashFinished(true);
+    }
+  }, []);
+
+  const handleSplashFinish = () => {
+    sessionStorage.setItem('hasSeenSplash', 'true');
+    setSplashFinished(true);
+    setTimeout(() => setShowSplash(false), 300);
+  };
+
+  if (showSplash && !splashFinished) {
+    return <SplashScreen onFinish={handleSplashFinish} />;
+  }
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/auth" element={<Auth />} />
@@ -62,6 +89,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;

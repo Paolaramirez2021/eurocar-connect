@@ -21,17 +21,18 @@ export default defineConfig(({ mode }) => ({
         "robots.txt"
       ],
       manifest: {
-        name: "EuroCar Rental",
+        name: "EuroCar Connect",
         short_name: "EuroCar",
         description: "Sistema profesional de gestión para alquiler de vehículos - Control total de flotas, mantenimientos, alquileres y finanzas",
         theme_color: "#1e40af",
         background_color: "#0f172a",
         display: "standalone",
-        orientation: "portrait",
+        orientation: "any",
         scope: "/",
         start_url: "/",
         lang: "es",
         categories: ["business", "productivity", "utilities"],
+        prefer_related_applications: false,
         icons: [
           {
             src: "/assets/eurocar_logo.png",
