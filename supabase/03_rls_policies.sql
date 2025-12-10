@@ -104,12 +104,11 @@ CREATE POLICY "Admins can delete customers" ON public.customers
 -- ============================================================
 
 DROP POLICY IF EXISTS "Users view own reservations" ON public.reservations;
-CREATE POLICY "Users view own reservations" ON public.reservations
-    FOR SELECT USING (auth.uid() = created_by);
-
 DROP POLICY IF EXISTS "Admins view all reservations" ON public.reservations;
-CREATE POLICY "Admins view all reservations" ON public.reservations
-    FOR SELECT USING (public.has_any_role(auth.uid(), ARRAY['socio_principal'::app_role, 'administrador'::app_role]));
+
+-- NUEVA POLÍTICA: Todos los usuarios autenticados pueden ver todas las reservas
+CREATE POLICY "All authenticated users can view all reservations" ON public.reservations
+    FOR SELECT USING (auth.uid() IS NOT NULL);
 
 DROP POLICY IF EXISTS "Comercial and operativo can create reservations" ON public.reservations;
 CREATE POLICY "Comercial and operativo can create reservations" ON public.reservations

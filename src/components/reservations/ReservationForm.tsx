@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Loader2, Calendar as CalendarIcon, AlertCircle, User, CreditCard, Briefcase, Users, FileText, Search, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -85,6 +85,9 @@ export const ReservationForm = () => {
   const [precioFinal, setPrecioFinal] = useState<number>(0);
   const [showBlockedCustomerDialog, setShowBlockedCustomerDialog] = useState(false);
   const [blockedCustomerName, setBlockedCustomerName] = useState("");
+  const [allCustomers, setAllCustomers] = useState<any[]>([]);
+  const [filteredCustomers, setFilteredCustomers] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   
   const [customer, setCustomer] = useState<Customer>({
     primer_apellido: "",
@@ -120,7 +123,25 @@ export const ReservationForm = () => {
   useEffect(() => {
     loadVehicles();
     loadUser();
+    loadCustomers();
   }, []);
+
+  // Cargar todos los clientes al inicio
+  const loadCustomers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("customers")
+        .select("*")
+        .order("nombres");
+
+      if (error) throw error;
+      
+      console.log('[Clientes] Cargados:', data?.length || 0);
+      setAllCustomers(data || []);
+    } catch (error) {
+      console.error("Error loading customers:", error);
+    }
+  };
 
   useEffect(() => {
     if (selectedVehicle && fechaInicio && fechaFin) {
@@ -354,6 +375,88 @@ export const ReservationForm = () => {
     setCustomer(prev => ({ ...prev, [field]: value }));
   };
 
+  // Búsqueda en tiempo real mientras escribe
+  const searchCustomersRealtime = useCallback((searchTerm: string) => {
+    if (!searchTerm || searchTerm.length < 3) {
+      setFilteredCustomers([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    const normalized = searchTerm.trim().replace(/\s+/g, '').toLowerCase();
+    
+    const matches = allCustomers.filter(c => {
+      const normalizedCedula = c.cedula_pasaporte?.trim().replace(/\s+/g, '').toLowerCase() || '';
+      const normalizedNombre = `${c.nombres} ${c.primer_apellido}`.toLowerCase();
+      
+      return normalizedCedula.includes(normalized) || normalizedNombre.includes(searchTerm.toLowerCase());
+    }).slice(0, 5); // Mostrar max 5 sugerencias
+
+    console.log('[Búsqueda Real Time] Encontrados:', matches.length);
+    setFilteredCustomers(matches);
+    setShowSuggestions(matches.length > 0);
+  }, [allCustomers]);
+
+  // Manejar cambio en el campo de cédula con búsqueda en tiempo real
+  const handleCedulaChange = (value: string) => {
+    updateCustomer("cedula_pasaporte", value);
+    searchCustomersRealtime(value);
+  };
+
+  // Seleccionar cliente de las sugerencias
+  const selectCustomer = (selectedCustomer: any) => {
+    console.log('[Cliente Seleccionado]', selectedCustomer);
+    
+    // Check if customer has negative alert
+    if (selectedCustomer.alerta_cliente === "negativo") {
+      setBlockedCustomerName(`${selectedCustomer.nombres} ${selectedCustomer.primer_apellido}`);
+      setShowBlockedCustomerDialog(true);
+      createSecurityAlert(selectedCustomer, selectedVehicle);
+      
+      // Reset
+      setCustomer({
+        primer_apellido: "",
+        segundo_apellido: "",
+        nombres: "",
+        cedula_pasaporte: "",
+        ciudad: "",
+        fecha_nacimiento: undefined,
+        estado_civil: "",
+        licencia_numero: "",
+        licencia_ciudad_expedicion: "",
+        licencia_fecha_vencimiento: undefined,
+        direccion_residencia: "",
+        pais: "Colombia",
+        telefono: "",
+        celular: "",
+        email: "",
+        ocupacion: "",
+        empresa: "",
+        direccion_oficina: "",
+        banco: "",
+        numero_tarjeta: "",
+        referencia_personal_nombre: "",
+        referencia_personal_telefono: "",
+        referencia_comercial_nombre: "",
+        referencia_comercial_telefono: "",
+        referencia_familiar_nombre: "",
+        referencia_familiar_telefono: "",
+      });
+      setShowSuggestions(false);
+      return;
+    }
+    
+    // Cargar datos del cliente seleccionado
+    setCustomer({
+      ...selectedCustomer,
+      fecha_nacimiento: selectedCustomer.fecha_nacimiento ? new Date(selectedCustomer.fecha_nacimiento) : undefined,
+      licencia_fecha_vencimiento: selectedCustomer.licencia_fecha_vencimiento ? new Date(selectedCustomer.licencia_fecha_vencimiento) : undefined,
+    });
+    
+    setShowSuggestions(false);
+    toast.success(`Cliente cargado: ${selectedCustomer.nombres} ${selectedCustomer.primer_apellido}`);
+  };
+
   const handleSubmit = async () => {
     // Validate required fields
     if (!selectedVehicle || !fechaInicio || !fechaFin) {
@@ -572,28 +675,46 @@ export const ReservationForm = () => {
 
           {/* Datos Personales */}
           <TabsContent value="personal" className="space-y-4 mt-4">
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Label htmlFor="cedula">Cédula o Pasaporte *</Label>
-                <Input
-                  id="cedula"
-                  value={customer.cedula_pasaporte}
-                  onChange={(e) => updateCustomer("cedula_pasaporte", e.target.value)}
-                  placeholder="123456789"
-                />
-              </div>
-              <Button
-                onClick={searchCustomerByCedula}
-                disabled={searchingCustomer || !customer.cedula_pasaporte}
-                className="mt-auto"
-                variant="outline"
-              >
-                {searchingCustomer ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Search className="h-4 w-4" />
-                )}
-              </Button>
+            <div className="relative">
+              <Label htmlFor="cedula">Cédula o Pasaporte * (Empieza a escribir)</Label>
+              <Input
+                id="cedula"
+                value={customer.cedula_pasaporte}
+                onChange={(e) => handleCedulaChange(e.target.value)}
+                onFocus={() => customer.cedula_pasaporte.length >= 3 && setShowSuggestions(filteredCustomers.length > 0)}
+                placeholder="Escribe cédula, pasaporte o nombre..."
+                autoComplete="off"
+              />
+              
+              {/* Sugerencias en tiempo real */}
+              {showSuggestions && filteredCustomers.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                  {filteredCustomers.map((cust) => (
+                    <button
+                      key={cust.id}
+                      type="button"
+                      onClick={() => selectCustomer(cust)}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-100 border-b last:border-b-0 flex flex-col"
+                    >
+                      <span className="font-medium text-sm">
+                        {cust.nombres} {cust.primer_apellido} {cust.segundo_apellido}
+                      </span>
+                      <span className="text-xs text-gray-600">
+                        CC/Pasaporte: {cust.cedula_pasaporte}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {cust.email || 'Sin email'} • {cust.celular}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              
+              {customer.cedula_pasaporte.length >= 3 && !showSuggestions && (
+                <p className="text-xs text-gray-500 mt-1">
+                  {allCustomers.length > 0 ? 'No se encontraron coincidencias. Puedes crear un nuevo cliente.' : 'Cargando clientes...'}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
