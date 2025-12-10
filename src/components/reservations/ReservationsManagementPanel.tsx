@@ -12,6 +12,7 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { ReservationActions } from "./ReservationActions";
 import { ReservationDetailsModal } from "./ReservationDetailsModal";
+import { useRealtimeReservations } from "@/hooks/useRealtimeReservations";
 
 interface Reservation {
   id: string;
@@ -51,6 +52,9 @@ export const ReservationsManagementPanel = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+
+  // Habilitar actualización en tiempo real
+  useRealtimeReservations();
 
   useEffect(() => {
     loadReservations();
@@ -123,21 +127,29 @@ export const ReservationsManagementPanel = () => {
   };
 
   const getStatusBadge = (estado: string, paymentStatus: string) => {
+    // Orden de prioridad: estado > paymentStatus
     if (estado === "confirmed") {
       return <Badge className="bg-red-500 text-white">Confirmada (Rentado)</Badge>;
     }
-    if (estado === "pending_with_payment" || paymentStatus === "paid") {
-      return <Badge className="bg-green-400 text-white">Reservado con Pago</Badge>;
+    
+    // Si tiene pago confirmado
+    if (estado === "pending_with_payment" || (paymentStatus === "paid" && estado !== "pending_no_payment")) {
+      return <Badge className="bg-green-500 text-white">Reservado con Pago</Badge>;
     }
-    if (estado === "pending_no_payment" || paymentStatus === "pending") {
-      return <Badge className="bg-lime-400 text-white">Reservado sin Pago</Badge>;
+    
+    // Si está pendiente sin pago
+    if (estado === "pending_no_payment" || estado === "pending" || paymentStatus === "pending") {
+      return <Badge className="bg-lime-400 text-black">Reservado sin Pago (2h)</Badge>;
     }
+    
     if (estado === "cancelled") {
       return <Badge variant="destructive">Cancelada</Badge>;
     }
+    
     if (estado === "completed") {
       return <Badge variant="secondary">Completada</Badge>;
     }
+    
     return <Badge variant="outline">{estado}</Badge>;
   };
 
