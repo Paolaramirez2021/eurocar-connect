@@ -150,6 +150,14 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
   const calendarData = useMemo<VehicleCalendar[]>(() => {
     if (!vehicles || !reservations || !maintenance) return [];
 
+    console.log('[Calendario] Generando datos:', {
+      vehiculos: vehicles?.length,
+      reservas: reservations?.length,
+      mantenimientos: maintenance?.length,
+      rangoDesde: format(dateRange.from, 'yyyy-MM-dd'),
+      rangoHasta: format(dateRange.to, 'yyyy-MM-dd')
+    });
+
     const allDays = eachDayOfInterval({ start: dateRange.from, end: dateRange.to });
 
     return vehicles.map(vehicle => {
@@ -159,7 +167,19 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
           if (res.vehicle_id !== vehicle.id) return false;
           const resStart = new Date(res.fecha_inicio);
           const resEnd = new Date(res.fecha_fin);
-          return isWithinInterval(day, { start: resStart, end: resEnd });
+          const matches = isWithinInterval(day, { start: resStart, end: resEnd });
+          
+          if (matches) {
+            console.log('[Calendario] Reserva encontrada:', {
+              vehiculo: vehicle.placa,
+              dia: format(day, 'yyyy-MM-dd'),
+              reservaInicio: format(resStart, 'yyyy-MM-dd'),
+              reservaFin: format(resEnd, 'yyyy-MM-dd'),
+              estado: res.estado
+            });
+          }
+          
+          return matches;
         });
 
         // Check for maintenance
@@ -169,7 +189,7 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
           return format(maintDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd');
         });
 
-        // Determine status based on nuevo estado values
+        // Determine status based on estado values
         let status: DayStatus['status'] = 'available';
         let reservationId: string | undefined;
         let maintenanceId: string | undefined;
@@ -179,14 +199,23 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
           maintenanceId = maintenanceItem.id;
         } else if (reservation) {
           reservationId = reservation.id;
-          if (reservation.estado === 'confirmed') {
-            status = 'rented'; // Confirmado con contrato = Rentado (rojo)
-          } else if (reservation.estado === 'pending_with_payment') {
-            status = 'reserved_paid'; // Reservado con pago = Verde oscuro
-          } else if (reservation.estado === 'pending_no_payment') {
-            status = 'reserved_no_payment'; // Reservado sin pago = Amarillo/Lima
-          } else if (reservation.estado === 'completed') {
-            status = 'rented'; // Completed también se muestra como rentado
+          const estado = reservation.estado?.toLowerCase() || '';
+          
+          // Estados que indican que está rentado/ocupado (rojo)
+          if (estado === 'confirmed' || estado === 'completed' || estado === 'active') {
+            status = 'rented';
+          } 
+          // Reservado con pago (verde)
+          else if (estado === 'pending_with_payment' || estado === 'reserved_paid') {
+            status = 'reserved_paid';
+          } 
+          // Reservado sin pago (amarillo/lima)
+          else if (estado === 'pending_no_payment' || estado === 'reserved_no_payment') {
+            status = 'reserved_no_payment';
+          }
+          // Cualquier otro estado de reserva activa (pending genérico)
+          else if (estado === 'pending' || estado.includes('reserv')) {
+            status = 'reserved_no_payment'; // Por defecto pendiente sin pago
           }
         }
 
