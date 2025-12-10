@@ -1286,7 +1286,10 @@ export const ReservationForm = () => {
                   </div>
                   
                   <div className="flex justify-between text-sm text-orange-700 dark:text-orange-400">
-                    <span>IVA (19%):</span>
+                    <span className="flex items-center gap-1">
+                      <span className="text-xs">+</span>
+                      <span>Más impuesto IVA 19%</span>
+                    </span>
                     <span className="font-semibold">${iva.toLocaleString('es-CO')}</span>
                   </div>
                   
