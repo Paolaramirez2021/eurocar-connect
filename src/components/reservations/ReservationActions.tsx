@@ -26,7 +26,13 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
   const handleMarkAsPaid = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase
+      console.log('[Marcar como Pagado] Iniciando...', {
+        reservationId: reservation.id,
+        estadoActual: reservation.estado,
+        paymentStatusActual: reservation.payment_status
+      });
+
+      const { data, error } = await supabase
         .from("reservations")
         .update({
           payment_status: "paid",
@@ -34,16 +40,25 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
           estado: "pending_with_payment",
           auto_cancel_at: null, // Remove auto-cancel since payment is confirmed
         })
-        .eq("id", reservation.id);
+        .eq("id", reservation.id)
+        .select()
+        .single();
 
       if (error) throw error;
+
+      console.log('[Marcar como Pagado] ✅ Actualizado:', {
+        reservationId: data.id,
+        nuevoEstado: data.estado,
+        nuevoPaymentStatus: data.payment_status,
+        paymentDate: data.payment_date
+      });
 
       toast.success("Pago registrado exitosamente", {
         description: "La reserva ahora está pendiente de contrato.",
       });
       onUpdate();
     } catch (error: any) {
-      console.error("Error marking as paid:", error);
+      console.error("[Marcar como Pagado] ❌ Error:", error);
       toast.error("Error al registrar pago", {
         description: error.message,
       });
