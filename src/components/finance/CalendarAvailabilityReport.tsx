@@ -474,49 +474,63 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
                   </div>
 
                   {/* Datos del cliente */}
-                  {dayDetails.contracts && dayDetails.contracts.length > 0 && (
-                    <div className="p-4 bg-muted/50 rounded-lg space-y-3">
-                      <div className="flex items-start gap-2">
-                        <User className="h-5 w-5 text-primary mt-0.5" />
+                  <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border-2 border-blue-200 dark:border-blue-800 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-blue-600 rounded-lg">
+                        <User className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-xs text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-1">Cliente</p>
+                        <p className="text-lg font-bold text-blue-900 dark:text-blue-100">
+                          {dayDetails.contracts && dayDetails.contracts.length > 0 
+                            ? dayDetails.contracts[0].customer_name 
+                            : dayDetails.cliente_nombre || 'Sin información'}
+                        </p>
+                        {((dayDetails.contracts && dayDetails.contracts.length > 0 && dayDetails.contracts[0].customer_document) || dayDetails.cliente_documento) && (
+                          <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                            📋 Documento: {dayDetails.contracts && dayDetails.contracts.length > 0 
+                              ? dayDetails.contracts[0].customer_document 
+                              : dayDetails.cliente_documento}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {((dayDetails.contracts && dayDetails.contracts.length > 0 && dayDetails.contracts[0].customer_phone) || dayDetails.cliente_contacto) && (
+                      <div className="flex items-center gap-2 pt-2 border-t border-blue-200 dark:border-blue-800">
+                        <Phone className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         <div>
-                          <p className="font-medium text-sm text-muted-foreground">Cliente</p>
-                          <p className="text-base font-semibold">{dayDetails.contracts[0].customer_name}</p>
-                          {dayDetails.contracts[0].customer_document && (
-                            <p className="text-sm text-muted-foreground">
-                              Documento: {dayDetails.contracts[0].customer_document}
-                            </p>
-                          )}
+                          <p className="font-medium text-xs text-blue-600 dark:text-blue-400">Teléfono</p>
+                          <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                            {dayDetails.contracts && dayDetails.contracts.length > 0 
+                              ? dayDetails.contracts[0].customer_phone 
+                              : dayDetails.cliente_contacto}
+                          </p>
                         </div>
                       </div>
+                    )}
 
-                      {dayDetails.contracts[0].customer_phone && (
-                        <div className="flex items-start gap-2">
-                          <Phone className="h-5 w-5 text-primary mt-0.5" />
-                          <div>
-                            <p className="font-medium text-sm text-muted-foreground">Teléfono</p>
-                            <p className="text-base">{dayDetails.contracts[0].customer_phone}</p>
-                          </div>
+                    {((dayDetails.contracts && dayDetails.contracts.length > 0 && dayDetails.contracts[0].customer_email) || dayDetails.cliente_email) && (
+                      <div className="flex items-center gap-2 pt-2 border-t border-blue-200 dark:border-blue-800">
+                        <Mail className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <div>
+                          <p className="font-medium text-xs text-blue-600 dark:text-blue-400">Email</p>
+                          <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                            {dayDetails.contracts && dayDetails.contracts.length > 0 
+                              ? dayDetails.contracts[0].customer_email 
+                              : dayDetails.cliente_email}
+                          </p>
                         </div>
-                      )}
+                      </div>
+                    )}
 
-                      {dayDetails.contracts[0].customer_email && (
-                        <div className="flex items-start gap-2">
-                          <Mail className="h-5 w-5 text-primary mt-0.5" />
-                          <div>
-                            <p className="font-medium text-sm text-muted-foreground">Email</p>
-                            <p className="text-base">{dayDetails.contracts[0].customer_email}</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {dayDetails.contracts[0].contract_number && (
-                        <div className="pt-2 border-t">
-                          <p className="font-medium text-sm text-muted-foreground">Número de Contrato</p>
-                          <p className="text-base font-mono font-semibold">{dayDetails.contracts[0].contract_number}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    {dayDetails.contracts && dayDetails.contracts.length > 0 && dayDetails.contracts[0].contract_number && (
+                      <div className="pt-2 border-t border-blue-200 dark:border-blue-800">
+                        <p className="font-medium text-xs text-blue-600 dark:text-blue-400 mb-1">Número de Contrato</p>
+                        <p className="text-sm font-mono font-bold text-blue-900 dark:text-blue-100">{dayDetails.contracts[0].contract_number}</p>
+                      </div>
+                    )}
+                  </div>
 
                   {/* Fechas y duración */}
                   <div className="p-4 bg-muted/50 rounded-lg space-y-2">
