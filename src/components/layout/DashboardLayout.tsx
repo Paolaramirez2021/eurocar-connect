@@ -26,6 +26,9 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { useQuery } from "@tanstack/react-query";
+import { getDashboardStats } from "@/lib/dashboardStats";
+import { useDashboardRealtime } from "@/hooks/useDashboardRealtime";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -36,12 +39,22 @@ const DashboardLayout = ({ children, user }: DashboardLayoutProps) => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Obtener estadísticas reales desde Supabase
+  const { data: stats } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: getDashboardStats,
+    refetchInterval: 30000, // Actualizar cada 30 segundos como fallback
+  });
+
+  // Habilitar actualización en tiempo real
+  useDashboardRealtime();
+
   const handleLogout = async () => {
     try {
       // Log the logout before signing out
       await logAudit({
         actionType: 'USER_LOGOUT',
-        description: 'Usuario cerró sesión'
+        descripcion: 'Usuario cerró sesión'
       });
 
       await supabase.auth.signOut();
@@ -57,11 +70,26 @@ const DashboardLayout = ({ children, user }: DashboardLayoutProps) => {
 
   const navItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-    { icon: Car, label: "Vehículos", path: "/vehicles", badge: "24" },
+    { 
+      icon: Car, 
+      label: "Vehículos", 
+      path: "/vehicles", 
+      badge: stats?.vehiculosTotal ? stats.vehiculosTotal.toString() : undefined 
+    },
     { icon: Users, label: "Clientes", path: "/customers" },
-    { icon: Calendar, label: "Alquileres", path: "/rentals", badge: "18" },
+    { 
+      icon: Calendar, 
+      label: "Alquileres", 
+      path: "/rentals", 
+      badge: stats?.alquileresActivos ? stats.alquileresActivos.toString() : undefined 
+    },
     { icon: FileText, label: "Contratos", path: "/contracts" },
-    { icon: Wrench, label: "Mantenimientos", path: "/maintenance", badge: "3" },
+    { 
+      icon: Wrench, 
+      label: "Mantenimientos", 
+      path: "/maintenance", 
+      badge: stats?.mantenimientosPendientes ? stats.mantenimientosPendientes.toString() : undefined 
+    },
     { icon: DollarSign, label: "Finanzas", path: "/finance" },
     { icon: Settings, label: "Configuración", path: "/settings" },
   ];

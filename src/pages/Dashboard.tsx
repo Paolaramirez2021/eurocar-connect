@@ -11,6 +11,8 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { logAudit } from "@/lib/audit";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
+import { getDashboardStats } from "@/lib/dashboardStats";
+import { useDashboardRealtime } from "@/hooks/useDashboardRealtime";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -18,87 +20,24 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const { profile, loading: profileLoading } = useUserRole(user);
 
-  // Fetch real dashboard stats
-  const { data: vehicleStats } = useQuery({
-    queryKey: ['dashboard-vehicle-stats'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('vehicles')
-        .select('id, estado');
-      
-      if (error) throw error;
-      
-      const total = data.length;
-      const disponibles = data.filter(v => v.estado === 'disponible').length;
-      
-      return { total, disponibles };
-    },
+  // Habilitar actualización en tiempo real
+  useDashboardRealtime();
+
+  // Obtener estadísticas centralizadas
+  const { data: dashboardStats } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: getDashboardStats,
+    refetchInterval: 30000,
   });
 
-  const { data: rentalsThisMonth } = useQuery({
-    queryKey: ['dashboard-rentals-month'],
-    queryFn: async () => {
-      const now = new Date();
-      const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-      const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-      
-      const { data, error } = await supabase
-        .from('reservations')
-        .select('id, vehicle_id')
-        .in('estado', ['confirmed', 'pending'])
-        .gte('fecha_inicio', startDate.toISOString())
-        .lte('fecha_inicio', endDate.toISOString());
-      
-      if (error) throw error;
-      
-      // Count unique vehicles
-      const uniqueVehicles = new Set(data.map(r => r.vehicle_id));
-      return uniqueVehicles.size;
-    },
-  });
+  const vehicleStats = {
+    total: dashboardStats?.vehiculosTotal ?? 0,
+    disponibles: dashboardStats?.vehiculosDisponibles ?? 0
+  };
 
-  const { data: monthlyIncome } = useQuery({
-    queryKey: ['dashboard-monthly-income'],
-    queryFn: async () => {
-      const now = new Date();
-      const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
-      
-      const { data, error } = await supabase
-        .from('reservations')
-        .select('valor_total, price_total, descuento, estado, fecha_inicio')
-        .in('estado', ['completed', 'confirmed', 'pending'])
-        .gte('fecha_inicio', startDate)
-        .lte('fecha_inicio', endDate);
-      
-      if (error) throw error;
-      
-      const total = data.reduce((sum, r) => {
-        const base = (r.valor_total ?? r.price_total ?? 0) as number;
-        const descuento = (r.descuento ?? 0) as number;
-        return sum + (base - descuento);
-      }, 0);
-      
-      return total;
-    },
-  });
-
-  const { data: activeCustomers } = useQuery({
-    queryKey: ['dashboard-active-customers'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('reservations')
-        .select('customer_id')
-        .in('estado', ['confirmed', 'pending'])
-        .gte('fecha_fin', new Date().toISOString());
-      
-      if (error) throw error;
-      
-      // Count unique customers
-      const uniqueCustomers = new Set(data.map(r => r.customer_id).filter(Boolean));
-      return uniqueCustomers.size;
-    },
-  });
+  const rentalsThisMonth = dashboardStats?.alquileresActivos ?? 0;
+  const monthlyIncome = dashboardStats?.ingresosDelMes ?? 0;
+  const activeCustomers = dashboardStats?.clientesActivos ?? 0;
 
   useEffect(() => {
     // Check for existing session
