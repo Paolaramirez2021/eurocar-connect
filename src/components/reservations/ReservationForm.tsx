@@ -22,7 +22,7 @@ import {
   AlertDialogFooter,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import { format } from "date-fns";
+import { format, differenceInCalendarDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useUserRole } from "@/hooks/useUserRole";
 
@@ -81,6 +81,10 @@ export const ReservationForm = () => {
   const [searchingCustomer, setSearchingCustomer] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [diasAlquiler, setDiasAlquiler] = useState<number>(0);
+  const [tarifaDiaria, setTarifaDiaria] = useState<number>(0); // Tarifa SIN IVA
+  const [subtotal, setSubtotal] = useState<number>(0); // Días × Tarifa (sin IVA)
+  const [iva, setIva] = useState<number>(0); // 19% del subtotal
+  const [totalReserva, setTotalReserva] = useState<number>(0); // Subtotal + IVA
   const [precioBase, setPrecioBase] = useState<number>(0);
   const [precioFinal, setPrecioFinal] = useState<number>(0);
   const [showBlockedCustomerDialog, setShowBlockedCustomerDialog] = useState(false);
@@ -175,39 +179,86 @@ export const ReservationForm = () => {
   const calculatePrice = () => {
     if (!selectedVehicle || !fechaInicio || !fechaFin) {
       setDiasAlquiler(0);
+      setTarifaDiaria(0);
+      setSubtotal(0);
+      setIva(0);
+      setTotalReserva(0);
       setPrecioBase(0);
       setPrecioFinal(0);
+      setPriceTotal("");
+      return;
+    }
+
+    // Validación: fecha fin debe ser mayor o igual a fecha inicio
+    if (fechaFin < fechaInicio) {
+      toast.error("La fecha de fin debe ser mayor o igual a la fecha de inicio");
       return;
     }
 
     const vehicle = vehicles.find(v => v.id === selectedVehicle);
     if (!vehicle || !vehicle.tarifa_dia_iva) {
-      setPrecioBase(0);
-      setPrecioFinal(0);
+      setDiasAlquiler(0);
+      setTarifaDiaria(0);
+      setSubtotal(0);
+      setIva(0);
+      setTotalReserva(0);
       return;
     }
 
-    // Calculate days
-    const diffTime = Math.abs(fechaFin.getTime() - fechaInicio.getTime());
-    const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    // ✅ CORRECCIÓN 1: Cálculo correcto de días (incluye día de inicio)
+    // Usar differenceInCalendarDays + 1
+    const days = differenceInCalendarDays(fechaFin, fechaInicio) + 1;
     setDiasAlquiler(days);
 
-    // Calculate base price
-    const base = vehicle.tarifa_dia_iva * days;
-    setPrecioBase(base);
+    console.log('[Cálculo Reserva]', {
+      fechaInicio: format(fechaInicio, 'yyyy-MM-dd'),
+      fechaFin: format(fechaFin, 'yyyy-MM-dd'),
+      diasCalculados: days
+    });
 
-    // Calculate discount
+    // ✅ CORRECCIÓN 2: Obtener tarifa SIN IVA
+    // La BD tiene tarifa_dia_iva que incluye IVA, hay que revertirlo
+    // tarifa_sin_iva = tarifa_con_iva / 1.19
+    const tarifaSinIva = Math.round(vehicle.tarifa_dia_iva / 1.19);
+    setTarifaDiaria(tarifaSinIva);
+
+    // ✅ CORRECCIÓN 3: Calcular subtotal (días × tarifa sin IVA)
+    const subtotalCalculado = tarifaSinIva * days;
+    setSubtotal(subtotalCalculado);
+
+    // ✅ CORRECCIÓN 4: Calcular IVA (19% del subtotal)
+    const ivaCalculado = Math.round(subtotalCalculado * 0.19);
+    setIva(ivaCalculado);
+
+    // ✅ CORRECCIÓN 5: Calcular total (subtotal + IVA)
+    const totalCalculado = subtotalCalculado + ivaCalculado;
+    setTotalReserva(totalCalculado);
+
+    // Mantener compatibilidad con código existente
+    setPrecioBase(totalCalculado);
+
+    // Aplicar descuentos si existen
     let descuento = 0;
     if (descuentoValor) {
       descuento = parseFloat(descuentoValor);
     } else if (descuentoPorcentaje) {
-      descuento = base * (parseFloat(descuentoPorcentaje) / 100);
+      descuento = totalCalculado * (parseFloat(descuentoPorcentaje) / 100);
     }
 
-    // Calculate final price
-    const final = Math.max(0, base - descuento);
+    // Precio final después de descuento
+    const final = Math.max(0, totalCalculado - descuento);
     setPrecioFinal(final);
     setPriceTotal(final.toString());
+
+    console.log('[Desglose Financiero]', {
+      dias: days,
+      tarifaDiaria: tarifaSinIva,
+      subtotal: subtotalCalculado,
+      iva19: ivaCalculado,
+      totalSinDescuento: totalCalculado,
+      descuento: descuento,
+      totalFinal: final
+    });
   };
 
   const checkAvailability = async () => {
@@ -534,10 +585,10 @@ export const ReservationForm = () => {
         descuentoFinal = parseFloat(descuentoValor);
       } else if (descuentoPorcentaje) {
         descuentoPorcFinal = parseFloat(descuentoPorcentaje);
-        descuentoFinal = precioBase * (descuentoPorcFinal / 100);
+        descuentoFinal = totalReserva * (descuentoPorcFinal / 100);
       }
 
-      // Create reservation
+      // ✅ CORRECCIÓN 6: Guardar valores correctos en BD
       const { data: reservation, error: reservationError } = await supabase
         .from("reservations")
         .insert({
@@ -548,18 +599,34 @@ export const ReservationForm = () => {
           fecha_inicio: fechaInicio.toISOString(),
           fecha_fin: fechaFin.toISOString(),
           estado: "pending",
-          price_total: priceTotal ? parseFloat(priceTotal) : null,
+          // Valores fiscales correctos
+          dias_totales: diasAlquiler, // Días reales (incluye día inicio)
+          tarifa_diaria: tarifaDiaria, // Tarifa SIN IVA
+          subtotal: subtotal, // Días × Tarifa (sin IVA)
+          iva: iva, // 19% del subtotal
+          valor_total: totalReserva, // Subtotal + IVA (antes de descuento)
+          price_total: precioFinal, // Total después de descuento
           descuento: descuentoFinal,
           descuento_porcentaje: descuentoPorcFinal,
-          dias_totales: diasAlquiler,
+          // Mantener compatibilidad
           tarifa_dia_iva: vehicles.find(v => v.id === selectedVehicle)?.tarifa_dia_iva,
-          valor_total: precioBase,
           created_by: user.id,
           source,
           notas,
         })
         .select()
         .single();
+
+      console.log('[Reserva Guardada]', {
+        id: reservation?.id,
+        dias: diasAlquiler,
+        tarifaDiaria,
+        subtotal,
+        iva,
+        valorTotal: totalReserva,
+        descuento: descuentoFinal,
+        precioFinal
+      });
 
       if (reservationError) throw reservationError;
 
@@ -1125,24 +1192,42 @@ export const ReservationForm = () => {
             </div>
           </div>
 
-          {/* Cálculo de Precio */}
+          {/* Cálculo de Precio - Desglose Fiscal Correcto */}
           {diasAlquiler > 0 && (
-            <Card className="bg-muted/50">
+            <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200">
               <CardContent className="pt-6">
                 <div className="space-y-3">
+                  <div className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3">
+                    📊 Desglose de Reserva
+                  </div>
+                  
                   <div className="flex justify-between text-sm">
                     <span>Días de alquiler:</span>
-                    <span className="font-semibold">{diasAlquiler} días</span>
+                    <span className="font-semibold">{diasAlquiler} {diasAlquiler === 1 ? 'día' : 'días'}</span>
                   </div>
+                  
                   <div className="flex justify-between text-sm">
-                    <span>Tarifa por día (IVA incluido):</span>
+                    <span>Tarifa por día (sin IVA):</span>
                     <span className="font-semibold">
-                      ${vehicles.find(v => v.id === selectedVehicle)?.tarifa_dia_iva?.toLocaleString() || 0}
+                      ${tarifaDiaria.toLocaleString('es-CO')}
                     </span>
                   </div>
+                  
                   <div className="flex justify-between text-sm border-t pt-2">
-                    <span className="font-medium">Subtotal:</span>
-                    <span className="font-semibold">${precioBase.toLocaleString()}</span>
+                    <span>Subtotal (sin IVA):</span>
+                    <span className="font-semibold">${subtotal.toLocaleString('es-CO')}</span>
+                  </div>
+                  
+                  <div className="flex justify-between text-sm text-orange-700 dark:text-orange-400">
+                    <span>IVA (19%):</span>
+                    <span className="font-semibold">${iva.toLocaleString('es-CO')}</span>
+                  </div>
+                  
+                  <div className="flex justify-between border-t-2 pt-3 text-base">
+                    <span className="font-bold text-blue-900 dark:text-blue-100">TOTAL RESERVA:</span>
+                    <span className="font-bold text-blue-900 dark:text-blue-100 text-lg">
+                      ${totalReserva.toLocaleString('es-CO')}
+                    </span>
                   </div>
                 </div>
               </CardContent>
