@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle, XCircle, CreditCard } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -22,6 +23,7 @@ interface ReservationActionsProps {
 export const ReservationActions = ({ reservation, onUpdate }: ReservationActionsProps) => {
   const [loading, setLoading] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
+  const queryClient = useQueryClient();
 
   const handleMarkAsPaid = async () => {
     setLoading(true);
@@ -56,6 +58,11 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
       toast.success("Pago registrado exitosamente", {
         description: "La reserva ahora está pendiente de contrato.",
       });
+      
+      // Invalidate queries to refresh data immediately
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      
       onUpdate();
     } catch (error: any) {
       console.error("[Marcar como Pagado] ❌ Error:", error);
@@ -105,6 +112,11 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
       toast.success("Reserva cancelada", {
         description: "El proceso de devolución ha sido iniciado.",
       });
+      
+      // Invalidate queries to refresh data immediately
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      
       onUpdate();
     } catch (error: any) {
       console.error("Error cancelling reservation:", error);

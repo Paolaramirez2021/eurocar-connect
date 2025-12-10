@@ -29,6 +29,7 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useQuery } from "@tanstack/react-query";
 import { getDashboardStats } from "@/lib/dashboardStats";
 import { useDashboardRealtime } from "@/hooks/useDashboardRealtime";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -48,6 +49,9 @@ const DashboardLayout = ({ children, user }: DashboardLayoutProps) => {
 
   // Habilitar actualización en tiempo real
   useDashboardRealtime();
+  
+  // Sistema de sincronización completo en tiempo real
+  useRealtimeSync();
 
   const handleLogout = async () => {
     try {

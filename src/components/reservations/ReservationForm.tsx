@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Calendar as CalendarIcon, AlertCircle, User, CreditCard, Briefcase, Users, FileText, Search, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,6 +69,7 @@ interface Customer {
 }
 
 export const ReservationForm = () => {
+  const queryClient = useQueryClient();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<string>("");
   const [fechaInicio, setFechaInicio] = useState<Date>();
@@ -643,7 +645,15 @@ export const ReservationForm = () => {
         description: `Reservación creada para ${customer.nombres} ${customer.primer_apellido}`
       });
 
-      toast.success("Reservación creada exitosamente");
+      // ✅ INVALIDAR QUERIES INMEDIATAMENTE para refresh automático
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['calendar-data'] });
+
+      toast.success("Reservación creada exitosamente", {
+        description: `Reserva para ${customer.nombres} ${customer.primer_apellido}. Los datos se actualizarán automáticamente.`,
+      });
       
       // Reset form
       setSelectedVehicle("");
