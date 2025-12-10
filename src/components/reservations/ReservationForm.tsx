@@ -23,6 +23,7 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { format, differenceInCalendarDays } from "date-fns";
+import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useUserRole } from "@/hooks/useUserRole";
 
@@ -1137,57 +1138,124 @@ export const ReservationForm = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Fecha de Inicio */}
             <div className="space-y-2">
-              <Label>Fecha de Inicio *</Label>
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4 text-blue-600" />
+                Fecha de Inicio *
+              </Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !fechaInicio && "text-muted-foreground"
+                      "w-full justify-start text-left font-normal h-11 border-2 hover:border-blue-500 hover:bg-blue-50 transition-all",
+                      !fechaInicio && "text-muted-foreground",
+                      fechaInicio && "border-blue-300 bg-blue-50/50"
                     )}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {fechaInicio ? format(fechaInicio, "PPP") : "Selecciona fecha"}
+                    <CalendarIcon className="mr-2 h-4 w-4 text-blue-600" />
+                    {fechaInicio ? (
+                      <span className="font-medium">
+                        {format(fechaInicio, "EEEE, d 'de' MMMM yyyy", { locale: es })}
+                      </span>
+                    ) : (
+                      <span>Selecciona fecha de inicio</span>
+                    )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
+                <PopoverContent className="w-auto p-0 shadow-lg border-2" align="start">
                   <Calendar
                     mode="single"
                     selected={fechaInicio}
                     onSelect={setFechaInicio}
                     initialFocus
+                    locale={es}
+                    className="rounded-md"
+                    classNames={{
+                      months: "space-y-4",
+                      month: "space-y-4",
+                      caption: "flex justify-center pt-1 relative items-center",
+                      caption_label: "text-sm font-semibold",
+                      nav: "space-x-1 flex items-center",
+                      nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+                      table: "w-full border-collapse space-y-1",
+                      head_row: "flex",
+                      head_cell: "text-muted-foreground rounded-md w-9 font-medium text-[0.8rem]",
+                      row: "flex w-full mt-2",
+                      cell: "text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                      day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-blue-100 rounded-md",
+                      day_selected: "bg-blue-600 text-white hover:bg-blue-700 hover:text-white focus:bg-blue-600 focus:text-white",
+                      day_today: "bg-accent text-accent-foreground font-bold border-2 border-blue-400",
+                      day_outside: "text-muted-foreground opacity-50",
+                      day_disabled: "text-muted-foreground opacity-50",
+                    }}
                   />
                 </PopoverContent>
               </Popover>
             </div>
 
+            {/* Fecha de Fin */}
             <div className="space-y-2">
-              <Label>Fecha de Fin *</Label>
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4 text-green-600" />
+                Fecha de Fin *
+              </Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !fechaFin && "text-muted-foreground"
+                      "w-full justify-start text-left font-normal h-11 border-2 hover:border-green-500 hover:bg-green-50 transition-all",
+                      !fechaFin && "text-muted-foreground",
+                      fechaFin && "border-green-300 bg-green-50/50"
                     )}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {fechaFin ? format(fechaFin, "PPP") : "Selecciona fecha"}
+                    <CalendarIcon className="mr-2 h-4 w-4 text-green-600" />
+                    {fechaFin ? (
+                      <span className="font-medium">
+                        {format(fechaFin, "EEEE, d 'de' MMMM yyyy", { locale: es })}
+                      </span>
+                    ) : (
+                      <span>Selecciona fecha de fin</span>
+                    )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
+                <PopoverContent className="w-auto p-0 shadow-lg border-2" align="start">
                   <Calendar
                     mode="single"
                     selected={fechaFin}
                     onSelect={setFechaFin}
                     initialFocus
+                    locale={es}
                     disabled={(date) => fechaInicio ? date < fechaInicio : false}
+                    className="rounded-md"
+                    classNames={{
+                      months: "space-y-4",
+                      month: "space-y-4",
+                      caption: "flex justify-center pt-1 relative items-center",
+                      caption_label: "text-sm font-semibold",
+                      nav: "space-x-1 flex items-center",
+                      nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+                      table: "w-full border-collapse space-y-1",
+                      head_row: "flex",
+                      head_cell: "text-muted-foreground rounded-md w-9 font-medium text-[0.8rem]",
+                      row: "flex w-full mt-2",
+                      cell: "text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                      day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-green-100 rounded-md",
+                      day_selected: "bg-green-600 text-white hover:bg-green-700 hover:text-white focus:bg-green-600 focus:text-white",
+                      day_today: "bg-accent text-accent-foreground font-bold border-2 border-green-400",
+                      day_outside: "text-muted-foreground opacity-50",
+                      day_disabled: "text-muted-foreground opacity-50 line-through",
+                    }}
                   />
                 </PopoverContent>
               </Popover>
+              {fechaInicio && fechaFin && (
+                <p className="text-xs text-green-600 flex items-center gap-1">
+                  ✓ {diasAlquiler} {diasAlquiler === 1 ? 'día' : 'días'} de alquiler
+                </p>
+              )}
             </div>
           </div>
 
