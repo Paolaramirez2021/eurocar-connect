@@ -217,9 +217,8 @@ export const ReservationForm = () => {
     });
 
     // ✅ CORRECCIÓN 2: Obtener tarifa SIN IVA
-    // La BD tiene tarifa_dia_iva que incluye IVA, hay que revertirlo
-    // tarifa_sin_iva = tarifa_con_iva / 1.19
-    const tarifaSinIva = Math.round(vehicle.tarifa_dia_iva / 1.19);
+    // La BD tiene tarifa_dia_iva que YA es sin IVA
+    const tarifaSinIva = vehicle.tarifa_dia_iva;
     setTarifaDiaria(tarifaSinIva);
 
     // ✅ CORRECCIÓN 3: Calcular subtotal (días × tarifa sin IVA)
