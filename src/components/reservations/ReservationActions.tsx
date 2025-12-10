@@ -34,7 +34,7 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
         paymentStatusActual: reservation.payment_status
       });
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("reservations")
         .update({
           payment_status: "paid",
@@ -42,26 +42,23 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
           estado: "pending_with_payment",
           auto_cancel_at: null, // Remove auto-cancel since payment is confirmed
         })
-        .eq("id", reservation.id)
-        .select()
-        .maybeSingle();
+        .eq("id", reservation.id);
 
       if (error) throw error;
 
       console.log('[Marcar como Pagado] ✅ Actualizado:', {
-        reservationId: data.id,
-        nuevoEstado: data.estado,
-        nuevoPaymentStatus: data.payment_status,
-        paymentDate: data.payment_date
+        reservationId: reservation.id,
+        nuevoEstado: 'pending_with_payment',
+        nuevoPaymentStatus: 'paid'
       });
 
       toast.success("Pago registrado exitosamente", {
         description: "La reserva ahora está pendiente de contrato.",
       });
       
-      // Invalidate queries to refresh data immediately
+      // Invalidar queries para actualización inmediata
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
-      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
       
       onUpdate();
     } catch (error: any) {
