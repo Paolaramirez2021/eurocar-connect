@@ -44,7 +44,7 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
         })
         .eq("id", reservation.id)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 
