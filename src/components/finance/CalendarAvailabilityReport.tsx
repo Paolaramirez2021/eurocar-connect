@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, ChevronDown, ChevronUp, User, Calendar, Phone, Mail, Wrench, DollarSign } from "lucide-react";
-import { eachDayOfInterval, format, isWithinInterval, getDaysInMonth, startOfMonth, differenceInDays } from "date-fns";
+import { eachDayOfInterval, format, isWithinInterval, getDaysInMonth, startOfMonth, differenceInDays, differenceInCalendarDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { useMemo, useState } from "react";
 import { isColombianHoliday } from "@/lib/colombianHolidays";
@@ -551,7 +551,7 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
                     <div className="pt-2 border-t">
                       <p className="font-medium text-sm text-muted-foreground">Días de Alquiler</p>
                       <p className="text-2xl font-bold text-primary">
-                        {differenceInDays(new Date(dayDetails.fecha_fin), new Date(dayDetails.fecha_inicio))} días
+                        {differenceInCalendarDays(new Date(dayDetails.fecha_fin), new Date(dayDetails.fecha_inicio)) + 1} días
                       </p>
                     </div>
                   </div>
