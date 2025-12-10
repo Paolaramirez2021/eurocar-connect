@@ -247,15 +247,47 @@ export const ReservationForm = () => {
 
     setSearchingCustomer(true);
     try {
-      // Trim whitespace and search
-      const searchValue = customer.cedula_pasaporte.trim();
+      // Normalize search value: remove spaces, trim, lowercase
+      const searchValue = customer.cedula_pasaporte
+        .trim()
+        .replace(/\s+/g, '') // Remove all spaces
+        .toLowerCase();
       
-      const { data, error } = await supabase
+      if (!searchValue) {
+        toast.info("Ingrese un número de cédula o pasaporte");
+        return;
+      }
+      
+      console.log('[Búsqueda Cliente] Valor de búsqueda normalizado:', searchValue);
+      
+      // Get all customers and search in frontend for better matching
+      const { data: allCustomers, error } = await supabase
         .from("customers")
-        .select("*")
-        .ilike("cedula_pasaporte", searchValue);
+        .select("*");
 
-      if (error) throw error;
+      if (error) {
+        console.error('[Búsqueda Cliente] Error:', error);
+        throw error;
+      }
+
+      console.log('[Búsqueda Cliente] Total clientes en DB:', allCustomers?.length || 0);
+
+      // Search with normalization (remove spaces, case insensitive)
+      const data = allCustomers?.filter(c => {
+        const normalizedCedula = c.cedula_pasaporte
+          .trim()
+          .replace(/\s+/g, '')
+          .toLowerCase();
+        return normalizedCedula === searchValue;
+      });
+
+      console.log('[Búsqueda Cliente] Resultados encontrados:', data?.length || 0);
+      if (data && data.length > 0) {
+        console.log('[Búsqueda Cliente] Cliente encontrado:', {
+          nombre: data[0].nombres,
+          cedula: data[0].cedula_pasaporte
+        });
+      }
 
       if (data && data.length > 0) {
         const foundCustomer = data[0];
@@ -307,7 +339,8 @@ export const ReservationForm = () => {
         });
         toast.success(`Cliente encontrado: ${foundCustomer.nombres} ${foundCustomer.primer_apellido}`);
       } else {
-        toast.info("Cliente no encontrado. Complete los datos para crear un nuevo cliente.");
+        console.log('[Búsqueda Cliente] No se encontraron resultados para:', searchValue);
+        toast.info(`Cliente no encontrado con cédula/pasaporte: "${searchValue}". Complete los datos para crear un nuevo cliente.`);
       }
     } catch (error) {
       console.error("Error searching customer:", error);
