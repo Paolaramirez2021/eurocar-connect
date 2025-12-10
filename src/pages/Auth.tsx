@@ -130,9 +130,9 @@ const Auth = () => {
           <CardContent className="pt-8 px-6 pb-6 md:px-8">
             <div className="flex justify-center mb-8">
               <img 
-                src="/assets/eurocar_logo.png" 
+                src={logoEurocar}
                 alt="EuroCar Rental" 
-                className="w-48 md:w-56 h-auto object-contain"
+                className="w-64 md:w-80 lg:w-96 h-auto object-contain"
               />
             </div>
             <Tabs defaultValue="login" className="w-full">

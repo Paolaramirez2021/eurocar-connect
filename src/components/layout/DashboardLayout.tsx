@@ -114,9 +114,9 @@ const DashboardLayout = ({ children, user }: DashboardLayoutProps) => {
           {/* Logo - Centered on mobile, left on desktop */}
           <div className="flex items-center justify-center flex-1 lg:flex-none lg:justify-start">
             <img 
-              src="/assets/eurocar_logo.png" 
+              src={logoEurocar}
               alt="EuroCar Rental" 
-              className="w-28 sm:w-32 md:w-40 h-auto object-contain transition-all duration-300" 
+              className="w-40 sm:w-48 md:w-56 lg:w-64 h-auto object-contain transition-all duration-300" 
             />
           </div>
           

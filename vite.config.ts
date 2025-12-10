@@ -16,18 +16,20 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: [
-        "assets/eurocar_logo.png",
+        "assets/logo-eurocar.png",
+        "pwa-192x192.png",
+        "pwa-512x512.png",
         "favicon.ico",
         "robots.txt"
       ],
       manifest: {
-        name: "EuroCar Connect",
-        short_name: "EuroCar",
+        name: "EUROCAR - Sistema de Gestión",
+        short_name: "Eurocar",
         description: "Sistema profesional de gestión para alquiler de vehículos - Control total de flotas, mantenimientos, alquileres y finanzas",
         theme_color: "#1e40af",
-        background_color: "#0f172a",
+        background_color: "#000000",
         display: "standalone",
-        orientation: "any",
+        orientation: "portrait",
         scope: "/",
         start_url: "/",
         lang: "es",
@@ -35,49 +37,25 @@ export default defineConfig(({ mode }) => ({
         prefer_related_applications: false,
         icons: [
           {
-            src: "/assets/eurocar_logo.png",
-            sizes: "48x48",
-            type: "image/png",
-            purpose: "any"
-          },
-          {
-            src: "/assets/eurocar_logo.png",
-            sizes: "72x72",
-            type: "image/png",
-            purpose: "any"
-          },
-          {
-            src: "/assets/eurocar_logo.png",
-            sizes: "96x96",
-            type: "image/png",
-            purpose: "any"
-          },
-          {
-            src: "/assets/eurocar_logo.png",
-            sizes: "144x144",
-            type: "image/png",
-            purpose: "any"
-          },
-          {
-            src: "/assets/eurocar_logo.png",
+            src: "/pwa-192x192.png",
             sizes: "192x192",
             type: "image/png",
             purpose: "any"
           },
           {
-            src: "/assets/eurocar_logo.png",
+            src: "/pwa-512x512.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "any"
           },
           {
-            src: "/assets/eurocar_logo.png",
+            src: "/pwa-192x192.png",
             sizes: "192x192",
             type: "image/png",
             purpose: "maskable"
           },
           {
-            src: "/assets/eurocar_logo.png",
+            src: "/pwa-512x512.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable"
@@ -85,7 +63,7 @@ export default defineConfig(({ mode }) => ({
         ],
         screenshots: [
           {
-            src: "/assets/eurocar_logo.png",
+            src: "/pwa-512x512.png",
             sizes: "512x512",
             type: "image/png",
             form_factor: "wide",
@@ -98,21 +76,21 @@ export default defineConfig(({ mode }) => ({
             short_name: "Reserva",
             description: "Crear una nueva reserva",
             url: "/reservations?tab=nueva",
-            icons: [{ src: "/assets/eurocar_logo.png", sizes: "96x96" }]
+            icons: [{ src: "/pwa-192x192.png", sizes: "192x192" }]
           },
           {
             name: "Vehículos",
             short_name: "Vehículos",
             description: "Ver flota de vehículos",
             url: "/vehicles",
-            icons: [{ src: "/assets/eurocar_logo.png", sizes: "96x96" }]
+            icons: [{ src: "/pwa-192x192.png", sizes: "192x192" }]
           },
           {
             name: "Clientes",
             short_name: "Clientes",
             description: "Gestionar clientes",
             url: "/customers",
-            icons: [{ src: "/assets/eurocar_logo.png", sizes: "96x96" }]
+            icons: [{ src: "/pwa-192x192.png", sizes: "192x192" }]
           }
         ]
       },
