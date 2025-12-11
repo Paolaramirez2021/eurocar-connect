@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { getCalendarStatus, CALENDAR_COLORS, occupiesVehicleInCalendar, ALL_ACTIVE_STATES_FOR_QUERY, type CalendarStatus } from "@/config/states";
+import { getCalendarStatus, CALENDAR_COLORS, occupiesVehicleInCalendar, type CalendarStatus } from "@/config/states";
 
 interface CalendarAvailabilityReportProps {
   dateRange: {
@@ -122,14 +122,17 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
   const { data: reservations, isLoading: reservationsLoading } = useQuery({
     queryKey: ['reservations-calendar', dateRange],
     queryFn: async () => {
-      // Solo obtener reservas que ocupan vehículo (excluir canceladas/expiradas)
+      // Obtener TODAS las reservas del rango y filtrar en frontend
       const { data, error } = await supabase
         .from('reservations')
         .select('*')
-        .in('estado', ALL_ACTIVE_STATES_FOR_QUERY)
         .gte('fecha_fin', dateRange.from.toISOString())
         .lte('fecha_inicio', dateRange.to.toISOString());
-      if (error) throw error;
+      if (error) {
+        console.error('[Calendar] Error fetching reservations:', error);
+        throw error;
+      }
+      console.log('[Calendar] Reservations loaded:', data?.length || 0);
       return data || [];
     },
     enabled: !!dateRange.from && !!dateRange.to

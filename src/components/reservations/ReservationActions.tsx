@@ -95,24 +95,39 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
     setLoading(true);
     try {
       const userId = (await supabase.auth.getUser()).data.user?.id;
+      
+      console.log('[Cancelar con Devolución] Iniciando...', { id: reservation.id });
+
+      const updateData: any = {
+        estado: "cancelada",
+        payment_status: "refunded",
+        cancelled_at: new Date().toISOString(),
+        cancelled_by: userId,
+        cancellation_reason: cancellationReason,
+        refund_status: "pending",
+        updated_at: new Date().toISOString(),
+      };
+
+      // Intentar agregar cancellation_type (puede no existir)
+      try {
+        updateData.cancellation_type = "con_devolucion";
+      } catch (e) {}
 
       const { data, error } = await supabase
         .from("reservations")
-        .update({
-          estado: "cancelada",
-          payment_status: "refunded",
-          cancellation_type: "con_devolucion",
-          cancelled_at: new Date().toISOString(),
-          cancelled_by: userId,
-          cancellation_reason: cancellationReason,
-          refund_status: "pending",
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq("id", reservation.id)
         .select();
 
-      if (error) throw error;
-      if (!data || data.length === 0) throw new Error('No se pudo cancelar. Verifique permisos.');
+      if (error) {
+        console.error('[Cancelar] Error Supabase:', error);
+        throw error;
+      }
+      
+      if (!data || data.length === 0) {
+        console.error('[Cancelar] No se actualizó ningún registro');
+        throw new Error('No se pudo cancelar. Verifique permisos.');
+      }
 
       // Liberar vehículo
       if (reservation.vehicle_id) {
@@ -147,24 +162,39 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
     setLoading(true);
     try {
       const userId = (await supabase.auth.getUser()).data.user?.id;
+      
+      console.log('[Cancelar sin Devolución] Iniciando...', { id: reservation.id });
+
+      const updateData: any = {
+        estado: "cancelada",
+        payment_status: "paid", // Mantiene paid = sin devolución
+        cancelled_at: new Date().toISOString(),
+        cancelled_by: userId,
+        cancellation_reason: cancellationReason,
+        refund_status: null,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Intentar agregar cancellation_type (puede no existir)
+      try {
+        updateData.cancellation_type = "sin_devolucion";
+      } catch (e) {}
 
       const { data, error } = await supabase
         .from("reservations")
-        .update({
-          estado: "cancelada",
-          payment_status: "paid", // Mantiene paid = sin devolución
-          cancellation_type: "sin_devolucion",
-          cancelled_at: new Date().toISOString(),
-          cancelled_by: userId,
-          cancellation_reason: cancellationReason,
-          refund_status: null,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq("id", reservation.id)
         .select();
 
-      if (error) throw error;
-      if (!data || data.length === 0) throw new Error('No se pudo cancelar. Verifique permisos.');
+      if (error) {
+        console.error('[Cancelar] Error Supabase:', error);
+        throw error;
+      }
+      
+      if (!data || data.length === 0) {
+        console.error('[Cancelar] No se actualizó ningún registro');
+        throw new Error('No se pudo cancelar. Verifique permisos.');
+      }
 
       // Liberar vehículo
       if (reservation.vehicle_id) {

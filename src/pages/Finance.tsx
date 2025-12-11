@@ -10,7 +10,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, subMonths, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { ReportsTab } from "@/components/finance/ReportsTab";
-import { ALL_REVENUE_STATES_FOR_QUERY } from "@/config/states";
+import { shouldIncludeInRevenue } from "@/config/states";
 
 export default function Finance() {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>("all");
@@ -36,7 +36,7 @@ export default function Finance() {
     }
   });
 
-  // Obtener reservas que generan ingresos (6 meses)
+  // Obtener TODAS las reservas (6 meses) - filtrar ingresos en frontend
   const { data: reservations } = useQuery({
     queryKey: ['reservations-finance', selectedVehicleId],
     queryFn: async () => {
@@ -44,15 +44,18 @@ export default function Finance() {
       let query = supabase
         .from('reservations')
         .select('*')
-        .gte('fecha_inicio', sixMonthsAgo.toISOString())
-        .in('estado', ALL_REVENUE_STATES_FOR_QUERY);
+        .gte('fecha_inicio', sixMonthsAgo.toISOString());
       
       if (selectedVehicleId !== "all") {
         query = query.eq('vehicle_id', selectedVehicleId);
       }
       
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error('[Finance] Error:', error);
+        throw error;
+      }
+      console.log('[Finance] Reservations loaded:', data?.length || 0);
       return data || [];
     }
   });
@@ -88,8 +91,13 @@ export default function Finance() {
     return daysInMonth.map(day => {
       const dayStr = format(day, 'yyyy-MM-dd');
       
-      // Calcular ingresos de ese día (reservas activas ese día)
+      // Calcular ingresos de ese día (reservas activas ese día que generan ingreso)
       const dailyIncome = reservations.reduce((sum, reservation) => {
+        // Solo contar si el estado genera ingreso
+        if (!shouldIncludeInRevenue(reservation.estado, reservation.cancellation_type)) {
+          return sum;
+        }
+        
         const resStart = new Date(reservation.fecha_inicio);
         const resEnd = new Date(reservation.fecha_fin);
         
@@ -121,11 +129,12 @@ export default function Finance() {
       const monthStart = startOfMonth(monthDate);
       const monthEnd = endOfMonth(monthDate);
 
-      // Filtrar reservas del mes
+      // Filtrar reservas del mes que generan ingreso
       const monthReservations = reservations.filter(r => {
         const resDate = new Date(r.fecha_inicio);
-        return (resDate >= monthStart && resDate <= monthEnd) && 
-               (r.estado === 'completed' || r.estado === 'confirmed' || r.estado === 'pending');
+        const inRange = resDate >= monthStart && resDate <= monthEnd;
+        const generatesRevenue = shouldIncludeInRevenue(r.estado, r.cancellation_type);
+        return inRange && generatesRevenue;
       });
 
       // Calcular ingresos brutos del mes

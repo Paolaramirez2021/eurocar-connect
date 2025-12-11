@@ -233,16 +233,24 @@ export function isReservationActive(estado: string): boolean {
 
 /**
  * Determina si debe incluirse en ingresos financieros
+ * Más permisivo: incluye si tiene pago confirmado O estado que genera ingreso
  */
 export function shouldIncludeInRevenue(estado: string, cancellationType?: CancellationType): boolean {
-  const config = getStateConfig(estado);
+  const normalized = normalizeState(estado);
   
-  // Cancelada sin devolución SÍ cuenta como ingreso
-  if (normalizeState(estado) === 'cancelada' && cancellationType === 'sin_devolucion') {
+  // Estados que SIEMPRE generan ingreso
+  const revenueStates = ['con_pago', 'contrato_generado', 'confirmado', 'completada'];
+  if (revenueStates.includes(normalized)) {
     return true;
   }
   
-  return config.includeInRevenue;
+  // Cancelada sin devolución SÍ cuenta como ingreso
+  if (normalized === 'cancelada' && cancellationType === 'sin_devolucion') {
+    return true;
+  }
+  
+  // Por defecto, no genera ingreso
+  return false;
 }
 
 /**
