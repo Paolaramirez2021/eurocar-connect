@@ -46,7 +46,7 @@ export const DetailedReport = ({ dateRange }: DetailedReportProps) => {
       const { data, error } = await supabase
         .from('reservations')
         .select('*')
-        .in('estado', ['confirmed', 'pending', 'completed'])
+        .not('estado', 'in', '("cancelled","cancelada","expired","expirada")')
         .gte('fecha_fin', dateRange.from.toISOString())
         .lte('fecha_inicio', dateRange.to.toISOString());
       if (error) throw error;
