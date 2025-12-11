@@ -14,7 +14,7 @@ import { ReservationActions } from "./ReservationActions";
 import { ReservationDetailsModal } from "./ReservationDetailsModal";
 import { useRealtimeReservations } from "@/hooks/useRealtimeReservations";
 import { useReservationExpiration } from "@/hooks/useReservationExpiration";
-import { getStateConfig, getTimeUntilExpiration, RESERVATION_STATES, type ReservationStatus } from "@/config/states";
+import { getStateConfig, getTimeUntilExpiration, normalizeState, getCancellationLabel, type CancellationType } from "@/config/states";
 
 interface Reservation {
   id: string;
@@ -36,6 +36,7 @@ interface Reservation {
   cancelled_at: string | null;
   cancelled_by: string | null;
   cancellation_reason: string | null;
+  cancellation_type?: CancellationType;
   refund_status: string | null;
   refund_date: string | null;
   refund_reference: string | null;
@@ -131,9 +132,16 @@ export const ReservationsManagementPanel = () => {
     setFilteredReservations(filtered);
   };
 
-  const getStatusBadge = (estado: string) => {
-    // Usar configuración centralizada - SOLO basado en estado
-    const config = getStateConfig(estado);
+  const getStatusBadge = (reservation: Reservation) => {
+    const config = getStateConfig(reservation.estado);
+    const normalized = normalizeState(reservation.estado);
+    
+    // Para canceladas, mostrar etiqueta específica
+    if (normalized === 'cancelada' && reservation.cancellation_type) {
+      const label = getCancellationLabel(reservation.cancellation_type);
+      return <Badge className={config.badgeClass}>{label}</Badge>;
+    }
+    
     return <Badge className={config.badgeClass}>{config.label}</Badge>;
   };
 
@@ -219,9 +227,9 @@ export const ReservationsManagementPanel = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los estados</SelectItem>
-                <SelectItem value="reservado_sin_pago">Sin pago (2h)</SelectItem>
-                <SelectItem value="reservado_con_pago">Con pago</SelectItem>
-                <SelectItem value="pendiente_contrato">Pendiente contrato</SelectItem>
+                <SelectItem value="sin_pago">Sin pago (2h)</SelectItem>
+                <SelectItem value="con_pago">Con pago</SelectItem>
+                <SelectItem value="contrato_generado">Contrato generado</SelectItem>
                 <SelectItem value="confirmado">Confirmadas</SelectItem>
                 <SelectItem value="completada">Completadas</SelectItem>
                 <SelectItem value="expirada">Expiradas</SelectItem>
@@ -293,7 +301,7 @@ export const ReservationsManagementPanel = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {getStatusBadge(reservation.estado)}
+                      {getStatusBadge(reservation)}
                     </TableCell>
                     <TableCell>
                       {getPaymentBadge(reservation.payment_status, reservation.payment_date)}

@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { getCalendarStatus, CALENDAR_COLORS, occupiesVehicleInCalendar, CALENDAR_VISIBLE_STATES, type CalendarStatus } from "@/config/states";
+import { getCalendarStatus, CALENDAR_COLORS, occupiesVehicleInCalendar, ALL_ACTIVE_STATES_FOR_QUERY, type CalendarStatus } from "@/config/states";
 
 interface CalendarAvailabilityReportProps {
   dateRange: {
@@ -23,7 +23,7 @@ interface CalendarAvailabilityReportProps {
 
 interface DayStatus {
   date: Date;
-  status: 'rented' | 'pending_contract' | 'reserved_paid' | 'reserved_no_payment' | 'maintenance' | 'available';
+  status: 'rented' | 'contract_pending' | 'paid' | 'no_payment' | 'maintenance' | 'available';
   isPicoPlaca?: boolean;
   isHoliday?: boolean;
   reservationId?: string;
@@ -122,26 +122,15 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
   const { data: reservations, isLoading: reservationsLoading } = useQuery({
     queryKey: ['reservations-calendar', dateRange],
     queryFn: async () => {
-      // Solo obtener reservas que ocupan vehículo usando estados unificados
+      // Solo obtener reservas que ocupan vehículo (excluir canceladas/expiradas)
       const { data, error } = await supabase
         .from('reservations')
         .select('*')
-        .in('estado', [
-          // Estados unificados que ocupan vehículo
-          'reservado_sin_pago',
-          'reservado_con_pago', 
-          'pendiente_contrato',
-          'confirmado',
-          // Estados legacy (para compatibilidad)
-          'confirmed',
-          'pending',
-          'pending_no_payment',
-          'pending_with_payment'
-        ])
+        .in('estado', ALL_ACTIVE_STATES_FOR_QUERY)
         .gte('fecha_fin', dateRange.from.toISOString())
         .lte('fecha_inicio', dateRange.to.toISOString());
       if (error) throw error;
-      return data;
+      return data || [];
     },
     enabled: !!dateRange.from && !!dateRange.to
   });
@@ -234,10 +223,11 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
         };
       });
 
-      // Calculate totals - include pending_contract as occupied
+      // Calculate totals
       const totalOccupied = days.filter(d => d.status === 'rented').length;
-      const totalPendingContract = days.filter(d => d.status === 'pending_contract').length;
-      const totalReserved = days.filter(d => d.status === 'reserved_paid' || d.status === 'reserved_no_payment').length;
+      const totalContractPending = days.filter(d => d.status === 'contract_pending').length;
+      const totalPaid = days.filter(d => d.status === 'paid').length;
+      const totalNoPayment = days.filter(d => d.status === 'no_payment').length;
       const totalMaintenance = days.filter(d => d.status === 'maintenance').length;
       const totalAvailable = days.filter(d => d.status === 'available').length;
 
@@ -248,7 +238,7 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
         modelo: vehicle.modelo,
         days,
         totalAvailable,
-        totalOccupied: totalOccupied + totalPendingContract + totalReserved,
+        totalOccupied: totalOccupied + totalContractPending + totalPaid + totalNoPayment,
         totalMaintenance
       };
     });
@@ -294,19 +284,19 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
           <div className="flex flex-wrap items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-muted/30 rounded-b-lg text-xs sm:text-sm border-t">
             <div className="flex items-center gap-1.5 sm:gap-2">
               <div className="w-3 h-3 sm:w-4 sm:h-4 bg-red-500 rounded" />
-              <span>Confirmado (en alquiler)</span>
+              <span>Confirmado (rentado)</span>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2">
               <div className="w-3 h-3 sm:w-4 sm:h-4 bg-blue-400 rounded" />
-              <span>Pendiente de contrato</span>
+              <span>Contrato generado</span>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2">
               <div className="w-3 h-3 sm:w-4 sm:h-4 bg-green-400 rounded" />
-              <span>Reservado con pago</span>
+              <span>Con pago</span>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2">
-              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-lime-400 rounded" />
-              <span>Reservado sin pago (2h)</span>
+              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-yellow-400 rounded" />
+              <span>Sin pago (2h)</span>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2">
               <div className="w-3 h-3 sm:w-4 sm:h-4 bg-orange-500 rounded" />

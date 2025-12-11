@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle, XCircle, CreditCard, FileText } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import { getStateConfig, normalizeState } from "@/config/states";
+import { getStateConfig, normalizeState, type CancellationType } from "@/config/states";
 
 interface Reservation {
   id: string;
@@ -15,6 +15,8 @@ interface Reservation {
   payment_status: string;
   auto_cancel_at: string | null;
   created_at: string;
+  vehicle_id?: string;
+  cancellation_type?: CancellationType;
 }
 
 interface ReservationActionsProps {
@@ -27,69 +29,55 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
   const [cancellationReason, setCancellationReason] = useState("");
   const queryClient = useQueryClient();
 
-  // Normalizar estado para manejar legacy
   const normalizedEstado = normalizeState(reservation.estado);
   const stateConfig = getStateConfig(reservation.estado);
 
+  // Función para invalidar todas las queries relacionadas
+  const invalidateAllQueries = () => {
+    queryClient.invalidateQueries({ queryKey: ['reservations'] });
+    queryClient.invalidateQueries({ queryKey: ['reservations-calendar'] });
+    queryClient.invalidateQueries({ queryKey: ['reservations-finance'] });
+    queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+    queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+    queryClient.invalidateQueries({ queryKey: ['contracts'] });
+  };
+
   /**
    * MARCAR COMO PAGADO
-   * Actualiza AMBOS campos: estado Y payment_status
    */
   const handleMarkAsPaid = async () => {
     setLoading(true);
     try {
-      console.log('[Marcar como Pagado] Iniciando...', {
-        reservationId: reservation.id,
-        estadoActual: reservation.estado,
-        paymentStatusActual: reservation.payment_status
-      });
+      console.log('[Marcar como Pagado] Iniciando...', { id: reservation.id, estadoActual: reservation.estado });
 
-      const { data, error, count } = await supabase
+      const { data, error } = await supabase
         .from("reservations")
         .update({
-          // UNIFICADO: Actualizar AMBOS campos
-          estado: "reservado_con_pago",      // Nuevo estado unificado
-          payment_status: "paid",             // Status de pago
+          estado: "con_pago",
+          payment_status: "paid",
           payment_date: new Date().toISOString(),
-          auto_cancel_at: null,               // Eliminar auto-cancelación
+          auto_cancel_at: null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", reservation.id)
-        .select();  // Agregar select para obtener los datos actualizados
+        .select();
 
       if (error) {
-        console.error('[Marcar como Pagado] ❌ Error de Supabase:', error);
+        console.error('[Marcar como Pagado] Error:', error);
         throw error;
       }
 
-      // Verificar si realmente se actualizó (RLS puede bloquear silenciosamente)
       if (!data || data.length === 0) {
-        console.error('[Marcar como Pagado] ❌ No se actualizó ningún registro (posible problema de permisos RLS)');
-        throw new Error('No se pudo actualizar la reserva. Verifique que tiene permisos para realizar esta acción.');
+        throw new Error('No se pudo actualizar. Verifique permisos.');
       }
 
-      console.log('[Marcar como Pagado] ✅ Actualizado:', {
-        reservationId: reservation.id,
-        nuevoEstado: data[0]?.estado,
-        nuevoPaymentStatus: data[0]?.payment_status
-      });
-
-      toast.success("Pago registrado exitosamente", {
-        description: "La reserva ahora está lista para generar contrato.",
-      });
-      
-      // Invalidar todas las queries relacionadas
-      queryClient.invalidateQueries({ queryKey: ['reservations'] });
-      queryClient.invalidateQueries({ queryKey: ['reservations-calendar'] });
-      queryClient.invalidateQueries({ queryKey: ['reservations-finance'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-      
+      console.log('[Marcar como Pagado] ✅ Actualizado:', data[0]);
+      toast.success("Pago registrado", { description: "La reserva está lista para generar contrato." });
+      invalidateAllQueries();
       onUpdate();
     } catch (error: any) {
-      console.error("[Marcar como Pagado] ❌ Error:", error);
-      toast.error("Error al registrar pago", {
-        description: error.message,
-      });
+      console.error("[Marcar como Pagado] Error:", error);
+      toast.error("Error al registrar pago", { description: error.message });
     } finally {
       setLoading(false);
     }
@@ -97,7 +85,6 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
 
   /**
    * CANCELAR CON DEVOLUCIÓN
-   * Marca estado = cancelada, payment_status = refunded (si había pago)
    */
   const handleCancelWithRefund = async () => {
     if (!cancellationReason.trim()) {
@@ -108,55 +95,41 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
     setLoading(true);
     try {
       const userId = (await supabase.auth.getUser()).data.user?.id;
-      const hadPayment = reservation.payment_status === 'paid';
 
-      const { error: reservationError } = await supabase
+      const { data, error } = await supabase
         .from("reservations")
         .update({
-          estado: "cancelada",                                    // Estado unificado
-          payment_status: hadPayment ? "refunded" : "pending",    // Marcar devolución si había pago
+          estado: "cancelada",
+          payment_status: "refunded",
+          cancellation_type: "con_devolucion",
           cancelled_at: new Date().toISOString(),
           cancelled_by: userId,
           cancellation_reason: cancellationReason,
-          refund_status: hadPayment ? "pending" : null,
+          refund_status: "pending",
           updated_at: new Date().toISOString(),
         })
-        .eq("id", reservation.id);
-
-      if (reservationError) throw reservationError;
-
-      // Liberar el vehículo
-      const { data: reservationData } = await supabase
-        .from("reservations")
-        .select("vehicle_id")
         .eq("id", reservation.id)
-        .single();
+        .select();
 
-      if (reservationData?.vehicle_id) {
+      if (error) throw error;
+      if (!data || data.length === 0) throw new Error('No se pudo cancelar. Verifique permisos.');
+
+      // Liberar vehículo
+      if (reservation.vehicle_id) {
         await supabase
           .from("vehicles")
           .update({ estado: "disponible" })
-          .eq("id", reservationData.vehicle_id);
+          .eq("id", reservation.vehicle_id);
       }
 
-      toast.success("Reserva cancelada", {
-        description: hadPayment 
-          ? "El proceso de devolución ha sido iniciado."
-          : "La reserva ha sido cancelada.",
-      });
-      
-      // Invalidar queries
-      queryClient.invalidateQueries({ queryKey: ['reservations'] });
-      queryClient.invalidateQueries({ queryKey: ['reservations-calendar'] });
-      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-      
+      console.log('[Cancelar con Devolución] ✅', data[0]);
+      toast.success("Reserva cancelada", { description: "Proceso de devolución iniciado." });
+      invalidateAllQueries();
+      setCancellationReason("");
       onUpdate();
     } catch (error: any) {
-      console.error("Error cancelling reservation:", error);
-      toast.error("Error al cancelar reserva", {
-        description: error.message,
-      });
+      console.error("Error cancelando:", error);
+      toast.error("Error al cancelar", { description: error.message });
     } finally {
       setLoading(false);
     }
@@ -175,48 +148,40 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
     try {
       const userId = (await supabase.auth.getUser()).data.user?.id;
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("reservations")
         .update({
           estado: "cancelada",
-          payment_status: "paid",  // Mantener paid = sin devolución
+          payment_status: "paid", // Mantiene paid = sin devolución
+          cancellation_type: "sin_devolucion",
           cancelled_at: new Date().toISOString(),
           cancelled_by: userId,
           cancellation_reason: cancellationReason,
           refund_status: null,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", reservation.id);
+        .eq("id", reservation.id)
+        .select();
 
       if (error) throw error;
+      if (!data || data.length === 0) throw new Error('No se pudo cancelar. Verifique permisos.');
 
-      // Liberar el vehículo
-      const { data: reservationData } = await supabase
-        .from("reservations")
-        .select("vehicle_id")
-        .eq("id", reservation.id)
-        .single();
-
-      if (reservationData?.vehicle_id) {
+      // Liberar vehículo
+      if (reservation.vehicle_id) {
         await supabase
           .from("vehicles")
           .update({ estado: "disponible" })
-          .eq("id", reservationData.vehicle_id);
+          .eq("id", reservation.vehicle_id);
       }
 
-      toast.success("Reserva cancelada", {
-        description: "La reserva ha sido cancelada sin devolución.",
-      });
-      
-      queryClient.invalidateQueries({ queryKey: ['reservations'] });
-      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
-      
+      console.log('[Cancelar sin Devolución] ✅', data[0]);
+      toast.success("Reserva cancelada", { description: "Sin proceso de devolución." });
+      invalidateAllQueries();
+      setCancellationReason("");
       onUpdate();
     } catch (error: any) {
-      console.error("Error cancelling reservation:", error);
-      toast.error("Error al cancelar reserva", {
-        description: error.message,
-      });
+      console.error("Error cancelando:", error);
+      toast.error("Error al cancelar", { description: error.message });
     } finally {
       setLoading(false);
     }
@@ -241,15 +206,56 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     
-    return `${hours}h ${minutes}m restantes`;
+    return `${hours}h ${minutes}m`;
   };
 
+  // Componente de diálogo de cancelación reutilizable
+  const CancelDialog = ({ trigger, showRefundOptions = false }: { trigger: React.ReactNode; showRefundOptions?: boolean }) => (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>¿Cancelar reserva?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Esta acción cancelará la reserva de {reservation.cliente_nombre} y liberará el vehículo.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="py-4">
+          <label className="text-sm font-medium mb-2 block">Motivo de cancelación *</label>
+          <Textarea
+            value={cancellationReason}
+            onChange={(e) => setCancellationReason(e.target.value)}
+            placeholder="Ingrese el motivo..."
+            className="w-full"
+          />
+        </div>
+        <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+          <AlertDialogCancel onClick={() => setCancellationReason("")}>Cancelar</AlertDialogCancel>
+          {showRefundOptions ? (
+            <>
+              <Button variant="outline" onClick={handleCancelWithoutRefund} disabled={loading}>
+                Sin Devolución
+              </Button>
+              <AlertDialogAction onClick={handleCancelWithRefund} disabled={loading}>
+                Con Devolución
+              </AlertDialogAction>
+            </>
+          ) : (
+            <AlertDialogAction onClick={handleCancelWithRefund} disabled={loading}>
+              Confirmar Cancelación
+            </AlertDialogAction>
+          )}
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
   // ============================================
-  // RENDERIZADO BASADO EN ESTADO UNIFICADO
+  // RENDERIZADO POR ESTADO
   // ============================================
 
-  // RESERVADO SIN PAGO - Mostrar botón de marcar como pagado
-  if (normalizedEstado === "reservado_sin_pago") {
+  // SIN PAGO o PENDIENTE
+  if (normalizedEstado === "sin_pago" || normalizedEstado === "pendiente") {
     const timeRemaining = getTimeRemaining();
     return (
       <div className="flex flex-col gap-2 min-w-[200px]">
@@ -262,99 +268,58 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
           <CreditCard className="mr-2 h-4 w-4" />
           Marcar como Pagado
         </Button>
+        <CancelDialog 
+          trigger={
+            <Button variant="ghost" size="sm" className="w-full text-red-600 hover:text-red-700">
+              <XCircle className="mr-2 h-4 w-4" />
+              Cancelar
+            </Button>
+          }
+        />
       </div>
     );
   }
 
-  // RESERVADO CON PAGO - Puede cancelar con/sin devolución
-  if (normalizedEstado === "reservado_con_pago") {
+  // CON PAGO
+  if (normalizedEstado === "con_pago") {
     return (
       <div className="flex flex-col gap-2 min-w-[200px]">
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm" disabled={loading} className="w-full">
+        <div className="text-xs text-green-600 text-center">✅ Pago confirmado</div>
+        <CancelDialog 
+          showRefundOptions={true}
+          trigger={
+            <Button variant="destructive" size="sm" className="w-full">
               <XCircle className="mr-2 h-4 w-4" />
-              Cancelar con Devolución
+              Cancelar Reserva
             </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Cancelar reserva con devolución?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Se cancelará la reserva de {reservation.cliente_nombre} y se iniciará el proceso de devolución de dinero.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <div className="py-4">
-              <label className="text-sm font-medium mb-2 block">Motivo de cancelación</label>
-              <Textarea
-                value={cancellationReason}
-                onChange={(e) => setCancellationReason(e.target.value)}
-                placeholder="Ingrese el motivo de la cancelación..."
-                className="w-full"
-              />
-            </div>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setCancellationReason("")}>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleCancelWithRefund} disabled={loading}>
-                Confirmar Cancelación
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-        <div className="text-xs text-green-600 text-center">
-          ✅ Pago confirmado - Listo para contrato
-        </div>
+          }
+        />
       </div>
     );
   }
 
-  // PENDIENTE DE CONTRATO
-  if (normalizedEstado === "pendiente_contrato") {
+  // CONTRATO GENERADO
+  if (normalizedEstado === "contrato_generado") {
     return (
       <div className="flex flex-col gap-2 min-w-[200px]">
         <div className="text-xs text-blue-600 text-center">
           <FileText className="h-4 w-4 inline mr-1" />
           Contrato pendiente de firma
         </div>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm" disabled={loading} className="w-full text-red-600 border-red-200 hover:bg-red-50">
+        <CancelDialog 
+          showRefundOptions={true}
+          trigger={
+            <Button variant="outline" size="sm" className="w-full text-red-600 border-red-200 hover:bg-red-50">
               <XCircle className="mr-2 h-4 w-4" />
               Cancelar
             </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Cancelar reserva?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta reserva tiene un contrato pendiente de firma. ¿Desea cancelar con o sin devolución?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <div className="py-4">
-              <label className="text-sm font-medium mb-2 block">Motivo de cancelación</label>
-              <Textarea
-                value={cancellationReason}
-                onChange={(e) => setCancellationReason(e.target.value)}
-                placeholder="Ingrese el motivo de la cancelación..."
-                className="w-full"
-              />
-            </div>
-            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-              <AlertDialogCancel onClick={() => setCancellationReason("")}>Mantener Reserva</AlertDialogCancel>
-              <Button variant="outline" onClick={handleCancelWithoutRefund} disabled={loading}>
-                Sin Devolución
-              </Button>
-              <AlertDialogAction onClick={handleCancelWithRefund} disabled={loading}>
-                Con Devolución
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+          }
+        />
       </div>
     );
   }
 
-  // CONFIRMADO (contrato firmado, en uso)
+  // CONFIRMADO
   if (normalizedEstado === "confirmado") {
     return (
       <div className="flex flex-col gap-2 min-w-[200px]">
@@ -362,40 +327,15 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
           <CheckCircle className="h-4 w-4 inline mr-1" />
           En alquiler activo
         </div>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm" disabled={loading} className="w-full">
+        <CancelDialog 
+          showRefundOptions={true}
+          trigger={
+            <Button variant="outline" size="sm" className="w-full">
               <XCircle className="mr-2 h-4 w-4" />
               Cancelar Reserva
             </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Cancelar reserva confirmada?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta reserva tiene un contrato firmado. La cancelación liberará el vehículo.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <div className="py-4">
-              <label className="text-sm font-medium mb-2 block">Motivo de cancelación</label>
-              <Textarea
-                value={cancellationReason}
-                onChange={(e) => setCancellationReason(e.target.value)}
-                placeholder="Ingrese el motivo de la cancelación..."
-                className="w-full"
-              />
-            </div>
-            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-              <AlertDialogCancel onClick={() => setCancellationReason("")}>Mantener</AlertDialogCancel>
-              <Button variant="outline" onClick={handleCancelWithoutRefund} disabled={loading}>
-                Sin Devolución
-              </Button>
-              <AlertDialogAction onClick={handleCancelWithRefund} disabled={loading}>
-                Con Devolución
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+          }
+        />
       </div>
     );
   }
@@ -404,7 +344,7 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
   if (normalizedEstado === "completada") {
     return (
       <div className="text-xs text-center text-muted-foreground">
-        <CheckCircle className="h-4 w-4 mx-auto mb-1 text-blue-600" />
+        <CheckCircle className="h-4 w-4 mx-auto mb-1 text-slate-600" />
         Completada
       </div>
     );
@@ -413,24 +353,29 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
   // EXPIRADA
   if (normalizedEstado === "expirada") {
     return (
-      <div className="text-xs text-center text-red-600">
+      <div className="text-xs text-center text-orange-600">
         <XCircle className="h-4 w-4 mx-auto mb-1" />
-        Expirada por falta de pago
+        Expirada
       </div>
     );
   }
 
   // CANCELADA
   if (normalizedEstado === "cancelada") {
+    const label = reservation.cancellation_type === 'con_devolucion' 
+      ? 'Cancelada (con devolución)' 
+      : reservation.cancellation_type === 'sin_devolucion'
+        ? 'Cancelada (sin devolución)'
+        : 'Cancelada';
     return (
-      <div className="text-xs text-center text-muted-foreground">
-        <XCircle className="h-4 w-4 mx-auto mb-1 text-red-600" />
-        {reservation.payment_status === 'refunded' ? 'Cancelada (con devolución)' : 'Cancelada'}
+      <div className="text-xs text-center text-red-700">
+        <XCircle className="h-4 w-4 mx-auto mb-1" />
+        {label}
       </div>
     );
   }
 
-  // DEFAULT - mostrar estado actual
+  // DEFAULT
   return (
     <div className="text-xs text-center text-muted-foreground">
       {stateConfig.label}

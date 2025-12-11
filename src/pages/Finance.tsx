@@ -10,7 +10,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, subMonths, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { ReportsTab } from "@/components/finance/ReportsTab";
-import { shouldIncludeInRevenue, REVENUE_STATES, INACTIVE_STATES } from "@/config/states";
+import { ALL_REVENUE_STATES_FOR_QUERY } from "@/config/states";
 
 export default function Finance() {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>("all");
@@ -32,12 +32,11 @@ export default function Finance() {
         .select('*')
         .order('placa');
       if (error) throw error;
-      return data;
+      return data || [];
     }
   });
 
-  // Obtener reservas de los últimos 6 meses
-  // Solo estados que generan ingresos reales
+  // Obtener reservas que generan ingresos (6 meses)
   const { data: reservations } = useQuery({
     queryKey: ['reservations-finance', selectedVehicleId],
     queryFn: async () => {
@@ -46,17 +45,7 @@ export default function Finance() {
         .from('reservations')
         .select('*')
         .gte('fecha_inicio', sixMonthsAgo.toISOString())
-        // Estados UNIFICADOS que generan ingresos
-        .in('estado', [
-          'reservado_con_pago',     // Pagado
-          'pendiente_contrato',     // Contrato pendiente (ya pagado)
-          'confirmado',             // En alquiler activo
-          'completada',             // Finalizada
-          // Estados legacy (para compatibilidad)
-          'completed',
-          'confirmed', 
-          'pending_with_payment'
-        ]);
+        .in('estado', ALL_REVENUE_STATES_FOR_QUERY);
       
       if (selectedVehicleId !== "all") {
         query = query.eq('vehicle_id', selectedVehicleId);
@@ -64,7 +53,7 @@ export default function Finance() {
       
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      return data || [];
     }
   });
 
