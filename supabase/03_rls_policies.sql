@@ -115,8 +115,9 @@ CREATE POLICY "Comercial and operativo can create reservations" ON public.reserv
     FOR INSERT WITH CHECK (public.has_any_role(auth.uid(), ARRAY['socio_principal'::app_role, 'administrador'::app_role, 'comercial'::app_role, 'operativo'::app_role]));
 
 DROP POLICY IF EXISTS "Admins and comercial can update reservations" ON public.reservations;
-CREATE POLICY "Admins and comercial can update reservations" ON public.reservations
-    FOR UPDATE USING (public.has_any_role(auth.uid(), ARRAY['socio_principal'::app_role, 'administrador'::app_role, 'comercial'::app_role]));
+DROP POLICY IF EXISTS "Admins comercial and operativo can update reservations" ON public.reservations;
+CREATE POLICY "Admins comercial and operativo can update reservations" ON public.reservations
+    FOR UPDATE USING (public.has_any_role(auth.uid(), ARRAY['socio_principal'::app_role, 'administrador'::app_role, 'comercial'::app_role, 'operativo'::app_role]));
 
 DROP POLICY IF EXISTS "Admins can delete reservations" ON public.reservations;
 CREATE POLICY "Admins can delete reservations" ON public.reservations
