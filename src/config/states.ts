@@ -1,20 +1,20 @@
 /**
- * Configuración centralizada de estados de reservas
- * Este archivo es la ÚNICA fuente de verdad para colores, etiquetas y comportamientos
+ * Configuración centralizada de estados de reservas - UNIFICADO
  * 
- * IMPORTANTE: Cualquier cambio en estados/colores debe hacerse aquí
+ * IMPORTANTE: El campo `estado` es la ÚNICA fuente de verdad para determinar
+ * el color, comportamiento y visibilidad de una reserva.
+ * 
+ * El campo `payment_status` solo se usa para tracking interno de pagos.
  */
 
 export type ReservationStatus = 
-  | 'pending'
-  | 'pending_no_payment'
-  | 'pending_with_payment'
-  | 'confirmed'
-  | 'completed'
-  | 'cancelled'
-  | 'cancelada_con_devolucion'
-  | 'cancelada_sin_devolucion'
-  | 'expired';
+  | 'reservado_sin_pago'    // Reserva nueva sin pago (2h para pagar)
+  | 'reservado_con_pago'    // Pagado, sin contrato
+  | 'pendiente_contrato'    // Contrato generado, pendiente firma
+  | 'confirmado'            // Contrato firmado, vehículo entregado
+  | 'completada'            // Vehículo devuelto, reserva finalizada
+  | 'expirada'              // Expiró por falta de pago (2h)
+  | 'cancelada';            // Cancelada (ver payment_status para saber si hubo devolución)
 
 export type PaymentStatus = 'pending' | 'paid' | 'refunded';
 
@@ -42,13 +42,16 @@ export interface StateConfig {
 }
 
 /**
- * Configuración de todos los estados de reservas
+ * Configuración de todos los estados de reservas - UNIFICADO
  */
 export const RESERVATION_STATES: Record<ReservationStatus, StateConfig> = {
-  // Estados activos - Ocupan vehículo
-  confirmed: {
-    label: 'Confirmada (Rentado)',
-    description: 'Vehículo actualmente rentado con contrato firmado',
+  // ============================================
+  // ESTADOS ACTIVOS - Ocupan vehículo
+  // ============================================
+  
+  confirmado: {
+    label: 'Confirmado (Rentado)',
+    description: 'Contrato firmado, vehículo en uso',
     badgeClass: 'bg-red-500 text-white hover:bg-red-600',
     calendarClass: 'bg-red-500 hover:bg-red-600',
     colorHex: '#ef4444',
@@ -59,7 +62,20 @@ export const RESERVATION_STATES: Record<ReservationStatus, StateConfig> = {
     sortPriority: 1,
   },
   
-  pending_with_payment: {
+  pendiente_contrato: {
+    label: 'Pendiente de Contrato',
+    description: 'Contrato generado, esperando firma',
+    badgeClass: 'bg-blue-500 text-white hover:bg-blue-600',
+    calendarClass: 'bg-blue-400 hover:bg-blue-500',
+    colorHex: '#3b82f6',
+    isActive: true,
+    includeInRevenue: true,
+    occupiesVehicle: true,
+    hasAutoCancelTimer: false,
+    sortPriority: 2,
+  },
+  
+  reservado_con_pago: {
     label: 'Reservado con Pago',
     description: 'Reserva pagada, pendiente de contrato',
     badgeClass: 'bg-green-500 text-white hover:bg-green-600',
@@ -69,12 +85,12 @@ export const RESERVATION_STATES: Record<ReservationStatus, StateConfig> = {
     includeInRevenue: true,
     occupiesVehicle: true,
     hasAutoCancelTimer: false,
-    sortPriority: 2,
+    sortPriority: 3,
   },
   
-  pending_no_payment: {
+  reservado_sin_pago: {
     label: 'Reservado sin Pago (2h)',
-    description: 'Reserva sin pago, se cancela automáticamente en 2 horas',
+    description: 'Reserva sin pago, expira en 2 horas',
     badgeClass: 'bg-lime-400 text-black hover:bg-lime-500',
     calendarClass: 'bg-lime-400 hover:bg-lime-500',
     colorHex: '#a3e635',
@@ -82,25 +98,14 @@ export const RESERVATION_STATES: Record<ReservationStatus, StateConfig> = {
     includeInRevenue: false, // No contar hasta que se pague
     occupiesVehicle: true,
     hasAutoCancelTimer: true,
-    sortPriority: 3,
+    sortPriority: 4,
   },
   
-  // Alias para retrocompatibilidad
-  pending: {
-    label: 'Reservado sin Pago (2h)',
-    description: 'Reserva pendiente de pago',
-    badgeClass: 'bg-lime-400 text-black hover:bg-lime-500',
-    calendarClass: 'bg-lime-400 hover:bg-lime-500',
-    colorHex: '#a3e635',
-    isActive: true,
-    includeInRevenue: false,
-    occupiesVehicle: true,
-    hasAutoCancelTimer: true,
-    sortPriority: 3,
-  },
+  // ============================================
+  // ESTADOS FINALIZADOS - No ocupan vehículo
+  // ============================================
   
-  // Estados finalizados - No ocupan vehículo
-  completed: {
+  completada: {
     label: 'Completada',
     description: 'Reserva finalizada, vehículo devuelto',
     badgeClass: 'bg-gray-500 text-white',
@@ -113,48 +118,9 @@ export const RESERVATION_STATES: Record<ReservationStatus, StateConfig> = {
     sortPriority: 10,
   },
   
-  cancelled: {
-    label: 'Cancelada',
-    description: 'Reserva cancelada',
-    badgeClass: 'bg-red-700 text-white',
-    calendarClass: 'bg-red-200',
-    colorHex: '#b91c1c',
-    isActive: false,
-    includeInRevenue: false,
-    occupiesVehicle: false,
-    hasAutoCancelTimer: false,
-    sortPriority: 11,
-  },
-  
-  cancelada_con_devolucion: {
-    label: 'Cancelada (Devolución)',
-    description: 'Reserva cancelada con devolución de dinero',
-    badgeClass: 'bg-orange-500 text-white',
-    calendarClass: 'bg-orange-200',
-    colorHex: '#f97316',
-    isActive: false,
-    includeInRevenue: false,
-    occupiesVehicle: false,
-    hasAutoCancelTimer: false,
-    sortPriority: 12,
-  },
-  
-  cancelada_sin_devolucion: {
-    label: 'Cancelada (Sin Devolución)',
-    description: 'Reserva cancelada sin devolución de dinero',
-    badgeClass: 'bg-red-600 text-white',
-    calendarClass: 'bg-red-200',
-    colorHex: '#dc2626',
-    isActive: false,
-    includeInRevenue: true, // El dinero fue retenido
-    occupiesVehicle: false,
-    hasAutoCancelTimer: false,
-    sortPriority: 13,
-  },
-  
-  expired: {
+  expirada: {
     label: 'Expirada',
-    description: 'Reserva expirada por falta de pago',
+    description: 'Expiró por falta de pago después de 2 horas',
     badgeClass: 'bg-gray-400 text-white',
     calendarClass: 'bg-gray-200',
     colorHex: '#9ca3af',
@@ -162,58 +128,104 @@ export const RESERVATION_STATES: Record<ReservationStatus, StateConfig> = {
     includeInRevenue: false,
     occupiesVehicle: false,
     hasAutoCancelTimer: false,
-    sortPriority: 14,
+    sortPriority: 11,
   },
+  
+  cancelada: {
+    label: 'Cancelada',
+    description: 'Reserva cancelada',
+    badgeClass: 'bg-red-700 text-white',
+    calendarClass: 'bg-red-200',
+    colorHex: '#b91c1c',
+    isActive: false,
+    includeInRevenue: false, // Ver payment_status para saber si fue con devolución
+    occupiesVehicle: false,
+    hasAutoCancelTimer: false,
+    sortPriority: 12,
+  },
+};
+
+// Mapeo de estados legacy a nuevos estados
+const LEGACY_STATE_MAP: Record<string, ReservationStatus> = {
+  // Estados legacy -> nuevo estado
+  'pending': 'reservado_sin_pago',
+  'pending_no_payment': 'reservado_sin_pago',
+  'pending_with_payment': 'reservado_con_pago',
+  'reserved_paid': 'reservado_con_pago',
+  'reserved_no_payment': 'reservado_sin_pago',
+  'reserved': 'reservado_sin_pago',
+  'confirmed': 'confirmado',
+  'active': 'confirmado',
+  'rented': 'confirmado',
+  'completed': 'completada',
+  'cancelled': 'cancelada',
+  'cancelada_con_devolucion': 'cancelada',
+  'cancelada_sin_devolucion': 'cancelada',
+  'expired': 'expirada',
 };
 
 /**
  * Obtiene la configuración de un estado de reserva
- * Maneja estados desconocidos devolviendo un estado por defecto
+ * Maneja estados legacy y desconocidos
  */
 export function getStateConfig(estado: string | null | undefined): StateConfig {
   if (!estado) {
-    return RESERVATION_STATES.pending;
+    return RESERVATION_STATES.reservado_sin_pago;
   }
   
-  const normalizedState = estado.toLowerCase().trim() as ReservationStatus;
+  const normalizedState = estado.toLowerCase().trim();
   
-  // Mapeo de alias y estados legacy
-  const stateMap: Record<string, ReservationStatus> = {
-    'active': 'confirmed',
-    'rented': 'confirmed',
-    'reserved_paid': 'pending_with_payment',
-    'reserved_no_payment': 'pending_no_payment',
-    'reserved': 'pending_no_payment',
-  };
+  // Si es un estado nuevo válido, devolverlo directamente
+  if (normalizedState in RESERVATION_STATES) {
+    return RESERVATION_STATES[normalizedState as ReservationStatus];
+  }
   
-  const mappedState = stateMap[normalizedState] || normalizedState;
+  // Si es un estado legacy, mapearlo al nuevo
+  if (normalizedState in LEGACY_STATE_MAP) {
+    const newState = LEGACY_STATE_MAP[normalizedState];
+    return RESERVATION_STATES[newState];
+  }
   
-  return RESERVATION_STATES[mappedState as ReservationStatus] || RESERVATION_STATES.pending;
+  // Estado desconocido, devolver default
+  console.warn(`[States] Estado desconocido: "${estado}", usando reservado_sin_pago`);
+  return RESERVATION_STATES.reservado_sin_pago;
 }
 
 /**
- * Determina si una reserva está activa basándose en su estado y pago
+ * Normaliza un estado legacy al nuevo formato
  */
-export function isReservationActive(estado: string, paymentStatus?: string): boolean {
-  const config = getStateConfig(estado);
-  return config.isActive;
+export function normalizeState(estado: string | null | undefined): ReservationStatus {
+  if (!estado) return 'reservado_sin_pago';
+  
+  const normalizedState = estado.toLowerCase().trim();
+  
+  // Si ya es un estado nuevo válido
+  if (normalizedState in RESERVATION_STATES) {
+    return normalizedState as ReservationStatus;
+  }
+  
+  // Si es legacy, mapear
+  if (normalizedState in LEGACY_STATE_MAP) {
+    return LEGACY_STATE_MAP[normalizedState];
+  }
+  
+  return 'reservado_sin_pago';
+}
+
+/**
+ * Determina si una reserva está activa basándose SOLO en su estado
+ */
+export function isReservationActive(estado: string): boolean {
+  return getStateConfig(estado).isActive;
 }
 
 /**
  * Determina si una reserva debe incluirse en los ingresos financieros
+ * Solo cuenta: reservado_con_pago, pendiente_contrato, confirmado, completada
  */
-export function shouldIncludeInRevenue(estado: string, paymentStatus?: string): boolean {
-  // Si el pago está confirmado, siempre incluir (excepto cancelaciones con devolución)
-  if (paymentStatus === 'paid') {
-    const config = getStateConfig(estado);
-    // No incluir si fue cancelada con devolución
-    if (estado === 'cancelada_con_devolucion' || config.colorHex === '#f97316') {
-      return false;
-    }
-    return true;
-  }
-  
-  return getStateConfig(estado).includeInRevenue;
+export function shouldIncludeInRevenue(estado: string): boolean {
+  const config = getStateConfig(estado);
+  return config.includeInRevenue;
 }
 
 /**
@@ -226,69 +238,72 @@ export function occupiesVehicleInCalendar(estado: string): boolean {
 /**
  * Obtiene el tipo de estado para el calendario
  */
-export type CalendarStatus = 'rented' | 'reserved_paid' | 'reserved_no_payment' | 'maintenance' | 'available' | 'expired';
+export type CalendarStatus = 'rented' | 'pending_contract' | 'reserved_paid' | 'reserved_no_payment' | 'maintenance' | 'available';
 
-export function getCalendarStatus(estado: string, paymentStatus?: string): CalendarStatus {
+export function getCalendarStatus(estado: string): CalendarStatus {
   const config = getStateConfig(estado);
   
-  // Si está expirado o cancelado, no mostrar en calendario
+  // Si no ocupa vehículo, está disponible
   if (!config.occupiesVehicle) {
     return 'available';
   }
   
-  // Mapear al tipo de calendario
-  if (estado === 'confirmed' || estado === 'completed' || estado === 'active') {
-    return 'rented';
-  }
+  // Mapear al tipo de calendario basándose SOLO en estado
+  const normalized = normalizeState(estado);
   
-  if (estado === 'pending_with_payment' || paymentStatus === 'paid') {
-    return 'reserved_paid';
+  switch (normalized) {
+    case 'confirmado':
+    case 'completada':
+      return 'rented';
+    case 'pendiente_contrato':
+      return 'pending_contract';
+    case 'reservado_con_pago':
+      return 'reserved_paid';
+    case 'reservado_sin_pago':
+    default:
+      return 'reserved_no_payment';
   }
-  
-  return 'reserved_no_payment';
 }
 
 /**
  * Estados que deben mostrarse en el calendario (ocupan vehículo)
  */
 export const CALENDAR_VISIBLE_STATES: ReservationStatus[] = [
-  'confirmed',
-  'pending_with_payment',
-  'pending_no_payment',
-  'pending',
+  'confirmado',
+  'pendiente_contrato',
+  'reservado_con_pago',
+  'reservado_sin_pago',
 ];
 
 /**
  * Estados que cuentan para reportes financieros de ingresos
  */
 export const REVENUE_STATES: ReservationStatus[] = [
-  'confirmed',
-  'pending_with_payment',
-  'completed',
-  'cancelada_sin_devolucion',
+  'reservado_con_pago',
+  'pendiente_contrato',
+  'confirmado',
+  'completada',
 ];
 
 /**
- * Estados que NO deben mostrarse en reportes activos
+ * Estados inactivos que no ocupan vehículo
  */
 export const INACTIVE_STATES: ReservationStatus[] = [
-  'cancelled',
-  'cancelada_con_devolucion',
-  'cancelada_sin_devolucion',
-  'expired',
+  'expirada',
+  'cancelada',
 ];
 
 /**
  * Tiempo de auto-cancelación en milisegundos (2 horas)
  */
-export const AUTO_CANCEL_TIME_MS = 2 * 60 * 60 * 1000; // 2 hours
+export const AUTO_CANCEL_TIME_MS = 2 * 60 * 60 * 1000;
 
 /**
  * Verifica si una reserva debería haber expirado
+ * SOLO basándose en el estado y tiempo
  */
 export function shouldBeExpired(reservation: {
   estado: string;
-  payment_status?: string | null;
   auto_cancel_at?: string | null;
   created_at: string;
 }): boolean {
@@ -299,18 +314,12 @@ export function shouldBeExpired(reservation: {
     return false;
   }
   
-  // Si ya se pagó, no puede expirar
-  if (reservation.payment_status === 'paid') {
-    return false;
-  }
-  
   const now = new Date();
   let expirationTime: Date;
   
   if (reservation.auto_cancel_at) {
     expirationTime = new Date(reservation.auto_cancel_at);
   } else {
-    // Calcular desde created_at + 2 horas
     expirationTime = new Date(new Date(reservation.created_at).getTime() + AUTO_CANCEL_TIME_MS);
   }
   
@@ -322,13 +331,12 @@ export function shouldBeExpired(reservation: {
  */
 export function getTimeUntilExpiration(reservation: {
   estado: string;
-  payment_status?: string | null;
   auto_cancel_at?: string | null;
   created_at: string;
 }): { hours: number; minutes: number; isExpired: boolean; isUrgent: boolean } | null {
   const config = getStateConfig(reservation.estado);
   
-  if (!config.hasAutoCancelTimer || reservation.payment_status === 'paid') {
+  if (!config.hasAutoCancelTimer) {
     return null;
   }
   
@@ -349,17 +357,30 @@ export function getTimeUntilExpiration(reservation: {
   
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  const isUrgent = diff < 30 * 60 * 1000; // Menos de 30 minutos
+  const isUrgent = diff < 30 * 60 * 1000;
   
   return { hours, minutes, isExpired: false, isUrgent };
 }
 
-// Exportar colores del calendario para uso consistente
+// Colores del calendario usando el sistema unificado
 export const CALENDAR_COLORS = {
-  rented: 'bg-red-500 hover:bg-red-600',
-  reserved_paid: 'bg-green-400 hover:bg-green-500',
-  reserved_no_payment: 'bg-lime-400 hover:bg-lime-500',
+  rented: 'bg-red-500 hover:bg-red-600',           // confirmado
+  pending_contract: 'bg-blue-400 hover:bg-blue-500', // pendiente_contrato
+  reserved_paid: 'bg-green-400 hover:bg-green-500',  // reservado_con_pago
+  reserved_no_payment: 'bg-lime-400 hover:bg-lime-500', // reservado_sin_pago
   maintenance: 'bg-orange-500 hover:bg-orange-600',
   available: 'bg-white border border-border hover:bg-muted/20',
-  expired: 'bg-gray-300',
 };
+
+/**
+ * Obtener la etiqueta de cancelación basada en payment_status
+ */
+export function getCancellationLabel(paymentStatus: string | null): string {
+  if (paymentStatus === 'refunded') {
+    return 'Cancelada (con devolución)';
+  }
+  if (paymentStatus === 'paid') {
+    return 'Cancelada (sin devolución)';
+  }
+  return 'Cancelada';
+}

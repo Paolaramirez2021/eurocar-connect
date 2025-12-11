@@ -23,7 +23,7 @@ interface CalendarAvailabilityReportProps {
 
 interface DayStatus {
   date: Date;
-  status: 'rented' | 'reserved_paid' | 'reserved_no_payment' | 'maintenance' | 'available';
+  status: 'rented' | 'pending_contract' | 'reserved_paid' | 'reserved_no_payment' | 'maintenance' | 'available';
   isPicoPlaca?: boolean;
   isHoliday?: boolean;
   reservationId?: string;
@@ -122,12 +122,22 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
   const { data: reservations, isLoading: reservationsLoading } = useQuery({
     queryKey: ['reservations-calendar', dateRange],
     queryFn: async () => {
-      // Solo obtener reservas que ocupan vehículo (no canceladas ni expiradas)
+      // Solo obtener reservas que ocupan vehículo usando estados unificados
       const { data, error } = await supabase
         .from('reservations')
         .select('*')
-        .in('estado', ['confirmed', 'pending', 'pending_no_payment', 'pending_with_payment', 'completed'])
-        .not('estado', 'in', '(cancelled,expired,cancelada_con_devolucion,cancelada_sin_devolucion)')
+        .in('estado', [
+          // Estados unificados que ocupan vehículo
+          'reservado_sin_pago',
+          'reservado_con_pago', 
+          'pendiente_contrato',
+          'confirmado',
+          // Estados legacy (para compatibilidad)
+          'confirmed',
+          'pending',
+          'pending_no_payment',
+          'pending_with_payment'
+        ])
         .gte('fecha_fin', dateRange.from.toISOString())
         .lte('fecha_inicio', dateRange.to.toISOString());
       if (error) throw error;
@@ -192,7 +202,7 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
           return format(maintDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd');
         });
 
-        // Determine status based on estado values using centralized config
+        // Determine status based on estado ONLY using centralized config
         let status: DayStatus['status'] = 'available';
         let reservationId: string | undefined;
         let maintenanceId: string | undefined;
@@ -203,8 +213,8 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
         } else if (reservation) {
           reservationId = reservation.id;
           
-          // Usar la función centralizada para determinar el estado del calendario
-          const calendarStatus = getCalendarStatus(reservation.estado, reservation.payment_status);
+          // Usar la función centralizada - SOLO basado en estado
+          const calendarStatus = getCalendarStatus(reservation.estado);
           
           // Solo mostrar si el estado ocupa el vehículo
           if (occupiesVehicleInCalendar(reservation.estado)) {
@@ -224,8 +234,9 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
         };
       });
 
-      // Calculate totals - group both reserved types as occupied
+      // Calculate totals - include pending_contract as occupied
       const totalOccupied = days.filter(d => d.status === 'rented').length;
+      const totalPendingContract = days.filter(d => d.status === 'pending_contract').length;
       const totalReserved = days.filter(d => d.status === 'reserved_paid' || d.status === 'reserved_no_payment').length;
       const totalMaintenance = days.filter(d => d.status === 'maintenance').length;
       const totalAvailable = days.filter(d => d.status === 'available').length;
@@ -237,7 +248,7 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
         modelo: vehicle.modelo,
         days,
         totalAvailable,
-        totalOccupied: totalOccupied + totalReserved,
+        totalOccupied: totalOccupied + totalPendingContract + totalReserved,
         totalMaintenance
       };
     });
@@ -283,7 +294,11 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
           <div className="flex flex-wrap items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-muted/30 rounded-b-lg text-xs sm:text-sm border-t">
             <div className="flex items-center gap-1.5 sm:gap-2">
               <div className="w-3 h-3 sm:w-4 sm:h-4 bg-red-500 rounded" />
-              <span>Rentado (confirmado)</span>
+              <span>Confirmado (en alquiler)</span>
+            </div>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-blue-400 rounded" />
+              <span>Pendiente de contrato</span>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2">
               <div className="w-3 h-3 sm:w-4 sm:h-4 bg-green-400 rounded" />

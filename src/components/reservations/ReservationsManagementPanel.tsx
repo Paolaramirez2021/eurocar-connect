@@ -131,20 +131,13 @@ export const ReservationsManagementPanel = () => {
     setFilteredReservations(filtered);
   };
 
-  const getStatusBadge = (estado: string, paymentStatus: string) => {
-    // Usar configuración centralizada
+  const getStatusBadge = (estado: string) => {
+    // Usar configuración centralizada - SOLO basado en estado
     const config = getStateConfig(estado);
-    
-    // Caso especial: si tiene pago confirmado pero estado es pending, mostrar como pending_with_payment
-    if (paymentStatus === 'paid' && (estado === 'pending' || estado === 'pending_no_payment')) {
-      const paidConfig = getStateConfig('pending_with_payment');
-      return <Badge className={paidConfig.badgeClass}>{paidConfig.label}</Badge>;
-    }
-    
     return <Badge className={config.badgeClass}>{config.label}</Badge>;
   };
 
-  const getTimeRemaining = (reservation: { estado: string; payment_status: string; auto_cancel_at: string | null; created_at: string }) => {
+  const getTimeRemaining = (reservation: { estado: string; auto_cancel_at: string | null; created_at: string }) => {
     const timeInfo = getTimeUntilExpiration(reservation);
     
     if (!timeInfo) return null;
@@ -221,16 +214,18 @@ export const ReservationsManagementPanel = () => {
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-[220px]">
                 <SelectValue placeholder="Filtrar por estado" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los estados</SelectItem>
-                <SelectItem value="pending_no_payment">Sin pago (2h)</SelectItem>
-                <SelectItem value="pending_with_payment">Con pago</SelectItem>
-                <SelectItem value="confirmed">Confirmadas</SelectItem>
-                <SelectItem value="cancelled">Canceladas</SelectItem>
-                <SelectItem value="completed">Completadas</SelectItem>
+                <SelectItem value="reservado_sin_pago">Sin pago (2h)</SelectItem>
+                <SelectItem value="reservado_con_pago">Con pago</SelectItem>
+                <SelectItem value="pendiente_contrato">Pendiente contrato</SelectItem>
+                <SelectItem value="confirmado">Confirmadas</SelectItem>
+                <SelectItem value="completada">Completadas</SelectItem>
+                <SelectItem value="expirada">Expiradas</SelectItem>
+                <SelectItem value="cancelada">Canceladas</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -298,7 +293,7 @@ export const ReservationsManagementPanel = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {getStatusBadge(reservation.estado, reservation.payment_status)}
+                      {getStatusBadge(reservation.estado)}
                     </TableCell>
                     <TableCell>
                       {getPaymentBadge(reservation.payment_status, reservation.payment_date)}

@@ -36,8 +36,8 @@ export default function Finance() {
     }
   });
 
-  // Obtener reservas completadas de los últimos 6 meses
-  // Excluir estados cancelados y expirados para cálculo de ingresos
+  // Obtener reservas de los últimos 6 meses
+  // Solo estados que generan ingresos reales
   const { data: reservations } = useQuery({
     queryKey: ['reservations-finance', selectedVehicleId],
     queryFn: async () => {
@@ -46,10 +46,17 @@ export default function Finance() {
         .from('reservations')
         .select('*')
         .gte('fecha_inicio', sixMonthsAgo.toISOString())
-        // Estados que generan ingresos (usando configuración centralizada)
-        .in('estado', ['completed', 'confirmed', 'pending_with_payment', 'cancelada_sin_devolucion'])
-        // Excluir explícitamente estados inactivos
-        .not('estado', 'in', '(cancelled,expired,cancelada_con_devolucion)');
+        // Estados UNIFICADOS que generan ingresos
+        .in('estado', [
+          'reservado_con_pago',     // Pagado
+          'pendiente_contrato',     // Contrato pendiente (ya pagado)
+          'confirmado',             // En alquiler activo
+          'completada',             // Finalizada
+          // Estados legacy (para compatibilidad)
+          'completed',
+          'confirmed', 
+          'pending_with_payment'
+        ]);
       
       if (selectedVehicleId !== "all") {
         query = query.eq('vehicle_id', selectedVehicleId);
