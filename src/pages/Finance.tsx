@@ -36,15 +36,13 @@ export default function Finance() {
     }
   });
 
-  // Obtener TODAS las reservas (6 meses) - filtrar ingresos en frontend
+  // Obtener TODAS las reservas (sin filtro de fecha para incluir todas)
   const { data: reservations } = useQuery({
     queryKey: ['reservations-finance', selectedVehicleId],
     queryFn: async () => {
-      const sixMonthsAgo = subMonths(new Date(), 6);
       let query = supabase
         .from('reservations')
-        .select('*')
-        .gte('fecha_inicio', sixMonthsAgo.toISOString());
+        .select('*');
       
       if (selectedVehicleId !== "all") {
         query = query.eq('vehicle_id', selectedVehicleId);
@@ -56,6 +54,17 @@ export default function Finance() {
         throw error;
       }
       console.log('[Finance] Reservations loaded:', data?.length || 0);
+      // Debug: mostrar datos de reservas
+      data?.forEach(r => {
+        console.log('[Finance] Reserva:', {
+          id: r.id?.substring(0, 8),
+          estado: r.estado,
+          payment_status: r.payment_status,
+          valor_total: r.valor_total,
+          price_total: r.price_total,
+          fecha_inicio: r.fecha_inicio?.substring(0, 10)
+        });
+      });
       return data || [];
     }
   });
@@ -91,10 +100,12 @@ export default function Finance() {
     return daysInMonth.map(day => {
       const dayStr = format(day, 'yyyy-MM-dd');
       
-      // Calcular ingresos de ese día (reservas activas ese día que generan ingreso)
+      // Calcular ingresos de ese día (reservas activas ese día)
       const dailyIncome = reservations.reduce((sum, reservation) => {
-        // Solo contar si el estado genera ingreso
-        if (!shouldIncludeInRevenue(reservation.estado, reservation.payment_status)) {
+        // Excluir canceladas y expiradas
+        const estadosExcluidos = ['cancelled', 'cancelada', 'expired', 'expirada'];
+        const estadoNormalizado = (reservation.estado || '').toLowerCase();
+        if (estadosExcluidos.includes(estadoNormalizado)) {
           return sum;
         }
         
@@ -129,12 +140,17 @@ export default function Finance() {
       const monthStart = startOfMonth(monthDate);
       const monthEnd = endOfMonth(monthDate);
 
-      // Filtrar reservas del mes que generan ingreso
+      // Filtrar reservas del mes (excluir canceladas y expiradas)
       const monthReservations = reservations.filter(r => {
         const resDate = new Date(r.fecha_inicio);
         const inRange = resDate >= monthStart && resDate <= monthEnd;
-        const generatesRevenue = shouldIncludeInRevenue(r.estado, r.payment_status);
-        return inRange && generatesRevenue;
+        
+        // Excluir canceladas y expiradas
+        const estadosExcluidos = ['cancelled', 'cancelada', 'expired', 'expirada'];
+        const estadoNormalizado = (r.estado || '').toLowerCase();
+        const esActiva = !estadosExcluidos.includes(estadoNormalizado);
+        
+        return inRange && esActiva;
       });
 
       // Calcular ingresos brutos del mes
@@ -185,9 +201,12 @@ export default function Finance() {
       };
     }
 
-    const reservacionesValidas = reservations.filter(
-      r => r.estado === 'completed' || r.estado === 'confirmed' || r.estado === 'pending'
-    );
+    const reservacionesValidas = reservations.filter(r => {
+      // Incluir todas las reservas activas (no canceladas, no expiradas, no completadas)
+      const estadosExcluidos = ['cancelled', 'cancelada', 'expired', 'expirada'];
+      const estadoNormalizado = (r.estado || '').toLowerCase();
+      return !estadosExcluidos.includes(estadoNormalizado);
+    });
 
     const ingresosBrutos = reservacionesValidas.reduce(
       (sum, r) => sum + (r.valor_total || r.price_total || 0), 
