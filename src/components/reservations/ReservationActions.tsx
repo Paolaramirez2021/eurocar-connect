@@ -44,7 +44,7 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
         paymentStatusActual: reservation.payment_status
       });
 
-      const { error } = await supabase
+      const { data, error, count } = await supabase
         .from("reservations")
         .update({
           // UNIFICADO: Actualizar AMBOS campos
@@ -54,14 +54,24 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
           auto_cancel_at: null,               // Eliminar auto-cancelación
           updated_at: new Date().toISOString(),
         })
-        .eq("id", reservation.id);
+        .eq("id", reservation.id)
+        .select();  // Agregar select para obtener los datos actualizados
 
-      if (error) throw error;
+      if (error) {
+        console.error('[Marcar como Pagado] ❌ Error de Supabase:', error);
+        throw error;
+      }
+
+      // Verificar si realmente se actualizó (RLS puede bloquear silenciosamente)
+      if (!data || data.length === 0) {
+        console.error('[Marcar como Pagado] ❌ No se actualizó ningún registro (posible problema de permisos RLS)');
+        throw new Error('No se pudo actualizar la reserva. Verifique que tiene permisos para realizar esta acción.');
+      }
 
       console.log('[Marcar como Pagado] ✅ Actualizado:', {
         reservationId: reservation.id,
-        nuevoEstado: 'reservado_con_pago',
-        nuevoPaymentStatus: 'paid'
+        nuevoEstado: data[0]?.estado,
+        nuevoPaymentStatus: data[0]?.payment_status
       });
 
       toast.success("Pago registrado exitosamente", {
