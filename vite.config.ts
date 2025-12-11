@@ -19,6 +19,8 @@ export default defineConfig(({ mode }) => ({
         "assets/logo-eurocar.png",
         "pwa-192x192.png",
         "pwa-512x512.png",
+        "pwa-192x192-solid.png",
+        "pwa-512x512-solid.png",
         "favicon.ico",
         "robots.txt"
       ],
@@ -37,13 +39,13 @@ export default defineConfig(({ mode }) => ({
         prefer_related_applications: false,
         icons: [
           {
-            src: "/pwa-192x192.png",
+            src: "/pwa-192x192-solid.png",
             sizes: "192x192",
             type: "image/png",
             purpose: "any"
           },
           {
-            src: "/pwa-512x512.png",
+            src: "/pwa-512x512-solid.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "any"
