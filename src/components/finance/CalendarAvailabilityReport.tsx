@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { getCalendarStatus, CALENDAR_COLORS, occupiesVehicleInCalendar, CALENDAR_VISIBLE_STATES, type CalendarStatus } from "@/config/states";
 
 interface CalendarAvailabilityReportProps {
   dateRange: {
@@ -121,10 +122,12 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
   const { data: reservations, isLoading: reservationsLoading } = useQuery({
     queryKey: ['reservations-calendar', dateRange],
     queryFn: async () => {
+      // Solo obtener reservas que ocupan vehículo (no canceladas ni expiradas)
       const { data, error } = await supabase
         .from('reservations')
         .select('*')
-        .in('estado', ['confirmed', 'pending', 'completed'])
+        .in('estado', ['confirmed', 'pending', 'pending_no_payment', 'pending_with_payment', 'completed'])
+        .not('estado', 'in', '(cancelled,expired,cancelada_con_devolucion,cancelada_sin_devolucion)')
         .gte('fecha_fin', dateRange.from.toISOString())
         .lte('fecha_inicio', dateRange.to.toISOString());
       if (error) throw error;
@@ -189,7 +192,7 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
           return format(maintDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd');
         });
 
-        // Determine status based on estado values
+        // Determine status based on estado values using centralized config
         let status: DayStatus['status'] = 'available';
         let reservationId: string | undefined;
         let maintenanceId: string | undefined;
@@ -199,23 +202,13 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
           maintenanceId = maintenanceItem.id;
         } else if (reservation) {
           reservationId = reservation.id;
-          const estado = reservation.estado?.toLowerCase() || '';
           
-          // Estados que indican que está rentado/ocupado (rojo)
-          if (estado === 'confirmed' || estado === 'completed' || estado === 'active') {
-            status = 'rented';
-          } 
-          // Reservado con pago (verde)
-          else if (estado === 'pending_with_payment' || estado === 'reserved_paid') {
-            status = 'reserved_paid';
-          } 
-          // Reservado sin pago (amarillo/lima)
-          else if (estado === 'pending_no_payment' || estado === 'reserved_no_payment') {
-            status = 'reserved_no_payment';
-          }
-          // Cualquier otro estado de reserva activa (pending genérico)
-          else if (estado === 'pending' || estado.includes('reserv')) {
-            status = 'reserved_no_payment'; // Por defecto pendiente sin pago
+          // Usar la función centralizada para determinar el estado del calendario
+          const calendarStatus = getCalendarStatus(reservation.estado, reservation.payment_status);
+          
+          // Solo mostrar si el estado ocupa el vehículo
+          if (occupiesVehicleInCalendar(reservation.estado)) {
+            status = calendarStatus as DayStatus['status'];
           }
         }
 
@@ -252,19 +245,9 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
 
   const isLoading = vehiclesLoading || reservationsLoading || maintenanceLoading;
 
+  // Usar colores centralizados
   const getDayStatusColor = (status: DayStatus['status']) => {
-    switch (status) {
-      case 'rented':
-        return 'bg-red-500 hover:bg-red-600';
-      case 'reserved_paid':
-        return 'bg-green-400 hover:bg-green-500';
-      case 'reserved_no_payment':
-        return 'bg-lime-400 hover:bg-lime-500';
-      case 'maintenance':
-        return 'bg-orange-500 hover:bg-orange-600';
-      default:
-        return 'bg-white border border-border hover:bg-muted/20';
-    }
+    return CALENDAR_COLORS[status as keyof typeof CALENDAR_COLORS] || CALENDAR_COLORS.available;
   };
 
   if (isLoading) {

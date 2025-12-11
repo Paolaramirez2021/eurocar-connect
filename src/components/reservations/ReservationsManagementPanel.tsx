@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { ReservationActions } from "./ReservationActions";
 import { ReservationDetailsModal } from "./ReservationDetailsModal";
 import { useRealtimeReservations } from "@/hooks/useRealtimeReservations";
+import { useReservationExpiration } from "@/hooks/useReservationExpiration";
+import { getStateConfig, getTimeUntilExpiration, RESERVATION_STATES, type ReservationStatus } from "@/config/states";
 
 interface Reservation {
   id: string;
@@ -55,6 +57,9 @@ export const ReservationsManagementPanel = () => {
 
   // Habilitar actualización en tiempo real
   useRealtimeReservations();
+  
+  // Habilitar expiración automática de reservas sin pago
+  useReservationExpiration();
 
   useEffect(() => {
     loadReservations();
@@ -127,68 +132,30 @@ export const ReservationsManagementPanel = () => {
   };
 
   const getStatusBadge = (estado: string, paymentStatus: string) => {
-    // Orden de prioridad: estado > paymentStatus
-    if (estado === "confirmed") {
-      return <Badge className="bg-red-500 text-white">Confirmada (Rentado)</Badge>;
+    // Usar configuración centralizada
+    const config = getStateConfig(estado);
+    
+    // Caso especial: si tiene pago confirmado pero estado es pending, mostrar como pending_with_payment
+    if (paymentStatus === 'paid' && (estado === 'pending' || estado === 'pending_no_payment')) {
+      const paidConfig = getStateConfig('pending_with_payment');
+      return <Badge className={paidConfig.badgeClass}>{paidConfig.label}</Badge>;
     }
     
-    // Si tiene pago confirmado
-    if (estado === "pending_with_payment" || (paymentStatus === "paid" && estado !== "pending_no_payment")) {
-      return <Badge className="bg-green-500 text-white">Reservado con Pago</Badge>;
-    }
-    
-    // Si está pendiente sin pago
-    if (estado === "pending_no_payment" || estado === "pending" || paymentStatus === "pending") {
-      return <Badge className="bg-lime-400 text-black">Reservado sin Pago (2h)</Badge>;
-    }
-    
-    if (estado === "cancelled") {
-      return <Badge variant="destructive">Cancelada</Badge>;
-    }
-    
-    if (estado === "completed") {
-      return <Badge variant="secondary">Completada</Badge>;
-    }
-    
-    return <Badge variant="outline">{estado}</Badge>;
+    return <Badge className={config.badgeClass}>{config.label}</Badge>;
   };
 
   const getTimeRemaining = (reservation: { estado: string; payment_status: string; auto_cancel_at: string | null; created_at: string }) => {
-    // Only show for reservations that should auto-cancel
-    if (reservation.estado !== 'pending_no_payment' && reservation.estado !== 'pending') {
-      return null;
-    }
+    const timeInfo = getTimeUntilExpiration(reservation);
     
-    if (reservation.payment_status === 'paid') {
-      return null;
-    }
-
-    const now = new Date();
-    let cancelAt: Date;
+    if (!timeInfo) return null;
     
-    // Use auto_cancel_at if available, otherwise calculate from created_at
-    if (reservation.auto_cancel_at) {
-      cancelAt = new Date(reservation.auto_cancel_at);
-    } else {
-      // Fallback: calculate 2 hours from creation
-      const createdAt = new Date(reservation.created_at);
-      cancelAt = new Date(createdAt.getTime() + (2 * 60 * 60 * 1000));
-    }
-    
-    const diff = cancelAt.getTime() - now.getTime();
-    
-    if (diff <= 0) {
+    if (timeInfo.isExpired) {
       return <span className="text-red-600 font-semibold">⏰ Expirado</span>;
     }
     
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
-    const isUrgent = diff < 30 * 60 * 1000; // Less than 30 minutes
-    
     return (
-      <span className={isUrgent ? "text-red-600 font-semibold" : "text-orange-600 font-medium"}>
-        ⏱️ {hours}h {minutes}m
+      <span className={timeInfo.isUrgent ? "text-red-600 font-semibold" : "text-orange-600 font-medium"}>
+        ⏱️ {timeInfo.hours}h {timeInfo.minutes}m
       </span>
     );
   };

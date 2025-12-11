@@ -10,6 +10,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, subMonths, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { ReportsTab } from "@/components/finance/ReportsTab";
+import { shouldIncludeInRevenue, REVENUE_STATES, INACTIVE_STATES } from "@/config/states";
 
 export default function Finance() {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>("all");
@@ -36,6 +37,7 @@ export default function Finance() {
   });
 
   // Obtener reservas completadas de los últimos 6 meses
+  // Excluir estados cancelados y expirados para cálculo de ingresos
   const { data: reservations } = useQuery({
     queryKey: ['reservations-finance', selectedVehicleId],
     queryFn: async () => {
@@ -44,7 +46,10 @@ export default function Finance() {
         .from('reservations')
         .select('*')
         .gte('fecha_inicio', sixMonthsAgo.toISOString())
-        .in('estado', ['completed', 'confirmed', 'pending']);
+        // Estados que generan ingresos (usando configuración centralizada)
+        .in('estado', ['completed', 'confirmed', 'pending_with_payment', 'cancelada_sin_devolucion'])
+        // Excluir explícitamente estados inactivos
+        .not('estado', 'in', '(cancelled,expired,cancelada_con_devolucion)');
       
       if (selectedVehicleId !== "all") {
         query = query.eq('vehicle_id', selectedVehicleId);
