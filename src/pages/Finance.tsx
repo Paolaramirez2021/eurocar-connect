@@ -94,7 +94,7 @@ export default function Finance() {
       // Calcular ingresos de ese día (reservas activas ese día que generan ingreso)
       const dailyIncome = reservations.reduce((sum, reservation) => {
         // Solo contar si el estado genera ingreso
-        if (!shouldIncludeInRevenue(reservation.estado, reservation.cancellation_type)) {
+        if (!shouldIncludeInRevenue(reservation.estado, reservation.payment_status)) {
           return sum;
         }
         
@@ -133,7 +133,7 @@ export default function Finance() {
       const monthReservations = reservations.filter(r => {
         const resDate = new Date(r.fecha_inicio);
         const inRange = resDate >= monthStart && resDate <= monthEnd;
-        const generatesRevenue = shouldIncludeInRevenue(r.estado, r.cancellation_type);
+        const generatesRevenue = shouldIncludeInRevenue(r.estado, r.payment_status);
         return inRange && generatesRevenue;
       });
 

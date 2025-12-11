@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle, XCircle, CreditCard, FileText } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import { getStateConfig, normalizeState, type CancellationType } from "@/config/states";
+import { getStateConfig, normalizeState } from "@/config/states";
 
 interface Reservation {
   id: string;
@@ -16,7 +16,6 @@ interface Reservation {
   auto_cancel_at: string | null;
   created_at: string;
   vehicle_id?: string;
-  cancellation_type?: CancellationType;
 }
 
 interface ReservationActionsProps {
@@ -30,7 +29,10 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
   const queryClient = useQueryClient();
 
   const normalizedEstado = normalizeState(reservation.estado);
-  const stateConfig = getStateConfig(reservation.estado);
+  const isPaid = reservation.payment_status === 'paid' || 
+                 reservation.estado === 'pending_with_payment' ||
+                 reservation.estado === 'con_pago';
+  const stateConfig = getStateConfig(reservation.estado, reservation.payment_status);
 
   // Función para invalidar todas las queries relacionadas
   const invalidateAllQueries = () => {
@@ -44,6 +46,7 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
 
   /**
    * MARCAR COMO PAGADO
+   * Actualiza el estado a 'pending_with_payment' para compatibilidad con BD existente
    */
   const handleMarkAsPaid = async () => {
     setLoading(true);
@@ -53,7 +56,7 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
       const { data, error } = await supabase
         .from("reservations")
         .update({
-          estado: "con_pago",
+          estado: "pending_with_payment",  // Estado que indica pagado en la BD
           payment_status: "paid",
           payment_date: new Date().toISOString(),
           auto_cancel_at: null,
@@ -99,7 +102,7 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
       console.log('[Cancelar con Devolución] Iniciando...', { id: reservation.id });
 
       const updateData: any = {
-        estado: "cancelada",
+        estado: "cancelled",  // Usar estado de BD nativo
         payment_status: "refunded",
         cancelled_at: new Date().toISOString(),
         cancelled_by: userId,
@@ -107,11 +110,6 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
         refund_status: "pending",
         updated_at: new Date().toISOString(),
       };
-
-      // Intentar agregar cancellation_type (puede no existir)
-      try {
-        updateData.cancellation_type = "con_devolucion";
-      } catch (e) {}
 
       const { data, error } = await supabase
         .from("reservations")
@@ -166,7 +164,7 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
       console.log('[Cancelar sin Devolución] Iniciando...', { id: reservation.id });
 
       const updateData: any = {
-        estado: "cancelada",
+        estado: "cancelled",  // Usar estado de BD nativo
         payment_status: "paid", // Mantiene paid = sin devolución
         cancelled_at: new Date().toISOString(),
         cancelled_by: userId,
@@ -174,11 +172,6 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
         refund_status: null,
         updated_at: new Date().toISOString(),
       };
-
-      // Intentar agregar cancellation_type (puede no existir)
-      try {
-        updateData.cancellation_type = "sin_devolucion";
-      } catch (e) {}
 
       const { data, error } = await supabase
         .from("reservations")
@@ -281,11 +274,11 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
   );
 
   // ============================================
-  // RENDERIZADO POR ESTADO
+  // RENDERIZADO POR ESTADO - Usando estados nativos de BD
   // ============================================
 
-  // SIN PAGO o PENDIENTE
-  if (normalizedEstado === "sin_pago" || normalizedEstado === "pendiente") {
+  // PENDING SIN PAGO (estado='pending' y payment_status='pending')
+  if (normalizedEstado === "pending" && !isPaid) {
     const timeRemaining = getTimeRemaining();
     return (
       <div className="flex flex-col gap-2 min-w-[200px]">
@@ -310,8 +303,8 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
     );
   }
 
-  // CON PAGO
-  if (normalizedEstado === "con_pago") {
+  // PENDING CON PAGO (estado='pending' y payment_status='paid')
+  if (normalizedEstado === "pending" && isPaid) {
     return (
       <div className="flex flex-col gap-2 min-w-[200px]">
         <div className="text-xs text-green-600 text-center">✅ Pago confirmado</div>
@@ -328,29 +321,8 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
     );
   }
 
-  // CONTRATO GENERADO
-  if (normalizedEstado === "contrato_generado") {
-    return (
-      <div className="flex flex-col gap-2 min-w-[200px]">
-        <div className="text-xs text-blue-600 text-center">
-          <FileText className="h-4 w-4 inline mr-1" />
-          Contrato pendiente de firma
-        </div>
-        <CancelDialog 
-          showRefundOptions={true}
-          trigger={
-            <Button variant="outline" size="sm" className="w-full text-red-600 border-red-200 hover:bg-red-50">
-              <XCircle className="mr-2 h-4 w-4" />
-              Cancelar
-            </Button>
-          }
-        />
-      </div>
-    );
-  }
-
-  // CONFIRMADO
-  if (normalizedEstado === "confirmado") {
+  // CONFIRMED (contrato firmado, vehículo en uso)
+  if (normalizedEstado === "confirmed") {
     return (
       <div className="flex flex-col gap-2 min-w-[200px]">
         <div className="text-xs text-red-600 text-center">
@@ -370,8 +342,8 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
     );
   }
 
-  // COMPLETADA
-  if (normalizedEstado === "completada") {
+  // COMPLETED
+  if (normalizedEstado === "completed") {
     return (
       <div className="text-xs text-center text-muted-foreground">
         <CheckCircle className="h-4 w-4 mx-auto mb-1 text-slate-600" />
@@ -380,8 +352,8 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
     );
   }
 
-  // EXPIRADA
-  if (normalizedEstado === "expirada") {
+  // EXPIRED
+  if (normalizedEstado === "expired") {
     return (
       <div className="text-xs text-center text-orange-600">
         <XCircle className="h-4 w-4 mx-auto mb-1" />
@@ -390,11 +362,11 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
     );
   }
 
-  // CANCELADA
-  if (normalizedEstado === "cancelada") {
-    const label = reservation.cancellation_type === 'con_devolucion' 
+  // CANCELLED
+  if (normalizedEstado === "cancelled") {
+    const label = reservation.payment_status === 'refunded' 
       ? 'Cancelada (con devolución)' 
-      : reservation.cancellation_type === 'sin_devolucion'
+      : reservation.payment_status === 'paid'
         ? 'Cancelada (sin devolución)'
         : 'Cancelada';
     return (

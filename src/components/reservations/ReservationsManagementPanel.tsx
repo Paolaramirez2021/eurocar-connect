@@ -14,7 +14,7 @@ import { ReservationActions } from "./ReservationActions";
 import { ReservationDetailsModal } from "./ReservationDetailsModal";
 import { useRealtimeReservations } from "@/hooks/useRealtimeReservations";
 import { useReservationExpiration } from "@/hooks/useReservationExpiration";
-import { getStateConfig, getTimeUntilExpiration, normalizeState, getCancellationLabel, type CancellationType } from "@/config/states";
+import { getStateConfig, getTimeUntilExpiration, normalizeState } from "@/config/states";
 
 interface Reservation {
   id: string;
@@ -36,7 +36,6 @@ interface Reservation {
   cancelled_at: string | null;
   cancelled_by: string | null;
   cancellation_reason: string | null;
-  cancellation_type?: CancellationType;
   refund_status: string | null;
   refund_date: string | null;
   refund_reference: string | null;
@@ -133,19 +132,24 @@ export const ReservationsManagementPanel = () => {
   };
 
   const getStatusBadge = (reservation: Reservation) => {
-    const config = getStateConfig(reservation.estado);
+    // Usar estado + payment_status para determinar la configuración
+    const config = getStateConfig(reservation.estado, reservation.payment_status);
     const normalized = normalizeState(reservation.estado);
     
-    // Para canceladas, mostrar etiqueta específica
-    if (normalized === 'cancelada' && reservation.cancellation_type) {
-      const label = getCancellationLabel(reservation.cancellation_type);
+    // Para canceladas, mostrar etiqueta específica basada en payment_status
+    if (normalized === 'cancelled') {
+      const label = reservation.payment_status === 'refunded' 
+        ? 'Cancelada (con devolución)' 
+        : reservation.payment_status === 'paid'
+          ? 'Cancelada (sin devolución)'
+          : 'Cancelada';
       return <Badge className={config.badgeClass}>{label}</Badge>;
     }
     
     return <Badge className={config.badgeClass}>{config.label}</Badge>;
   };
 
-  const getTimeRemaining = (reservation: { estado: string; auto_cancel_at: string | null; created_at: string }) => {
+  const getTimeRemaining = (reservation: { estado: string; payment_status?: string; auto_cancel_at: string | null; created_at: string }) => {
     const timeInfo = getTimeUntilExpiration(reservation);
     
     if (!timeInfo) return null;

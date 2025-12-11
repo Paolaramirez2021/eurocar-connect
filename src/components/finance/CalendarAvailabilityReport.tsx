@@ -68,7 +68,8 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
     setLoadingDetails(true);
     
     try {
-      if (day.status === 'rented' || day.status === 'reserved_paid' || day.status === 'reserved_no_payment') {
+      // Estados de reserva: rented, paid, no_payment (nuevos nombres)
+      if (day.status === 'rented' || day.status === 'paid' || day.status === 'no_payment') {
         // Load reservation and contract details
         const { data: reservation, error: resError } = await supabase
           .from('reservations')
@@ -205,11 +206,11 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
         } else if (reservation) {
           reservationId = reservation.id;
           
-          // Usar la función centralizada - SOLO basado en estado
-          const calendarStatus = getCalendarStatus(reservation.estado);
+          // Usar la función centralizada - pasando estado Y payment_status
+          const calendarStatus = getCalendarStatus(reservation.estado, reservation.payment_status);
           
           // Solo mostrar si el estado ocupa el vehículo
-          if (occupiesVehicleInCalendar(reservation.estado)) {
+          if (occupiesVehicleInCalendar(reservation.estado, reservation.payment_status)) {
             status = calendarStatus as DayStatus['status'];
           }
         }
@@ -375,8 +376,8 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
                       onClick={() => handleDayClick(vehicle, day)}
                       title={`${format(day.date, 'd MMM', { locale: es })} - ${
                         day.status === 'rented' ? 'Rentado' :
-                        day.status === 'reserved_paid' ? 'Reservado con pago' :
-                        day.status === 'reserved_no_payment' ? 'Reservado sin pago (2h)' :
+                        day.status === 'paid' ? 'Reserva Pagada' :
+                        day.status === 'no_payment' ? 'Sin pago (2h)' :
                         day.status === 'maintenance' ? 'Mantenimiento' :
                         'Disponible'
                       }${day.isHoliday ? ' (Festivo)' : ''}${day.status !== 'available' ? ' - Click para más detalles' : ''}`}
@@ -449,17 +450,17 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
               <Separator />
 
               {/* Detalles según el estado */}
-              {(selectedDay.day.status === 'rented' || selectedDay.day.status === 'reserved_paid' || selectedDay.day.status === 'reserved_no_payment') && (
+              {(selectedDay.day.status === 'rented' || selectedDay.day.status === 'paid' || selectedDay.day.status === 'no_payment') && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-lg">Información de Reserva</h3>
                     <Badge variant={
                       selectedDay.day.status === 'rented' ? 'destructive' :
-                      selectedDay.day.status === 'reserved_paid' ? 'default' :
+                      selectedDay.day.status === 'paid' ? 'default' :
                       'secondary'
                     }>
                       {selectedDay.day.status === 'rented' ? 'Rentado (Confirmado)' :
-                       selectedDay.day.status === 'reserved_paid' ? 'Reservado con Pago' :
+                       selectedDay.day.status === 'paid' ? 'Reserva Pagada' :
                        'Reservado sin Pago'}
                     </Badge>
                   </div>
