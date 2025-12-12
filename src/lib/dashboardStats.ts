@@ -27,11 +27,11 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       .select('id', { count: 'exact', head: true })
       .eq('estado', 'disponible');
 
-    // 3. ALQUILERES ACTIVOS (confirmados o pendientes, no vencidos)
+    // 3. ALQUILERES ACTIVOS (confirmados, pendientes o con pago, no cancelados/expirados)
     const { count: alquileresActivos } = await supabase
       .from('reservations')
       .select('id', { count: 'exact', head: true })
-      .in('estado', ['confirmed', 'pending'])
+      .not('estado', 'in', '("cancelled","cancelada","expired","expirada","completed","completada")')
       .gte('fecha_fin', new Date().toISOString());
 
     // 4. MANTENIMIENTOS PENDIENTES (últimos 30 días o sin completar)
@@ -50,15 +50,15 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       .select('id', { count: 'exact', head: true })
       .eq('estado', 'activo');
 
-    // 6. INGRESOS DEL MES ACTUAL
+    // 6. INGRESOS DEL MES ACTUAL (todas las reservas activas, no canceladas)
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
     
     const { data: reservasDelMes } = await supabase
       .from('reservations')
-      .select('valor_total, price_total, descuento')
-      .in('estado', ['completed', 'confirmed'])
+      .select('valor_total, price_total, descuento, estado')
+      .not('estado', 'in', '("cancelled","cancelada","expired","expirada")')
       .gte('fecha_inicio', startOfMonth)
       .lte('fecha_inicio', endOfMonth);
 
