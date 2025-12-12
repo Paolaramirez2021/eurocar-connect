@@ -40,6 +40,8 @@ interface CustomerFormData {
   direccion_oficina?: string;
   banco?: string;
   numero_tarjeta?: string;
+  fecha_vencimiento_tarjeta?: string;
+  cvv_tarjeta?: string;
   referencia_personal_nombre?: string;
   referencia_personal_telefono?: string;
   referencia_familiar_nombre?: string;
@@ -182,7 +184,7 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
             <TabsTrigger value="personal">Personal</TabsTrigger>
             <TabsTrigger value="contacto">Contacto</TabsTrigger>
             <TabsTrigger value="licencia">Licencia</TabsTrigger>
-            <TabsTrigger value="laboral">Laboral</TabsTrigger>
+            <TabsTrigger value="laboral">Info. Bancaria</TabsTrigger>
             <TabsTrigger value="referencias">Referencias</TabsTrigger>
           </TabsList>
 
@@ -316,74 +318,36 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
           <TabsContent value="laboral" className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="empresa">Empresa</Label>
-                <Input id="empresa" {...register("empresa")} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="ocupacion">Ocupación</Label>
-                <Input id="ocupacion" {...register("ocupacion")} />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="direccion_oficina">Dirección Oficina</Label>
-                <Input id="direccion_oficina" {...register("direccion_oficina")} />
-              </div>
-              <div className="space-y-2">
                 <Label htmlFor="banco">Banco</Label>
-                <Input id="banco" {...register("banco")} />
+                <Input id="banco" {...register("banco")} placeholder="Nombre del banco" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="numero_tarjeta">Últimos 4 dígitos tarjeta</Label>
-                <Input id="numero_tarjeta" maxLength={4} {...register("numero_tarjeta")} />
+                <Label htmlFor="numero_tarjeta">Número de Tarjeta</Label>
+                <Input id="numero_tarjeta" maxLength={16} {...register("numero_tarjeta")} placeholder="Últimos 4 dígitos o completo" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="fecha_vencimiento_tarjeta">Fecha de Vencimiento</Label>
+                <Input id="fecha_vencimiento_tarjeta" {...register("fecha_vencimiento_tarjeta")} placeholder="MM/AA" maxLength={5} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cvv_tarjeta">CVV</Label>
+                <Input id="cvv_tarjeta" type="password" maxLength={4} {...register("cvv_tarjeta")} placeholder="***" />
               </div>
             </div>
           </TabsContent>
 
           <TabsContent value="referencias" className="space-y-4">
-            <div className="space-y-6">
-              <div>
-                <h4 className="font-medium mb-3">Referencia Personal</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="referencia_personal_nombre">Nombre</Label>
-                    <Input id="referencia_personal_nombre" {...register("referencia_personal_nombre")} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="referencia_personal_telefono">Teléfono</Label>
-                    <Input id="referencia_personal_telefono" {...register("referencia_personal_telefono")} />
-                  </div>
-                </div>
-              </div>
-              <div>
-                <h4 className="font-medium mb-3">Referencia Familiar</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="referencia_familiar_nombre">Nombre</Label>
-                    <Input id="referencia_familiar_nombre" {...register("referencia_familiar_nombre")} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="referencia_familiar_telefono">Teléfono</Label>
-                    <Input id="referencia_familiar_telefono" {...register("referencia_familiar_telefono")} />
-                  </div>
-                </div>
-              </div>
-              <div>
-                <h4 className="font-medium mb-3">Referencia Comercial</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="referencia_comercial_nombre">Nombre</Label>
-                    <Input id="referencia_comercial_nombre" {...register("referencia_comercial_nombre")} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="referencia_comercial_telefono">Teléfono</Label>
-                    <Input id="referencia_comercial_telefono" {...register("referencia_comercial_telefono")} />
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="observaciones">Observaciones</Label>
-                <Textarea id="observaciones" rows={4} {...register("observaciones")} />
-              </div>
+            <div className="text-center py-8 text-muted-foreground">
+              <p>Sección no requerida para este formulario</p>
             </div>
+            {/* Campos ocultos para mantener compatibilidad */}
+            <input type="hidden" {...register("referencia_personal_nombre")} />
+            <input type="hidden" {...register("referencia_personal_telefono")} />
+            <input type="hidden" {...register("referencia_familiar_nombre")} />
+            <input type="hidden" {...register("referencia_familiar_telefono")} />
+            <input type="hidden" {...register("referencia_comercial_nombre")} />
+            <input type="hidden" {...register("referencia_comercial_telefono")} />
+            <input type="hidden" {...register("observaciones")} />
           </TabsContent>
         </Tabs>
 

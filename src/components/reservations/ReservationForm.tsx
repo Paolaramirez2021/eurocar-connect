@@ -59,6 +59,8 @@ interface Customer {
   direccion_oficina: string;
   banco: string;
   numero_tarjeta: string;
+  fecha_vencimiento_tarjeta: string;
+  cvv_tarjeta: string;
   referencia_personal_nombre: string;
   referencia_personal_telefono: string;
   referencia_comercial_nombre: string;
@@ -117,6 +119,8 @@ export const ReservationForm = () => {
     direccion_oficina: "",
     banco: "",
     numero_tarjeta: "",
+    fecha_vencimiento_tarjeta: "",
+    cvv_tarjeta: "",
     referencia_personal_nombre: "",
     referencia_personal_telefono: "",
     referencia_comercial_nombre: "",
@@ -735,8 +739,8 @@ export const ReservationForm = () => {
               <span className="hidden sm:inline">Licencia</span>
             </TabsTrigger>
             <TabsTrigger value="laboral" className="flex items-center gap-1">
-              <Briefcase className="h-4 w-4" />
-              <span className="hidden sm:inline">Laboral</span>
+              <CreditCard className="h-4 w-4" />
+              <span className="hidden sm:inline">Info. Bancaria</span>
             </TabsTrigger>
             {isAdmin && (
               <TabsTrigger value="financiero" className="flex items-center gap-1">
@@ -981,36 +985,50 @@ export const ReservationForm = () => {
             </div>
           </TabsContent>
 
-          {/* Laboral */}
+          {/* Información Bancaria */}
           <TabsContent value="laboral" className="space-y-4 mt-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="ocupacion">Ocupación</Label>
+                <Label htmlFor="banco">Banco</Label>
                 <Input
-                  id="ocupacion"
-                  value={customer.ocupacion}
-                  onChange={(e) => updateCustomer("ocupacion", e.target.value)}
-                  placeholder="Ingeniero"
+                  id="banco"
+                  value={customer.banco}
+                  onChange={(e) => updateCustomer("banco", e.target.value)}
+                  placeholder="Nombre del banco"
                 />
               </div>
 
               <div>
-                <Label htmlFor="empresa">Empresa donde Trabaja</Label>
+                <Label htmlFor="numero_tarjeta">Número de Tarjeta</Label>
                 <Input
-                  id="empresa"
-                  value={customer.empresa}
-                  onChange={(e) => updateCustomer("empresa", e.target.value)}
-                  placeholder="Empresa ABC S.A."
+                  id="numero_tarjeta"
+                  value={customer.numero_tarjeta}
+                  onChange={(e) => updateCustomer("numero_tarjeta", e.target.value)}
+                  placeholder="Últimos 4 dígitos o completo"
+                  maxLength={16}
                 />
               </div>
 
-              <div className="md:col-span-2">
-                <Label htmlFor="direccion_oficina">Dirección de Oficina</Label>
+              <div>
+                <Label htmlFor="fecha_vencimiento_tarjeta">Fecha de Vencimiento</Label>
                 <Input
-                  id="direccion_oficina"
-                  value={customer.direccion_oficina}
-                  onChange={(e) => updateCustomer("direccion_oficina", e.target.value)}
-                  placeholder="Calle 100 #20-30"
+                  id="fecha_vencimiento_tarjeta"
+                  value={customer.fecha_vencimiento_tarjeta}
+                  onChange={(e) => updateCustomer("fecha_vencimiento_tarjeta", e.target.value)}
+                  placeholder="MM/AA"
+                  maxLength={5}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="cvv_tarjeta">CVV</Label>
+                <Input
+                  id="cvv_tarjeta"
+                  type="password"
+                  value={customer.cvv_tarjeta}
+                  onChange={(e) => updateCustomer("cvv_tarjeta", e.target.value)}
+                  placeholder="***"
+                  maxLength={4}
                 />
               </div>
             </div>
@@ -1049,80 +1067,10 @@ export const ReservationForm = () => {
             </TabsContent>
           )}
 
-          {/* Referencias */}
+          {/* Referencias - Oculto */}
           <TabsContent value="referencias" className="space-y-4 mt-4">
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-sm font-medium mb-3">Referencia Personal</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="ref_personal_nombre">Nombre</Label>
-                    <Input
-                      id="ref_personal_nombre"
-                      value={customer.referencia_personal_nombre}
-                      onChange={(e) => updateCustomer("referencia_personal_nombre", e.target.value)}
-                      placeholder="Nombre completo"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="ref_personal_telefono">Teléfono</Label>
-                    <Input
-                      id="ref_personal_telefono"
-                      value={customer.referencia_personal_telefono}
-                      onChange={(e) => updateCustomer("referencia_personal_telefono", e.target.value)}
-                      placeholder="310 123 4567"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-medium mb-3">Referencia Comercial</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="ref_comercial_nombre">Nombre</Label>
-                    <Input
-                      id="ref_comercial_nombre"
-                      value={customer.referencia_comercial_nombre}
-                      onChange={(e) => updateCustomer("referencia_comercial_nombre", e.target.value)}
-                      placeholder="Nombre completo"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="ref_comercial_telefono">Teléfono</Label>
-                    <Input
-                      id="ref_comercial_telefono"
-                      value={customer.referencia_comercial_telefono}
-                      onChange={(e) => updateCustomer("referencia_comercial_telefono", e.target.value)}
-                      placeholder="310 123 4567"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-medium mb-3">Referencia Familiar</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="ref_familiar_nombre">Nombre</Label>
-                    <Input
-                      id="ref_familiar_nombre"
-                      value={customer.referencia_familiar_nombre}
-                      onChange={(e) => updateCustomer("referencia_familiar_nombre", e.target.value)}
-                      placeholder="Nombre completo"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="ref_familiar_telefono">Teléfono</Label>
-                    <Input
-                      id="ref_familiar_telefono"
-                      value={customer.referencia_familiar_telefono}
-                      onChange={(e) => updateCustomer("referencia_familiar_telefono", e.target.value)}
-                      placeholder="310 123 4567"
-                    />
-                  </div>
-                </div>
-              </div>
+            <div className="text-center py-8 text-muted-foreground">
+              <p>Sección no requerida para este formulario</p>
             </div>
           </TabsContent>
         </Tabs>
