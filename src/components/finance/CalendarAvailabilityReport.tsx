@@ -543,7 +543,7 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
                     <div className="pt-2 border-t">
                       <p className="font-medium text-sm text-muted-foreground">Días de Alquiler</p>
                       <p className="text-2xl font-bold text-primary">
-                        {differenceInCalendarDays(new Date(dayDetails.fecha_fin), new Date(dayDetails.fecha_inicio)) + 1} días
+                        {differenceInCalendarDays(new Date(dayDetails.fecha_fin), new Date(dayDetails.fecha_inicio))} días
                       </p>
                     </div>
                   </div>

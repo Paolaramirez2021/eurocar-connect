@@ -212,15 +212,16 @@ export const ReservationForm = () => {
       return;
     }
 
-    // ✅ CORRECCIÓN 1: Cálculo correcto de días (incluye día de inicio)
-    // Usar differenceInCalendarDays + 1
-    const days = differenceInCalendarDays(fechaFin, fechaInicio) + 1;
+    // ✅ CÁLCULO DE DÍAS: El día de devolución NO se cobra
+    // Del 3 al 22 = 19 días de alquiler (el 22 devuelves el vehículo)
+    const days = differenceInCalendarDays(fechaFin, fechaInicio);
     setDiasAlquiler(days);
 
     console.log('[Cálculo Reserva]', {
       fechaInicio: format(fechaInicio, 'yyyy-MM-dd'),
       fechaFin: format(fechaFin, 'yyyy-MM-dd'),
-      diasCalculados: days
+      diasACobrar: days,
+      nota: 'El día de devolución no se cobra'
     });
 
     // ✅ CORRECCIÓN 2: Obtener tarifa SIN IVA

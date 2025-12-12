@@ -116,11 +116,12 @@ const GestionReservas = () => {
   }, [reservationId, activeReservations, historicalReservations]);
 
   useEffect(() => {
-    // Calculate dias_totales
+    // Calcular días de alquiler (el día de devolución NO se cobra)
+    // Del 3 al 22 = 19 días
     if (fechaInicio && fechaFin) {
-      const diffTime = Math.abs(fechaFin.getTime() - fechaInicio.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      setDiasTotales(diffDays);
+      const diffTime = fechaFin.getTime() - fechaInicio.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      setDiasTotales(diffDays > 0 ? diffDays : 0);
     } else {
       setDiasTotales(0);
     }
