@@ -50,7 +50,7 @@ const Customers = () => {
 
   const handleEditCustomer = (customer: any) => {
     setSelectedCustomer(customer);
-    setCurrentView("detail"); // Show detail view first instead of direct edit
+    setCurrentView("edit"); // Go directly to edit form
   };
 
   const handleSelectCustomer = (customer: any) => {
@@ -88,7 +88,7 @@ const Customers = () => {
         </div>
 
         {/* Tabs for views */}
-        <Tabs value={currentView === "detail" ? "list" : currentView} onValueChange={(v) => {
+        <Tabs value={currentView === "detail" || currentView === "edit" ? "list" : currentView} onValueChange={(v) => {
           if (v === "list" || v === "new" || v === "api") {
             setCurrentView(v as View);
             setSelectedCustomer(null);
@@ -122,16 +122,20 @@ const Customers = () => {
                 onEdit={() => handleEditFromDetail(selectedCustomer)}
               />
             )}
-          </TabsContent>
-
-          <TabsContent value="new" className="mt-6">
-            {(currentView === "new" || currentView === "edit") && (
+            {currentView === "edit" && selectedCustomer && (
               <CustomerForm
                 customer={selectedCustomer}
                 onSuccess={handleSuccess}
                 onCancel={handleCancel}
               />
             )}
+          </TabsContent>
+
+          <TabsContent value="new" className="mt-6">
+            <CustomerForm
+              onSuccess={handleSuccess}
+              onCancel={handleCancel}
+            />
           </TabsContent>
 
           <TabsContent value="api" className="mt-6">
