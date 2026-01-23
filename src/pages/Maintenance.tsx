@@ -66,13 +66,25 @@ export default function Maintenance() {
 
   const createMaintenance = useMutation({
     mutationFn: async (data: typeof formData) => {
+      // Crear fechas a mediodía para evitar problemas de timezone
+      // Esto asegura que la fecha se mantenga en la zona horaria local (Colombia UTC-5)
+      const fechaInicioStr = `${data.fecha_inicio}T12:00:00`;
+      const fechaFinStr = `${data.fecha_fin}T12:00:00`;
+      
+      console.log('[Maintenance] Guardando:', {
+        fecha_inicio_input: data.fecha_inicio,
+        fecha_fin_input: data.fecha_fin,
+        fecha_inicio_saved: fechaInicioStr,
+        fecha_fin_saved: fechaFinStr
+      });
+      
       const { error } = await supabase.from('maintenance').insert({
         vehicle_id: data.vehicle_id,
         tipo: data.tipo,
         descripcion: data.descripcion,
-        fecha: data.fecha_inicio, // fecha principal = fecha_inicio
-        fecha_inicio: data.fecha_inicio,
-        fecha_fin: data.fecha_fin,
+        fecha: fechaInicioStr, // fecha principal = fecha_inicio
+        fecha_inicio: fechaInicioStr,
+        fecha_fin: fechaFinStr,
         costo: parseFloat(data.costo),
         kms: data.kms ? parseInt(data.kms) : null
       });
@@ -80,6 +92,7 @@ export default function Maintenance() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['maintenance'] });
+      queryClient.invalidateQueries({ queryKey: ['maintenance_schedules_calendar'] });
       queryClient.invalidateQueries({ queryKey: ['finance_items'] });
       toast.success('Mantenimiento registrado exitosamente');
       setIsDialogOpen(false);

@@ -3,18 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar as CalendarIcon, Gauge } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, parseISO, isWithinInterval, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-interface Schedule {
+interface MaintenanceItem {
   id: string;
   vehicle_id: string;
   tipo: string;
-  next_due_km: number | null;
-  next_due_date: string | null;
+  fecha_inicio: string;
+  fecha_fin: string;
   source: 'schedule' | 'maintenance';
   vehicles: {
     placa: string;
@@ -24,6 +24,14 @@ interface Schedule {
   };
 }
 
+// Función para parsear fecha sin problemas de zona horaria
+const parseLocalDate = (dateString: string): Date => {
+  // Si es formato ISO con timezone, extraer solo la fecha
+  const datePart = dateString.split('T')[0];
+  const [year, month, day] = datePart.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
 export const MaintenanceCalendar = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
@@ -32,7 +40,7 @@ export const MaintenanceCalendar = () => {
     queryFn: async () => {
       console.log('📅 Cargando mantenimientos programados para calendario...');
       
-      // Fetch scheduled maintenance
+      // Fetch scheduled maintenance (periódicos)
       const { data: schedulesData, error: schedulesError } = await supabase
         .from('maintenance_schedules')
         .select(`
@@ -52,7 +60,7 @@ export const MaintenanceCalendar = () => {
         throw schedulesError;
       }
 
-      // Fetch future maintenance records
+      // Fetch future maintenance records (con rango de fechas)
       const { data: maintenanceData, error: maintenanceError } = await supabase
         .from('maintenance')
         .select(`
@@ -60,6 +68,8 @@ export const MaintenanceCalendar = () => {
           vehicle_id,
           tipo,
           fecha,
+          fecha_inicio,
+          fecha_fin,
           completed,
           vehicles (
             placa,
@@ -68,34 +78,43 @@ export const MaintenanceCalendar = () => {
             kilometraje_actual
           )
         `)
-        .eq('completed', false)
-        .gte('fecha', new Date().toISOString());
+        .eq('completed', false);
       
       if (maintenanceError) {
         console.error('❌ Error cargando maintenance:', maintenanceError);
         throw maintenanceError;
       }
 
+      console.log('📊 Datos de mantenimiento crudos:', maintenanceData);
+
       // Combine both sources
-      const scheduledItems: Schedule[] = (schedulesData || []).map(s => ({
+      const scheduledItems: MaintenanceItem[] = (schedulesData || []).map(s => ({
         id: s.id,
         vehicle_id: s.vehicle_id,
         tipo: s.tipo,
-        next_due_km: s.next_due_km,
-        next_due_date: s.next_due_date,
+        fecha_inicio: s.next_due_date!,
+        fecha_fin: s.next_due_date!, // Para schedules, un solo día
         source: 'schedule' as const,
         vehicles: s.vehicles
       }));
 
-      const maintenanceItems: Schedule[] = (maintenanceData || []).map(m => ({
-        id: m.id,
-        vehicle_id: m.vehicle_id,
-        tipo: m.tipo,
-        next_due_km: null,
-        next_due_date: m.fecha,
-        source: 'maintenance' as const,
-        vehicles: m.vehicles
-      }));
+      // Para maintenance, usar fecha_inicio y fecha_fin si existen, sino usar fecha
+      const maintenanceItems: MaintenanceItem[] = (maintenanceData || []).map(m => {
+        const fechaInicio = m.fecha_inicio || m.fecha;
+        const fechaFin = m.fecha_fin || m.fecha;
+        
+        console.log(`📅 Mantenimiento ${m.id}: inicio=${fechaInicio}, fin=${fechaFin}`);
+        
+        return {
+          id: m.id,
+          vehicle_id: m.vehicle_id,
+          tipo: m.tipo,
+          fecha_inicio: fechaInicio,
+          fecha_fin: fechaFin,
+          source: 'maintenance' as const,
+          vehicles: m.vehicles
+        };
+      });
 
       const combined = [...scheduledItems, ...maintenanceItems];
       
@@ -104,7 +123,7 @@ export const MaintenanceCalendar = () => {
         maintenance: maintenanceItems.length,
         total: combined.length
       });
-      console.log('📊 Items:', combined);
+      console.log('📊 Items combinados:', combined);
       
       return combined;
     }
@@ -114,10 +133,20 @@ export const MaintenanceCalendar = () => {
   const monthEnd = endOfMonth(currentMonth);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
+  // Función para verificar si un día está dentro del rango de un mantenimiento
   const getSchedulesForDay = (day: Date) => {
-    return schedules?.filter(schedule => 
-      schedule.next_due_date && isSameDay(new Date(schedule.next_due_date), day)
-    ) || [];
+    const dayStart = startOfDay(day);
+    
+    return schedules?.filter(schedule => {
+      // Parsear fechas sin problemas de timezone
+      const fechaInicio = parseLocalDate(schedule.fecha_inicio);
+      const fechaFin = parseLocalDate(schedule.fecha_fin);
+      
+      // Verificar si el día está dentro del rango [fecha_inicio, fecha_fin]
+      const isInRange = dayStart >= startOfDay(fechaInicio) && dayStart <= startOfDay(fechaFin);
+      
+      return isInRange;
+    }) || [];
   };
 
   const previousMonth = () => {
