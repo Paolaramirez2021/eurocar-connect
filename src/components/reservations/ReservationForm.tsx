@@ -281,25 +281,30 @@ export const ReservationForm = () => {
 
       if (resError) throw resError;
 
-      // 2. Verificar si hay mantenimiento programado en esas fechas
+      // 2. Verificar si hay mantenimiento programado en esas fechas (con rango fecha_inicio - fecha_fin)
+      const fechaInicioStr = fechaInicio.toISOString().split('T')[0];
+      const fechaFinStr = fechaFin.toISOString().split('T')[0];
+      
       const { data: maintenanceConflicts, error: maintError } = await supabase
         .from('maintenance')
-        .select('id, fecha, tipo, descripcion')
+        .select('id, fecha, fecha_inicio, fecha_fin, tipo, descripcion')
         .eq('vehicle_id', selectedVehicle)
         .eq('completed', false)
-        .gte('fecha', fechaInicio.toISOString().split('T')[0])
-        .lte('fecha', fechaFin.toISOString().split('T')[0]);
+        .or(`and(fecha_inicio.lte.${fechaFinStr},fecha_fin.gte.${fechaInicioStr}),and(fecha.gte.${fechaInicioStr},fecha.lte.${fechaFinStr})`);
 
       if (maintError) throw maintError;
 
       // Si hay mantenimiento programado, no está disponible
       if (maintenanceConflicts && maintenanceConflicts.length > 0) {
         setIsAvailable(false);
-        const fechasMantenimiento = maintenanceConflicts.map(m => 
-          new Date(m.fecha).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit' })
-        ).join(', ');
+        const fechasMantenimiento = maintenanceConflicts.map(m => {
+          if (m.fecha_inicio && m.fecha_fin) {
+            return `${new Date(m.fecha_inicio).toLocaleDateString('es-CO')} - ${new Date(m.fecha_fin).toLocaleDateString('es-CO')}`;
+          }
+          return new Date(m.fecha).toLocaleDateString('es-CO');
+        }).join(', ');
         toast.error(`Vehículo en mantenimiento`, {
-          description: `El vehículo tiene mantenimiento programado en: ${fechasMantenimiento}`,
+          description: `El vehículo tiene mantenimiento programado: ${fechasMantenimiento}`,
           duration: 5000
         });
         return;
@@ -575,15 +580,17 @@ export const ReservationForm = () => {
       return;
     }
 
-    // Verificación adicional de mantenimiento antes de guardar
+    // Verificación adicional de mantenimiento antes de guardar (con rango de fechas)
     try {
+      const fechaInicioStr = fechaInicio.toISOString().split('T')[0];
+      const fechaFinStr = fechaFin.toISOString().split('T')[0];
+      
       const { data: maintenanceConflicts } = await supabase
         .from('maintenance')
-        .select('id, fecha, tipo')
+        .select('id, fecha, fecha_inicio, fecha_fin, tipo')
         .eq('vehicle_id', selectedVehicle)
         .eq('completed', false)
-        .gte('fecha', fechaInicio.toISOString().split('T')[0])
-        .lte('fecha', fechaFin.toISOString().split('T')[0]);
+        .or(`and(fecha_inicio.lte.${fechaFinStr},fecha_fin.gte.${fechaInicioStr}),and(fecha.gte.${fechaInicioStr},fecha.lte.${fechaFinStr})`);
 
       if (maintenanceConflicts && maintenanceConflicts.length > 0) {
         toast.error("No se puede reservar", {

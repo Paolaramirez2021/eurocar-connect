@@ -24,7 +24,8 @@ export default function Maintenance() {
     vehicle_id: "",
     tipo: "",
     descripcion: "",
-    fecha: new Date().toISOString().split('T')[0],
+    fecha_inicio: new Date().toISOString().split('T')[0],
+    fecha_fin: new Date().toISOString().split('T')[0],
     costo: "",
     kms: ""
   });
@@ -69,7 +70,9 @@ export default function Maintenance() {
         vehicle_id: data.vehicle_id,
         tipo: data.tipo,
         descripcion: data.descripcion,
-        fecha: data.fecha,
+        fecha: data.fecha_inicio, // fecha principal = fecha_inicio
+        fecha_inicio: data.fecha_inicio,
+        fecha_fin: data.fecha_fin,
         costo: parseFloat(data.costo),
         kms: data.kms ? parseInt(data.kms) : null
       });
@@ -84,7 +87,8 @@ export default function Maintenance() {
         vehicle_id: "",
         tipo: "",
         descripcion: "",
-        fecha: new Date().toISOString().split('T')[0],
+        fecha_inicio: new Date().toISOString().split('T')[0],
+        fecha_fin: new Date().toISOString().split('T')[0],
         costo: "",
         kms: ""
       });
@@ -198,13 +202,24 @@ export default function Maintenance() {
                     placeholder="Detalles del mantenimiento"
                   />
                 </div>
-                <div>
-                  <Label>Fecha</Label>
-                  <Input
-                    type="date"
-                    value={formData.fecha}
-                    onChange={(e) => setFormData({...formData, fecha: e.target.value})}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Fecha Inicio</Label>
+                    <Input
+                      type="date"
+                      value={formData.fecha_inicio}
+                      onChange={(e) => setFormData({...formData, fecha_inicio: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <Label>Fecha Fin</Label>
+                    <Input
+                      type="date"
+                      value={formData.fecha_fin}
+                      onChange={(e) => setFormData({...formData, fecha_fin: e.target.value})}
+                      min={formData.fecha_inicio}
+                    />
+                  </div>
                 </div>
                 <div>
                   <Label>Costo</Label>
