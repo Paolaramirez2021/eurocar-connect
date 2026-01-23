@@ -27,6 +27,8 @@ interface Reservation {
 interface Maintenance {
   id: string;
   fecha: string;
+  fecha_inicio: string | null;
+  fecha_fin: string | null;
   tipo: string;
   descripcion: string | null;
   costo: number;
@@ -151,16 +153,18 @@ export const UnifiedCalendar = ({ vehicleId, placa, currentMonth }: UnifiedCalen
 
     const { data, error } = await supabase
       .from("maintenance")
-      .select("id, fecha, tipo, descripcion, costo")
+      .select("id, fecha, fecha_inicio, fecha_fin, tipo, descripcion, costo")
       .eq("vehicle_id", vehicleId)
-      .gte("fecha", startOfMonth.toISOString())
-      .lte("fecha", endOfMonth.toISOString());
+      .eq("completed", false)
+      .or(`fecha.gte.${startOfMonth.toISOString()},fecha_inicio.gte.${startOfMonth.toISOString()}`)
+      .or(`fecha.lte.${endOfMonth.toISOString()},fecha_fin.lte.${endOfMonth.toISOString()}`);
 
     if (error) {
       console.error("Error loading maintenance:", error);
       return;
     }
 
+    console.log('[UnifiedCalendar] Mantenimientos cargados:', data);
     setMaintenances(data || []);
   };
 
@@ -205,10 +209,26 @@ export const UnifiedCalendar = ({ vehicleId, placa, currentMonth }: UnifiedCalen
     });
   };
 
+  // Función para parsear fecha sin problemas de zona horaria
+  const parseLocalDate = (dateString: string): Date => {
+    const datePart = dateString.split('T')[0];
+    const [year, month, day] = datePart.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
   const getMaintenanceForDate = (date: Date): Maintenance | undefined => {
+    const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    
     return maintenances.find(maintenance => {
-      const maintenanceDate = new Date(maintenance.fecha);
-      return maintenanceDate.toDateString() === date.toDateString();
+      // Usar fecha_inicio y fecha_fin si existen, sino usar fecha
+      const fechaInicioStr = maintenance.fecha_inicio || maintenance.fecha;
+      const fechaFinStr = maintenance.fecha_fin || maintenance.fecha;
+      
+      const fechaInicio = parseLocalDate(fechaInicioStr);
+      const fechaFin = parseLocalDate(fechaFinStr);
+      
+      // Verificar si el día está dentro del rango [fecha_inicio, fecha_fin]
+      return dayStart >= fechaInicio && dayStart <= fechaFin;
     });
   };
 
