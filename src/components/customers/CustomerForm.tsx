@@ -63,11 +63,83 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<CustomerFormData>({
-    defaultValues: customer || {
+  // Preparar defaultValues con datos del cliente si existe
+  const getDefaultValues = (): CustomerFormData => {
+    if (customer) {
+      return {
+        nombres: customer.nombres || "",
+        primer_apellido: customer.primer_apellido || "",
+        segundo_apellido: customer.segundo_apellido || "",
+        cedula_pasaporte: customer.cedula_pasaporte || "",
+        email: customer.email || "",
+        celular: customer.celular || "",
+        telefono: customer.telefono || "",
+        direccion_residencia: customer.direccion_residencia || "",
+        hotel_hospedaje: customer.hotel_hospedaje || "",
+        hotel_numero_habitacion: customer.hotel_numero_habitacion || "",
+        pais: customer.pais || "Colombia",
+        ciudad: customer.ciudad || "",
+        fecha_nacimiento: customer.fecha_nacimiento || "",
+        estado_civil: customer.estado_civil || "",
+        licencia_numero: customer.licencia_numero || "",
+        licencia_ciudad_expedicion: customer.licencia_ciudad_expedicion || "",
+        licencia_fecha_vencimiento: customer.licencia_fecha_vencimiento || "",
+        empresa: customer.empresa || "",
+        ocupacion: customer.ocupacion || "",
+        direccion_oficina: customer.direccion_oficina || "",
+        banco: customer.banco || "",
+        numero_tarjeta: customer.numero_tarjeta || "",
+        fecha_vencimiento_tarjeta: customer.fecha_vencimiento_tarjeta || "",
+        cvv_tarjeta: customer.cvv_tarjeta || "",
+        referencia_personal_nombre: customer.referencia_personal_nombre || "",
+        referencia_personal_telefono: customer.referencia_personal_telefono || "",
+        referencia_familiar_nombre: customer.referencia_familiar_nombre || "",
+        referencia_familiar_telefono: customer.referencia_familiar_telefono || "",
+        referencia_comercial_nombre: customer.referencia_comercial_nombre || "",
+        referencia_comercial_telefono: customer.referencia_comercial_telefono || "",
+        observaciones: customer.observaciones || "",
+        estado: customer.estado || "activo",
+      };
+    }
+    return {
+      nombres: "",
+      primer_apellido: "",
+      segundo_apellido: "",
+      cedula_pasaporte: "",
+      email: "",
+      celular: "",
+      telefono: "",
+      direccion_residencia: "",
+      hotel_hospedaje: "",
+      hotel_numero_habitacion: "",
       pais: "Colombia",
+      ciudad: "",
+      fecha_nacimiento: "",
+      estado_civil: "",
+      licencia_numero: "",
+      licencia_ciudad_expedicion: "",
+      licencia_fecha_vencimiento: "",
+      empresa: "",
+      ocupacion: "",
+      direccion_oficina: "",
+      banco: "",
+      numero_tarjeta: "",
+      fecha_vencimiento_tarjeta: "",
+      cvv_tarjeta: "",
+      referencia_personal_nombre: "",
+      referencia_personal_telefono: "",
+      referencia_familiar_nombre: "",
+      referencia_familiar_telefono: "",
+      referencia_comercial_nombre: "",
+      referencia_comercial_telefono: "",
+      observaciones: "",
       estado: "activo",
-    },
+    };
+  };
+
+  const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<CustomerFormData>({
+    defaultValues: getDefaultValues(),
+    mode: "onBlur", // Validar al salir del campo
   });
 
   // Debug: Log errores de validación
@@ -77,13 +149,13 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
     }
   }, [errors]);
 
+  // Cargar datos del cliente cuando cambia (para edición)
   useEffect(() => {
     if (customer) {
-      Object.keys(customer).forEach((key) => {
-        setValue(key as any, customer[key]);
-      });
+      console.log('[CustomerForm] Cargando datos del cliente:', customer.id);
+      reset(getDefaultValues());
     }
-  }, [customer, setValue]);
+  }, [customer, reset]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -126,30 +198,83 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
   };
 
   const onSubmit = async (data: CustomerFormData) => {
+    console.log('[CustomerForm] Iniciando submit...', { isUpdate: !!customer, customerId: customer?.id });
+    console.log('[CustomerForm] Datos a guardar:', data);
+    
     setIsSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error("Usuario no autenticado");
+      }
       
       let fotoDocumentoUrl = customer?.foto_documento_url;
 
       if (customer) {
         // Update existing customer
+        console.log('[CustomerForm] Actualizando cliente existente:', customer.id);
+        
         if (documentFile) {
           fotoDocumentoUrl = await uploadDocument(customer.id);
         }
 
-        const { error } = await supabase
-          .from("customers")
-          .update({
-            ...data,
-            foto_documento_url: fotoDocumentoUrl,
-          })
-          .eq("id", customer.id);
+        // Preparar datos para actualización (excluir campos que no deben actualizarse)
+        const updateData = {
+          nombres: data.nombres,
+          primer_apellido: data.primer_apellido,
+          segundo_apellido: data.segundo_apellido || null,
+          cedula_pasaporte: data.cedula_pasaporte,
+          email: data.email || null,
+          celular: data.celular,
+          telefono: data.telefono || null,
+          direccion_residencia: data.direccion_residencia || null,
+          hotel_hospedaje: data.hotel_hospedaje || null,
+          hotel_numero_habitacion: data.hotel_numero_habitacion || null,
+          pais: data.pais || "Colombia",
+          ciudad: data.ciudad || null,
+          fecha_nacimiento: data.fecha_nacimiento || null,
+          estado_civil: data.estado_civil || null,
+          licencia_numero: data.licencia_numero || null,
+          licencia_ciudad_expedicion: data.licencia_ciudad_expedicion || null,
+          licencia_fecha_vencimiento: data.licencia_fecha_vencimiento || null,
+          empresa: data.empresa || null,
+          ocupacion: data.ocupacion || null,
+          direccion_oficina: data.direccion_oficina || null,
+          banco: data.banco || null,
+          numero_tarjeta: data.numero_tarjeta || null,
+          fecha_vencimiento_tarjeta: data.fecha_vencimiento_tarjeta || null,
+          cvv_tarjeta: data.cvv_tarjeta || null,
+          referencia_personal_nombre: data.referencia_personal_nombre || null,
+          referencia_personal_telefono: data.referencia_personal_telefono || null,
+          referencia_familiar_nombre: data.referencia_familiar_nombre || null,
+          referencia_familiar_telefono: data.referencia_familiar_telefono || null,
+          referencia_comercial_nombre: data.referencia_comercial_nombre || null,
+          referencia_comercial_telefono: data.referencia_comercial_telefono || null,
+          observaciones: data.observaciones || null,
+          estado: data.estado,
+          foto_documento_url: fotoDocumentoUrl,
+        };
 
-        if (error) throw error;
+        console.log('[CustomerForm] Datos de actualización:', updateData);
+
+        const { error, data: updatedData } = await supabase
+          .from("customers")
+          .update(updateData)
+          .eq("id", customer.id)
+          .select();
+
+        if (error) {
+          console.error('[CustomerForm] Error de Supabase al actualizar:', error);
+          throw error;
+        }
+        
+        console.log('[CustomerForm] Cliente actualizado exitosamente:', updatedData);
         toast.success("Cliente actualizado exitosamente");
       } else {
         // Create new customer
+        console.log('[CustomerForm] Creando nuevo cliente...');
+        
         const { data: newCustomer, error: insertError } = await supabase
           .from("customers")
           .insert([{
@@ -159,7 +284,12 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
           .select()
           .single();
 
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error('[CustomerForm] Error de Supabase al crear:', insertError);
+          throw insertError;
+        }
+
+        console.log('[CustomerForm] Cliente creado:', newCustomer.id);
 
         if (documentFile) {
           fotoDocumentoUrl = await uploadDocument(newCustomer.id);
@@ -176,7 +306,7 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
 
       onSuccess();
     } catch (error: any) {
-      console.error("Error saving customer:", error);
+      console.error("[CustomerForm] Error al guardar cliente:", error);
       toast.error(error.message || "Error al guardar cliente");
     } finally {
       setIsSubmitting(false);
@@ -380,17 +510,29 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
 
         <div className="flex flex-col gap-2 pt-4 border-t">
           {Object.keys(errors).length > 0 && (
-            <div className="text-sm text-red-500 text-center">
-              ⚠️ Por favor complete los campos obligatorios marcados con *
+            <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700">
+              <div className="font-semibold flex items-center gap-2">
+                <span>⚠️</span> Por favor complete los campos obligatorios:
+              </div>
+              <ul className="list-disc list-inside mt-1 space-y-1">
+                {errors.nombres && <li>Nombres</li>}
+                {errors.primer_apellido && <li>Primer Apellido</li>}
+                {errors.cedula_pasaporte && <li>Cédula/Pasaporte</li>}
+                {errors.celular && <li>Celular</li>}
+              </ul>
             </div>
           )}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onCancel}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting || uploading}>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting || uploading}
+              data-testid="customer-form-submit-btn"
+            >
               {(isSubmitting || uploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {customer ? "Actualizar" : "Crear"} Cliente
+              {customer ? "Actualizar Cliente" : "Crear Cliente"}
             </Button>
           </div>
         </div>
