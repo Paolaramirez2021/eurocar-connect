@@ -70,6 +70,13 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
     },
   });
 
+  // Debug: Log errores de validación
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      console.log('[CustomerForm] Errores de validación:', errors);
+    }
+  }, [errors]);
+
   useEffect(() => {
     if (customer) {
       Object.keys(customer).forEach((key) => {
@@ -192,11 +199,21 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="nombres">Nombres *</Label>
-                <Input id="nombres" {...register("nombres", { required: true })} />
+                <Input 
+                  id="nombres" 
+                  {...register("nombres", { required: "Nombres es obligatorio" })} 
+                  className={errors.nombres ? "border-red-500" : ""}
+                />
+                {errors.nombres && <span className="text-xs text-red-500">{errors.nombres.message}</span>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="primer_apellido">Primer Apellido *</Label>
-                <Input id="primer_apellido" {...register("primer_apellido", { required: true })} />
+                <Input 
+                  id="primer_apellido" 
+                  {...register("primer_apellido", { required: "Primer apellido es obligatorio" })} 
+                  className={errors.primer_apellido ? "border-red-500" : ""}
+                />
+                {errors.primer_apellido && <span className="text-xs text-red-500">{errors.primer_apellido.message}</span>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="segundo_apellido">Segundo Apellido</Label>
@@ -204,7 +221,12 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
               </div>
               <div className="space-y-2">
                 <Label htmlFor="cedula_pasaporte">Cédula/Pasaporte *</Label>
-                <Input id="cedula_pasaporte" {...register("cedula_pasaporte", { required: true })} />
+                <Input 
+                  id="cedula_pasaporte" 
+                  {...register("cedula_pasaporte", { required: "Cédula o pasaporte es obligatorio" })} 
+                  className={errors.cedula_pasaporte ? "border-red-500" : ""}
+                />
+                {errors.cedula_pasaporte && <span className="text-xs text-red-500">{errors.cedula_pasaporte.message}</span>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="fecha_nacimiento">Fecha Nacimiento</Label>
@@ -265,7 +287,12 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="celular">Celular *</Label>
-                <Input id="celular" {...register("celular", { required: true })} />
+                <Input 
+                  id="celular" 
+                  {...register("celular", { required: "Celular es obligatorio" })} 
+                  className={errors.celular ? "border-red-500" : ""}
+                />
+                {errors.celular && <span className="text-xs text-red-500">{errors.celular.message}</span>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="telefono">Teléfono</Label>
@@ -351,14 +378,21 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
           </TabsContent>
         </Tabs>
 
-        <div className="flex justify-end gap-2 pt-4 border-t">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={isSubmitting || uploading}>
-            {(isSubmitting || uploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {customer ? "Actualizar" : "Crear"} Cliente
-          </Button>
+        <div className="flex flex-col gap-2 pt-4 border-t">
+          {Object.keys(errors).length > 0 && (
+            <div className="text-sm text-red-500 text-center">
+              ⚠️ Por favor complete los campos obligatorios marcados con *
+            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isSubmitting || uploading}>
+              {(isSubmitting || uploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {customer ? "Actualizar" : "Crear"} Cliente
+            </Button>
+          </div>
         </div>
       </form>
     </Card>
