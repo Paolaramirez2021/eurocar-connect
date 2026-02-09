@@ -27,8 +27,8 @@ export const CalendarView = () => {
   const loadVehicles = async () => {
     const { data, error } = await supabase
       .from("vehicles")
-      .select("id, placa, marca, modelo")
-      .order("placa");
+      .select("id, placa, marca, modelo, tarifa_dia_iva")
+      .order("tarifa_dia_iva", { ascending: true });
 
     if (error) {
       console.error("Error loading vehicles:", error);
