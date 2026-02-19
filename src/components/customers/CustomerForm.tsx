@@ -201,17 +201,25 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
     console.log('[CustomerForm] Iniciando submit...', { isUpdate: !!customer, customerId: customer?.id });
     console.log('[CustomerForm] Datos a guardar:', data);
     
+    // Validación adicional para actualización
+    if (customer && !customer.id) {
+      console.error('[CustomerForm] Error: customer existe pero no tiene ID');
+      toast.error("Error: No se puede identificar el cliente a actualizar");
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
+        toast.error("Usuario no autenticado");
         throw new Error("Usuario no autenticado");
       }
       
       let fotoDocumentoUrl = customer?.foto_documento_url;
 
-      if (customer) {
+      if (customer && customer.id) {
         // Update existing customer
         console.log('[CustomerForm] Actualizando cliente existente:', customer.id);
         
@@ -219,7 +227,7 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
           fotoDocumentoUrl = await uploadDocument(customer.id);
         }
 
-        // Preparar datos para actualización (excluir campos que no deben actualizarse)
+        // Preparar datos para actualización
         const updateData = {
           nombres: data.nombres,
           primer_apellido: data.primer_apellido,
@@ -256,17 +264,25 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
           foto_documento_url: fotoDocumentoUrl,
         };
 
+        console.log('[CustomerForm] Ejecutando UPDATE con ID:', customer.id);
         console.log('[CustomerForm] Datos de actualización:', updateData);
 
-        const { error, data: updatedData } = await supabase
+        const { error, data: updatedData, count } = await supabase
           .from("customers")
           .update(updateData)
           .eq("id", customer.id)
           .select();
 
+        console.log('[CustomerForm] Respuesta de Supabase:', { error, updatedData, count });
+
         if (error) {
           console.error('[CustomerForm] Error de Supabase al actualizar:', error);
+          toast.error(`Error al actualizar: ${error.message}`);
           throw error;
+        }
+        
+        if (!updatedData || updatedData.length === 0) {
+          console.warn('[CustomerForm] UPDATE ejecutado pero no se retornaron datos');
         }
         
         console.log('[CustomerForm] Cliente actualizado exitosamente:', updatedData);
