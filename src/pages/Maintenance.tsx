@@ -140,12 +140,17 @@ export default function Maintenance() {
       return result;
     },
     onSuccess: () => {
+      console.log('[Update] onSuccess - Invalidando queries');
       queryClient.invalidateQueries({ queryKey: ['maintenance'] });
       queryClient.invalidateQueries({ queryKey: ['maintenance_schedules_calendar'] });
       queryClient.invalidateQueries({ queryKey: ['maintenance_history'] });
       queryClient.invalidateQueries({ queryKey: ['finance_items'] });
       queryClient.invalidateQueries({ queryKey: ['maintenance-calendar'] });
       queryClient.invalidateQueries({ queryKey: ['maintenance-report'] });
+      
+      // Forzar refetch inmediato
+      queryClient.refetchQueries({ queryKey: ['maintenance'] });
+      
       toast.success('Mantenimiento actualizado exitosamente');
       setIsDialogOpen(false);
       setEditingMaintenance(null);
