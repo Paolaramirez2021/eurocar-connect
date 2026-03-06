@@ -130,7 +130,7 @@ export default function Finance() {
     });
   }, [reservations, selectedMonth]);
 
-  // Calcular datos de los últimos 6 meses
+  // Calcular datos de los últimos 6 meses (MES POR MES, sin acumular)
   const last6MonthsData = useMemo(() => {
     if (!reservations || !maintenance) return [];
 
@@ -140,41 +140,67 @@ export default function Finance() {
       const monthStart = startOfMonth(monthDate);
       const monthEnd = endOfMonth(monthDate);
 
-      // Filtrar reservas del mes (excluir canceladas y expiradas)
+      console.log(`[Finance] Calculando mes: ${format(monthDate, 'MMM yyyy', { locale: es })}`);
+
+      // Filtrar reservas que tengan días ACTIVOS en este mes específico
       const monthReservations = reservations.filter(r => {
-        const resDate = new Date(r.fecha_inicio);
-        const inRange = resDate >= monthStart && resDate <= monthEnd;
+        const resStart = new Date(r.fecha_inicio);
+        const resEnd = new Date(r.fecha_fin);
+        
+        // Verificar si la reserva tiene al menos un día activo en este mes
+        const hasActiveDaysInMonth = resStart <= monthEnd && resEnd >= monthStart;
         
         // Excluir canceladas y expiradas
         const estadosExcluidos = ['cancelled', 'cancelada', 'expired', 'expirada'];
         const estadoNormalizado = (r.estado || '').toLowerCase();
         const esActiva = !estadosExcluidos.includes(estadoNormalizado);
         
-        return inRange && esActiva;
+        return hasActiveDaysInMonth && esActiva;
       });
 
-      // Calcular ingresos brutos del mes
-      const monthIngresosBrutos = monthReservations.reduce(
-        (sum, r) => sum + (r.valor_total || r.price_total || 0), 
-        0
-      );
+      // Calcular ingresos del mes: solo los días que caen dentro de este mes
+      let monthIngresosBrutos = 0;
+      let monthDescuentos = 0;
 
-      // Calcular descuentos del mes
-      const monthDescuentos = monthReservations.reduce(
-        (sum, r) => sum + (r.descuento || 0), 
-        0
-      );
+      monthReservations.forEach(r => {
+        const resStart = new Date(r.fecha_inicio);
+        const resEnd = new Date(r.fecha_fin);
+        
+        // Calcular cuántos días de esta reserva caen en este mes
+        const effectiveStart = resStart < monthStart ? monthStart : resStart;
+        const effectiveEnd = resEnd > monthEnd ? monthEnd : resEnd;
+        const daysInMonth = differenceInDays(effectiveEnd, effectiveStart) + 1;
+        
+        // Calcular el total de días de la reserva
+        const totalDays = differenceInDays(resEnd, resStart) + 1;
+        
+        // Calcular la proporción de ingresos para este mes
+        const totalValue = r.valor_total || r.price_total || 0;
+        const dailyRate = totalValue / totalDays;
+        const monthValue = dailyRate * daysInMonth;
+        
+        monthIngresosBrutos += monthValue;
+        
+        // Calcular descuentos proporcionales
+        const totalDiscount = r.descuento || 0;
+        const dailyDiscount = totalDiscount / totalDays;
+        const monthDiscount = dailyDiscount * daysInMonth;
+        
+        monthDescuentos += monthDiscount;
+      });
 
       // Calcular ingresos netos del mes
       const monthIngresosNetos = monthIngresosBrutos - monthDescuentos;
 
-      // Calcular gastos del mes (mantenimiento)
+      // Calcular gastos del mes (mantenimiento que inició en este mes)
       const monthExpenses = maintenance
         .filter(m => {
-          const mainDate = new Date(m.fecha);
+          const mainDate = new Date(m.fecha || m.fecha_inicio);
           return mainDate >= monthStart && mainDate <= monthEnd;
         })
-        .reduce((sum, m) => sum + Number(m.costo), 0);
+        .reduce((sum, m) => sum + Number(m.costo || 0), 0);
+
+      console.log(`[Finance] ${format(monthDate, 'MMM yyyy')}: Ingresos=${monthIngresosBrutos.toFixed(0)}, Descuentos=${monthDescuentos.toFixed(0)}, Gastos=${monthExpenses.toFixed(0)}`);
 
       months.push({
         month: format(monthDate, 'MMM yyyy', { locale: es }),
@@ -186,6 +212,7 @@ export default function Finance() {
       });
     }
 
+    console.log('[Finance] Datos de 6 meses calculados:', months);
     return months;
   }, [reservations, maintenance]);
 
