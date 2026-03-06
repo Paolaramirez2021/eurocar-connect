@@ -58,12 +58,13 @@ export const DetailedReport = ({ dateRange }: DetailedReportProps) => {
   const { data: maintenance, isLoading: maintenanceLoading } = useQuery({
     queryKey: ['maintenance-report', dateRange],
     queryFn: async () => {
+      // Obtener mantenimientos que se solapen con el rango de fechas
       const { data, error } = await supabase
         .from('maintenance')
         .select('*')
-        .gte('fecha', dateRange.from.toISOString())
-        .lte('fecha', dateRange.to.toISOString());
+        .or(`and(fecha.lte.${dateRange.to.toISOString()},fecha_fin.gte.${dateRange.from.toISOString()})`);
       if (error) throw error;
+      console.log('[DetailedReport] Mantenimientos cargados:', data?.length || 0);
       return data;
     },
     enabled: !!dateRange.from && !!dateRange.to
