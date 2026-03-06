@@ -93,12 +93,16 @@ export const DetailedReport = ({ dateRange }: DetailedReportProps) => {
         }
       });
 
-      // Calcular días de mantenimiento
+      // Calcular días de mantenimiento - considerar rango completo (fecha a fecha_fin)
       allDays.forEach(day => {
         const hasMaintenance = maintenance.some(maint => {
           if (maint.vehicle_id !== vehicle.id) return false;
-          const maintDate = new Date(maint.fecha);
-          return format(maintDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd');
+          
+          const maintStart = new Date(maint.fecha);
+          const maintEnd = maint.fecha_fin ? new Date(maint.fecha_fin) : maintStart;
+          
+          // Verificar si el día está dentro del rango de mantenimiento
+          return isWithinInterval(day, { start: maintStart, end: maintEnd });
         });
 
         if (hasMaintenance && !occupiedDays.includes(format(day, 'dd/MM'))) {
