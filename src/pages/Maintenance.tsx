@@ -112,8 +112,27 @@ export default function Maintenance() {
   const updateMaintenance = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: typeof formData }) => {
       console.log('[Update] ===== INICIO ACTUALIZACIÓN =====');
-      console.log('[Update] ID:', id);
+      console.log('[Update] ID recibido:', id);
+      console.log('[Update] Tipo de ID:', typeof id);
       console.log('[Update] Data recibida:', data);
+      
+      // PRIMERO: Verificar que el registro existe
+      console.log('[Update] 1. Verificando que el registro existe...');
+      const { data: existing, error: checkError } = await supabase
+        .from('maintenance')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      console.log('[Update] Registro existente:', existing);
+      console.log('[Update] Error en verificación:', checkError);
+      
+      if (checkError || !existing) {
+        console.error('[Update] ❌ El registro NO existe en la BD');
+        throw new Error('El registro de mantenimiento no existe o no tienes permisos para verlo');
+      }
+      
+      console.log('[Update] ✅ Registro encontrado, procediendo con UPDATE');
       
       const fechaInicioStr = `${data.fecha_inicio}T12:00:00`;
       const fechaFinStr = `${data.fecha_fin}T12:00:00`;
@@ -129,7 +148,7 @@ export default function Maintenance() {
         kms: data.kms ? parseInt(data.kms) : null
       };
       
-      console.log('[Update] Datos procesados para UPDATE:', updateData);
+      console.log('[Update] 2. Datos procesados para UPDATE:', updateData);
       console.log('[Update] Costo parseado:', parseFloat(data.costo));
       
       const { data: result, error } = await supabase
@@ -138,18 +157,19 @@ export default function Maintenance() {
         .eq('id', id)
         .select('*');
       
-      console.log('[Update] Respuesta de Supabase:');
+      console.log('[Update] 3. Respuesta de Supabase UPDATE:');
       console.log('[Update] - Result:', result);
       console.log('[Update] - Error:', error);
       
       if (error) {
-        console.error('[Update] ❌ ERROR DETECTADO:', error);
+        console.error('[Update] ❌ ERROR en UPDATE:', error);
         throw error;
       }
       
       if (!result || result.length === 0) {
-        console.error('[Update] ❌ No se actualizó ningún registro');
-        throw new Error('No se encontró el registro para actualizar');
+        console.error('[Update] ❌ UPDATE no afectó ningún registro');
+        console.error('[Update] Esto podría ser un problema de RLS (Row Level Security)');
+        throw new Error('No se encontró el registro para actualizar. Verifica los permisos en Supabase.');
       }
       
       console.log('[Update] ✅ Actualización exitosa en BD:', result[0]);
