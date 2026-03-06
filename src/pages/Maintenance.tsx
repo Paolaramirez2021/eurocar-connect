@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Wrench, Calendar, History, MoreVertical, Trash2, Eye, CheckCircle2 } from "lucide-react";
+import { Plus, Wrench, Calendar, History, MoreVertical, Trash2, Eye, CheckCircle2, Pencil } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScheduledMaintenancePanel } from "@/components/maintenance/ScheduledMaintenancePanel";
@@ -20,6 +20,7 @@ import { MaintenanceCalendar } from "@/components/maintenance/MaintenanceCalenda
 export default function Maintenance() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingMaintenance, setEditingMaintenance] = useState<any>(null);
   const [formData, setFormData] = useState({
     vehicle_id: "",
     tipo: "",
