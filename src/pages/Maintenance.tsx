@@ -54,6 +54,7 @@ export default function Maintenance() {
   const { data: maintenance } = useQuery({
     queryKey: ['maintenance'],
     queryFn: async () => {
+      console.log('[Query] Cargando mantenimientos...');
       const { data, error } = await supabase
         .from('maintenance')
         .select('*, vehicles(placa, marca, modelo)')
@@ -61,8 +62,11 @@ export default function Maintenance() {
         .order('fecha', { ascending: false })
         .limit(10);
       if (error) throw error;
+      console.log('[Query] Mantenimientos cargados:', data?.length);
       return data;
-    }
+    },
+    staleTime: 0, // Datos siempre frescos
+    gcTime: 0, // No guardar en cache
   });
 
   const createMaintenance = useMutation({
