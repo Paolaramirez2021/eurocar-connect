@@ -9,6 +9,12 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    allowedHosts: [
+      ".emergentcf.cloud",
+      ".emergentagent.com",
+      "localhost",
+      "127.0.0.1"
+    ],
   },
   plugins: [
     react(),
