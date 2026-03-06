@@ -237,7 +237,7 @@ export default function Maintenance() {
               Gestión completa de mantenimiento vehicular
             </p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
             <DialogTrigger asChild>
               <Button size="lg">
                 <Plus className="h-4 w-4 mr-2" />
@@ -246,7 +246,9 @@ export default function Maintenance() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Registrar Mantenimiento</DialogTitle>
+                <DialogTitle>
+                  {editingMaintenance ? 'Editar Mantenimiento' : 'Registrar Mantenimiento'}
+                </DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
@@ -313,7 +315,7 @@ export default function Maintenance() {
                   </div>
                 </div>
                 <div>
-                  <Label>Costo</Label>
+                  <Label>Costo {editingMaintenance && '(Puedes actualizar con el valor real)'}</Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -331,8 +333,12 @@ export default function Maintenance() {
                     placeholder="Kilometraje al momento del mantenimiento"
                   />
                 </div>
-                <Button onClick={() => createMaintenance.mutate(formData)} className="w-full">
-                  Registrar
+                <Button 
+                  onClick={handleSave} 
+                  className="w-full"
+                  disabled={createMaintenance.isPending || updateMaintenance.isPending}
+                >
+                  {editingMaintenance ? 'Actualizar' : 'Registrar'}
                 </Button>
               </div>
             </DialogContent>
