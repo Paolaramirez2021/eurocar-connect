@@ -205,8 +205,10 @@ export default function Maintenance() {
   });
 
   const handleEdit = (item: any) => {
+    console.log('[handleEdit] Item a editar:', item);
     setEditingMaintenance(item);
-    setFormData({
+    
+    const formDataToEdit = {
       vehicle_id: item.vehicle_id,
       tipo: item.tipo,
       descripcion: item.descripcion || "",
@@ -214,7 +216,10 @@ export default function Maintenance() {
       fecha_fin: new Date(item.fecha_fin || item.fecha).toISOString().split('T')[0],
       costo: item.costo?.toString() || "",
       kms: item.kms?.toString() || ""
-    });
+    };
+    
+    console.log('[handleEdit] Form data cargado:', formDataToEdit);
+    setFormData(formDataToEdit);
     setIsDialogOpen(true);
   };
 
