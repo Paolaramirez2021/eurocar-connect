@@ -189,11 +189,26 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
           return matches;
         });
 
-        // Check for maintenance
+        // Check for maintenance - verificar si el día está en el rango de mantenimiento
         const maintenanceItem = maintenance.find(maint => {
           if (maint.vehicle_id !== vehicle.id) return false;
-          const maintDate = new Date(maint.fecha);
-          return format(maintDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd');
+          
+          const maintStart = new Date(maint.fecha);
+          const maintEnd = maint.fecha_fin ? new Date(maint.fecha_fin) : maintStart;
+          
+          // Verificar si el día actual está dentro del rango de mantenimiento
+          const isInMaintenanceRange = isWithinInterval(day, { start: maintStart, end: maintEnd });
+          
+          if (isInMaintenanceRange) {
+            console.log('[Calendario] Mantenimiento encontrado:', {
+              vehiculo: vehicle.placa,
+              dia: format(day, 'yyyy-MM-dd'),
+              mantenimientoInicio: format(maintStart, 'yyyy-MM-dd'),
+              mantenimientoFin: format(maintEnd, 'yyyy-MM-dd')
+            });
+          }
+          
+          return isInMaintenanceRange;
         });
 
         // Determine status based on estado ONLY using centralized config
