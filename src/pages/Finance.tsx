@@ -216,7 +216,7 @@ export default function Finance() {
     return months;
   }, [reservations, maintenance]);
 
-  // Calcular estadísticas generales
+  // Calcular estadísticas generales (MES ACTUAL SOLAMENTE)
   const stats = useMemo(() => {
     if (!reservations || !maintenance) {
       return { 
@@ -228,36 +228,79 @@ export default function Finance() {
       };
     }
 
-    const reservacionesValidas = reservations.filter(r => {
-      // Incluir todas las reservas activas (no canceladas, no expiradas, no completadas)
+    const currentMonthStart = startOfMonth(new Date());
+    const currentMonthEnd = endOfMonth(new Date());
+
+    // Filtrar reservas que tienen días activos en el mes actual
+    const reservacionesDelMes = reservations.filter(r => {
+      const resStart = new Date(r.fecha_inicio);
+      const resEnd = new Date(r.fecha_fin);
+      
+      // Verificar si la reserva tiene al menos un día activo en este mes
+      const hasActiveDaysInMonth = resStart <= currentMonthEnd && resEnd >= currentMonthStart;
+      
+      // Excluir canceladas y expiradas
       const estadosExcluidos = ['cancelled', 'cancelada', 'expired', 'expirada'];
       const estadoNormalizado = (r.estado || '').toLowerCase();
-      return !estadosExcluidos.includes(estadoNormalizado);
+      const esActiva = !estadosExcluidos.includes(estadoNormalizado);
+      
+      return hasActiveDaysInMonth && esActiva;
     });
 
-    const ingresosBrutos = reservacionesValidas.reduce(
-      (sum, r) => sum + (r.valor_total || r.price_total || 0), 
-      0
-    );
+    let ingresosBrutos = 0;
+    let descuentos = 0;
 
-    const descuentos = reservacionesValidas.reduce(
-      (sum, r) => sum + (r.descuento || 0), 
-      0
-    );
+    reservacionesDelMes.forEach(r => {
+      const resStart = new Date(r.fecha_inicio);
+      const resEnd = new Date(r.fecha_fin);
+      
+      // Calcular cuántos días de esta reserva caen en este mes
+      const effectiveStart = resStart < currentMonthStart ? currentMonthStart : resStart;
+      const effectiveEnd = resEnd > currentMonthEnd ? currentMonthEnd : resEnd;
+      const daysInMonth = differenceInDays(effectiveEnd, effectiveStart) + 1;
+      
+      // Calcular el total de días de la reserva
+      const totalDays = differenceInDays(resEnd, resStart) + 1;
+      
+      // Calcular la proporción de ingresos para este mes
+      const totalValue = r.valor_total || r.price_total || 0;
+      const dailyRate = totalValue / totalDays;
+      const monthValue = dailyRate * daysInMonth;
+      
+      ingresosBrutos += monthValue;
+      
+      // Calcular descuentos proporcionales
+      const totalDiscount = r.descuento || 0;
+      const dailyDiscount = totalDiscount / totalDays;
+      const monthDiscount = dailyDiscount * daysInMonth;
+      
+      descuentos += monthDiscount;
+    });
 
     const ingresosNetos = ingresosBrutos - descuentos;
 
-    const gastos = maintenance.reduce(
-      (sum, m) => sum + Number(m.costo), 
-      0
-    );
+    // Gastos del mes actual
+    const gastos = maintenance
+      .filter(m => {
+        const mainDate = new Date(m.fecha || m.fecha_inicio);
+        return mainDate >= currentMonthStart && mainDate <= currentMonthEnd;
+      })
+      .reduce((sum, m) => sum + Number(m.costo || 0), 0);
+
+    console.log('[Finance Stats] Mes actual:', {
+      ingresosBrutos: Math.round(ingresosBrutos),
+      descuentos: Math.round(descuentos),
+      ingresosNetos: Math.round(ingresosNetos),
+      gastos: Math.round(gastos),
+      totalNeto: Math.round(ingresosNetos - gastos)
+    });
 
     return {
-      ingresosBrutos,
-      descuentos,
-      ingresosNetos,
-      gastos,
-      totalNeto: ingresosNetos - gastos
+      ingresosBrutos: Math.round(ingresosBrutos),
+      descuentos: Math.round(descuentos),
+      ingresosNetos: Math.round(ingresosNetos),
+      gastos: Math.round(gastos),
+      totalNeto: Math.round(ingresosNetos - gastos)
     };
   }, [reservations, maintenance]);
 
