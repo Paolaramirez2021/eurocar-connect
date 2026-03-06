@@ -214,9 +214,17 @@ export default function Maintenance() {
   };
 
   const handleSave = () => {
+    // Validar que hay datos
+    if (!formData.vehicle_id || !formData.tipo || !formData.costo) {
+      toast.error('Por favor completa todos los campos requeridos');
+      return;
+    }
+
     if (editingMaintenance) {
+      console.log('[handleSave] Actualizando mantenimiento:', editingMaintenance.id);
       updateMaintenance.mutate({ id: editingMaintenance.id, data: formData });
     } else {
+      console.log('[handleSave] Creando nuevo mantenimiento');
       createMaintenance.mutate(formData);
     }
   };
