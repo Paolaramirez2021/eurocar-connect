@@ -139,17 +139,19 @@ export default function Maintenance() {
       console.log('[Update] Actualización exitosa:', result);
       return result;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       console.log('[Update] onSuccess - Invalidando queries');
-      queryClient.invalidateQueries({ queryKey: ['maintenance'] });
+      
+      // Invalidar y refrescar INMEDIATAMENTE
+      await queryClient.invalidateQueries({ queryKey: ['maintenance'] });
+      await queryClient.refetchQueries({ queryKey: ['maintenance'] });
+      
+      // Invalidar otros queries relacionados
       queryClient.invalidateQueries({ queryKey: ['maintenance_schedules_calendar'] });
       queryClient.invalidateQueries({ queryKey: ['maintenance_history'] });
       queryClient.invalidateQueries({ queryKey: ['finance_items'] });
       queryClient.invalidateQueries({ queryKey: ['maintenance-calendar'] });
       queryClient.invalidateQueries({ queryKey: ['maintenance-report'] });
-      
-      // Forzar refetch inmediato
-      queryClient.refetchQueries({ queryKey: ['maintenance'] });
       
       toast.success('Mantenimiento actualizado exitosamente');
       setIsDialogOpen(false);
@@ -163,6 +165,8 @@ export default function Maintenance() {
         costo: "",
         kms: ""
       });
+      
+      console.log('[Update] UI actualizada');
     },
     onError: (error) => {
       toast.error('Error al actualizar mantenimiento: ' + error.message);
