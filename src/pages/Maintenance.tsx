@@ -400,6 +400,13 @@ export default function Maintenance() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem 
+                                onClick={() => handleEdit(item)}
+                                data-testid={`edit-maintenance-${item.id}`}
+                              >
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
                                 onClick={() => toast.info('Funcionalidad de ver detalles próximamente')}
                               >
                                 <Eye className="h-4 w-4 mr-2" />
