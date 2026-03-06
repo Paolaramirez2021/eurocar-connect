@@ -186,6 +186,10 @@ export default function Maintenance() {
       console.log('[Update] UI actualizada');
     },
     onError: (error) => {
+      console.error('[Update] ===== ERROR EN ACTUALIZACIÓN =====');
+      console.error('[Update] Error completo:', error);
+      console.error('[Update] Error message:', error.message);
+      console.error('[Update] Error stack:', error.stack);
       toast.error('Error al actualizar mantenimiento: ' + error.message);
     }
   });
