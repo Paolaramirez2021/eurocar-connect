@@ -230,7 +230,17 @@ export default function Maintenance() {
   });
 
   const handleEdit = (item: any) => {
-    console.log('[handleEdit] Item a editar:', item);
+    console.log('[handleEdit] ===== ITEM COMPLETO =====');
+    console.log('[handleEdit] Item:', item);
+    console.log('[handleEdit] Item.id:', item.id);
+    console.log('[handleEdit] Tipo de item.id:', typeof item.id);
+    
+    if (!item.id) {
+      console.error('[handleEdit] ❌ ERROR: item.id es undefined o null');
+      toast.error('Error: ID de mantenimiento no válido');
+      return;
+    }
+    
     setEditingMaintenance(item);
     
     const formDataToEdit = {
