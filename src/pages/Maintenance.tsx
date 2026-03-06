@@ -111,7 +111,9 @@ export default function Maintenance() {
 
   const updateMaintenance = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: typeof formData }) => {
-      console.log('[Update] Iniciando actualización:', { id, data });
+      console.log('[Update] ===== INICIO ACTUALIZACIÓN =====');
+      console.log('[Update] ID:', id);
+      console.log('[Update] Data recibida:', data);
       
       const fechaInicioStr = `${data.fecha_inicio}T12:00:00`;
       const fechaFinStr = `${data.fecha_fin}T12:00:00`;
@@ -127,21 +129,32 @@ export default function Maintenance() {
         kms: data.kms ? parseInt(data.kms) : null
       };
       
-      console.log('[Update] Datos a actualizar:', updateData);
+      console.log('[Update] Datos procesados para UPDATE:', updateData);
+      console.log('[Update] Costo parseado:', parseFloat(data.costo));
       
       const { data: result, error } = await supabase
         .from('maintenance')
         .update(updateData)
         .eq('id', id)
-        .select();
+        .select('*');
+      
+      console.log('[Update] Respuesta de Supabase:');
+      console.log('[Update] - Result:', result);
+      console.log('[Update] - Error:', error);
       
       if (error) {
-        console.error('[Update] Error:', error);
+        console.error('[Update] ❌ ERROR DETECTADO:', error);
         throw error;
       }
       
-      console.log('[Update] Actualización exitosa:', result);
-      return result;
+      if (!result || result.length === 0) {
+        console.error('[Update] ❌ No se actualizó ningún registro');
+        throw new Error('No se encontró el registro para actualizar');
+      }
+      
+      console.log('[Update] ✅ Actualización exitosa en BD:', result[0]);
+      console.log('[Update] ===== FIN ACTUALIZACIÓN =====');
+      return result[0];
     },
     onSuccess: async () => {
       console.log('[Update] onSuccess - Invalidando queries');
