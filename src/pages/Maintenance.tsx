@@ -249,17 +249,23 @@ export default function Maintenance() {
   };
 
   const handleSave = () => {
+    console.log('[handleSave] ===== INICIO GUARDAR =====');
+    console.log('[handleSave] editingMaintenance:', editingMaintenance);
+    console.log('[handleSave] formData:', formData);
+    
     // Validar que hay datos
     if (!formData.vehicle_id || !formData.tipo || !formData.costo) {
+      console.error('[handleSave] ❌ Validación fallida - campos faltantes');
       toast.error('Por favor completa todos los campos requeridos');
       return;
     }
 
     if (editingMaintenance) {
-      console.log('[handleSave] Actualizando mantenimiento:', editingMaintenance.id);
+      console.log('[handleSave] 🔄 Modo EDICIÓN');
+      console.log('[handleSave] ID del mantenimiento:', editingMaintenance.id);
       updateMaintenance.mutate({ id: editingMaintenance.id, data: formData });
     } else {
-      console.log('[handleSave] Creando nuevo mantenimiento');
+      console.log('[handleSave] ➕ Modo CREAR');
       createMaintenance.mutate(formData);
     }
   };
