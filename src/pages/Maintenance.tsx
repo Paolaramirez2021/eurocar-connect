@@ -186,6 +186,44 @@ export default function Maintenance() {
     }
   });
 
+  const handleEdit = (item: any) => {
+    setEditingMaintenance(item);
+    setFormData({
+      vehicle_id: item.vehicle_id,
+      tipo: item.tipo,
+      descripcion: item.descripcion || "",
+      fecha_inicio: new Date(item.fecha_inicio || item.fecha).toISOString().split('T')[0],
+      fecha_fin: new Date(item.fecha_fin || item.fecha).toISOString().split('T')[0],
+      costo: item.costo?.toString() || "",
+      kms: item.kms?.toString() || ""
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleSave = () => {
+    if (editingMaintenance) {
+      updateMaintenance.mutate({ id: editingMaintenance.id, data: formData });
+    } else {
+      createMaintenance.mutate(formData);
+    }
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    setIsDialogOpen(open);
+    if (!open) {
+      setEditingMaintenance(null);
+      setFormData({
+        vehicle_id: "",
+        tipo: "",
+        descripcion: "",
+        fecha_inicio: new Date().toISOString().split('T')[0],
+        fecha_fin: new Date().toISOString().split('T')[0],
+        costo: "",
+        kms: ""
+      });
+    }
+  };
+
   return (
     <DashboardLayout user={session?.user || null}>
       <div className="space-y-6">
