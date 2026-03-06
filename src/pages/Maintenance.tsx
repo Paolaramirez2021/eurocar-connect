@@ -107,24 +107,37 @@ export default function Maintenance() {
 
   const updateMaintenance = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: typeof formData }) => {
+      console.log('[Update] Iniciando actualización:', { id, data });
+      
       const fechaInicioStr = `${data.fecha_inicio}T12:00:00`;
       const fechaFinStr = `${data.fecha_fin}T12:00:00`;
       
-      const { error } = await supabase
-        .from('maintenance')
-        .update({
-          vehicle_id: data.vehicle_id,
-          tipo: data.tipo,
-          descripcion: data.descripcion,
-          fecha: fechaInicioStr,
-          fecha_inicio: fechaInicioStr,
-          fecha_fin: fechaFinStr,
-          costo: parseFloat(data.costo),
-          kms: data.kms ? parseInt(data.kms) : null
-        })
-        .eq('id', id);
+      const updateData = {
+        vehicle_id: data.vehicle_id,
+        tipo: data.tipo,
+        descripcion: data.descripcion,
+        fecha: fechaInicioStr,
+        fecha_inicio: fechaInicioStr,
+        fecha_fin: fechaFinStr,
+        costo: parseFloat(data.costo),
+        kms: data.kms ? parseInt(data.kms) : null
+      };
       
-      if (error) throw error;
+      console.log('[Update] Datos a actualizar:', updateData);
+      
+      const { data: result, error } = await supabase
+        .from('maintenance')
+        .update(updateData)
+        .eq('id', id)
+        .select();
+      
+      if (error) {
+        console.error('[Update] Error:', error);
+        throw error;
+      }
+      
+      console.log('[Update] Actualización exitosa:', result);
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['maintenance'] });
