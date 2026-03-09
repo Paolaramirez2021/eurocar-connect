@@ -35,8 +35,8 @@ export const MaintenanceHistoryPanel = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('vehicles')
-        .select('id, placa, marca, modelo, daily_rate')
-        .order('daily_rate', { ascending: true }); // Ordenar por precio diario de menor a mayor
+        .select('id, placa, marca, modelo, tarifa_dia_iva')
+        .order('tarifa_dia_iva', { ascending: true }); // Ordenar por precio diario de menor a mayor
       if (error) throw error;
       return data;
     }
