@@ -34,7 +34,7 @@ export const DetailedReport = ({ dateRange }: DetailedReportProps) => {
       const { data, error } = await supabase
         .from('vehicles')
         .select('*')
-        .order('placa');
+        .order('daily_rate', { ascending: true }); // Ordenar por precio diario de menor a mayor
       if (error) throw error;
       return data;
     }
