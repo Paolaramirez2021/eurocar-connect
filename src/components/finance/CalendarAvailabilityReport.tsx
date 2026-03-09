@@ -108,17 +108,27 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
     }
   };
   
-  const { data: vehicles, isLoading: vehiclesLoading } = useQuery({
+  const { data: vehiclesData, isLoading: vehiclesLoading } = useQuery({
     queryKey: ['vehicles'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('vehicles')
         .select('*')
-        .order('daily_rate', { ascending: true, nullsFirst: false }); // Ordenar por precio diario de menor a mayor
+        .order('placa'); // Ordenar por placa primero (como estaba)
       if (error) throw error;
       return data;
     }
   });
+
+  // Ordenar vehículos por daily_rate en el cliente
+  const vehicles = useMemo(() => {
+    if (!vehiclesData) return [];
+    return [...vehiclesData].sort((a, b) => {
+      const rateA = a.daily_rate || 0;
+      const rateB = b.daily_rate || 0;
+      return rateA - rateB; // De menor a mayor
+    });
+  }, [vehiclesData]);
 
   const { data: reservations, isLoading: reservationsLoading } = useQuery({
     queryKey: ['reservations-calendar', dateRange],
