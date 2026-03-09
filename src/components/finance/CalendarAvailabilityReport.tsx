@@ -123,11 +123,27 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
   // Ordenar vehículos por daily_rate en el cliente
   const vehicles = useMemo(() => {
     if (!vehiclesData) return [];
-    return [...vehiclesData].sort((a, b) => {
-      const rateA = a.daily_rate || 0;
-      const rateB = b.daily_rate || 0;
+    
+    console.log('[CalendarReport] Vehículos antes de ordenar:', vehiclesData.map(v => ({ 
+      placa: v.placa, 
+      daily_rate: v.daily_rate,
+      precio_dia: v.precio_dia,
+      price_per_day: v.price_per_day 
+    })));
+    
+    const sorted = [...vehiclesData].sort((a, b) => {
+      // Intentar diferentes nombres de campo
+      const rateA = a.daily_rate || a.precio_dia || a.price_per_day || 0;
+      const rateB = b.daily_rate || b.precio_dia || b.price_per_day || 0;
       return rateA - rateB; // De menor a mayor
     });
+    
+    console.log('[CalendarReport] Vehículos después de ordenar:', sorted.map(v => ({ 
+      placa: v.placa, 
+      rate: v.daily_rate || v.precio_dia || v.price_per_day 
+    })));
+    
+    return sorted;
   }, [vehiclesData]);
 
   const { data: reservations, isLoading: reservationsLoading } = useQuery({
