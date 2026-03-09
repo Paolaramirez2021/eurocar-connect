@@ -120,28 +120,15 @@ export const CalendarAvailabilityReport = ({ dateRange }: CalendarAvailabilityRe
     }
   });
 
-  // Ordenar vehículos por daily_rate en el cliente
+  // Ordenar vehículos por tarifa_dia_iva en el cliente
   const vehicles = useMemo(() => {
     if (!vehiclesData) return [];
     
-    console.log('[CalendarReport] Vehículos antes de ordenar:', vehiclesData.map(v => ({ 
-      placa: v.placa, 
-      daily_rate: v.daily_rate,
-      precio_dia: v.precio_dia,
-      price_per_day: v.price_per_day 
-    })));
-    
     const sorted = [...vehiclesData].sort((a, b) => {
-      // Intentar diferentes nombres de campo
-      const rateA = a.daily_rate || a.precio_dia || a.price_per_day || 0;
-      const rateB = b.daily_rate || b.precio_dia || b.price_per_day || 0;
+      const rateA = a.tarifa_dia_iva || 0;
+      const rateB = b.tarifa_dia_iva || 0;
       return rateA - rateB; // De menor a mayor
     });
-    
-    console.log('[CalendarReport] Vehículos después de ordenar:', sorted.map(v => ({ 
-      placa: v.placa, 
-      rate: v.daily_rate || v.precio_dia || v.price_per_day 
-    })));
     
     return sorted;
   }, [vehiclesData]);
