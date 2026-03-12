@@ -52,3 +52,4 @@ bun.lockb
 # Environment files
 *.env
 *.env.*
+node_modules/html-pdf-node/node_modules/puppeteer/.local-chromium/linux-901912/chrome-linux/chrome
