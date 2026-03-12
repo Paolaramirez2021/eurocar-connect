@@ -188,24 +188,33 @@ export class ContractService {
     contractData: any
   ) {
     try {
-      // Llamar a la API de email (implementaremos con Resend)
-      const response = await fetch('/api/send-contract-email', {
+      console.log('[ContractService] Enviando email a:', clientEmail);
+      
+      // Obtener la URL del backend desde las variables de entorno
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+      
+      // Llamar al backend API
+      const response = await fetch(`${backendUrl}/api/send-contract-email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           to: [clientEmail, 'reservas@eurocar.com'],
-          contractPdfUrl,
-          contractData
+          contract_pdf_url: contractPdfUrl,
+          contract_data: contractData
         })
       });
 
       if (!response.ok) {
-        throw new Error('Error enviando email');
+        const error = await response.json();
+        throw new Error(error.detail || 'Error enviando email');
       }
 
-      return await response.json();
+      const result = await response.json();
+      console.log('[ContractService] Email enviado:', result);
+      
+      return result;
     } catch (error: any) {
       console.error('[ContractService] Error enviando email:', error);
       throw new Error(`Error al enviar email: ${error.message}`);
