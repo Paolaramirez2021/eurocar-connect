@@ -67,7 +67,6 @@ async def root():
     }
 
 @app.get("/health")
-@api_router.get("/health")
 async def health_check():
     return {
         "status": "healthy",
