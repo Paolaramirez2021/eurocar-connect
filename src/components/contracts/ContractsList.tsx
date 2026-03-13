@@ -311,16 +311,16 @@ export const ContractsList = ({ highlightedContractId }: ContractsListProps) => 
                   <TableCell>{getStatusBadge(contract)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      {contract.contract_type === 'preliminary' && 
-                       contract.preliminary_status === 'accepted' && (
+                      {/* Botón Convertir para contratos preliminares */}
+                      {contract.status === 'preliminary' && (
                         <Button
                           variant="default"
                           size="sm"
                           onClick={() => handleConvertToFinal(contract)}
-                          title="Convertir a contrato final"
+                          title="Convertir a contrato final con firma"
                         >
                           <ArrowRight className="h-4 w-4 mr-1" />
-                          Convertir
+                          Firmar
                         </Button>
                       )}
                       {contract.pdf_url && (
