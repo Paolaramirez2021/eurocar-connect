@@ -8,7 +8,7 @@ import subprocess
 import json
 import base64
 from typing import List, Optional
-from fastapi import FastAPI, HTTPException, File, UploadFile, APIRouter
+from fastapi import FastAPI, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel, EmailStr
