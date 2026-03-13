@@ -8,7 +8,7 @@ import subprocess
 import json
 import base64
 from typing import List, Optional
-from fastapi import FastAPI, HTTPException, File, UploadFile
+from fastapi import FastAPI, HTTPException, File, UploadFile, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel, EmailStr
@@ -54,6 +54,9 @@ class GeneratePDFRequest(BaseModel):
     html: str
     options: Optional[dict] = None
 
+# Router para rutas API (con y sin prefijo /api)
+api_router = APIRouter()
+
 # Rutas
 @app.get("/")
 async def root():
@@ -64,6 +67,7 @@ async def root():
     }
 
 @app.get("/health")
+@api_router.get("/health")
 async def health_check():
     return {
         "status": "healthy",
