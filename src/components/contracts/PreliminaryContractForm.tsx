@@ -177,6 +177,7 @@ export const PreliminaryContractForm = () => {
           fecha_inicio,
           fecha_fin,
           price_total,
+          valor_total,
           estado,
           vehicles (
             marca,
