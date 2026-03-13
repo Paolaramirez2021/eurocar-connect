@@ -21,6 +21,9 @@ Sistema completo de gestión de alquiler de vehículos para EUROCAR RENTAL, con 
 ├── src/
 │   ├── components/
 │   │   ├── contracts/         # Componentes de contratos
+│   │   │   ├── ContractsList.tsx  # Historial con reenvío de email
+│   │   │   ├── ContractForm.tsx   # Formulario de firma
+│   │   │   └── ...
 │   │   ├── finance/           # Componentes de finanzas
 │   │   └── ...
 │   ├── pages/                 # Páginas de la aplicación
@@ -39,6 +42,7 @@ Sistema completo de gestión de alquiler de vehículos para EUROCAR RENTAL, con 
 - Términos y condiciones con aceptación
 - Generación de PDF con Puppeteer
 - Envío automático de contrato por email (Resend)
+- **Reenvío de contrato** desde el historial (botón de email)
 - Almacenamiento de assets en Supabase Storage
 
 ### ✅ Módulo de Finanzas
@@ -55,7 +59,7 @@ Sistema completo de gestión de alquiler de vehículos para EUROCAR RENTAL, con 
 ### ✅ Backend FastAPI
 - **GET /health**: Estado del servicio
 - **POST /generate-pdf**: Genera PDF desde HTML
-- **POST /send-contract-email**: Envía contrato por email
+- **POST /send-contract-email**: Envía/reenvía contrato por email
 
 ## Credenciales Configuradas
 - **Resend API Key**: Configurada en /app/backend/.env
@@ -89,4 +93,4 @@ Sistema completo de gestión de alquiler de vehículos para EUROCAR RENTAL, con 
 
 ## Última Actualización
 Fecha: 13 de Marzo, 2025
-Sesión: Configuración de Resend + Backend de contratos
+Sesión: Reenvío de contratos por email implementado
