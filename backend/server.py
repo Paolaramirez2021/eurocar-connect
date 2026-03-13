@@ -4,9 +4,13 @@ FastAPI Backend para Eurocar Rental - Contratos
 import os
 import asyncio
 import logging
-from typing import List
+import subprocess
+import json
+import base64
+from typing import List, Optional
 from fastapi import FastAPI, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from pydantic import BaseModel, EmailStr
 import resend
 from dotenv import load_dotenv
