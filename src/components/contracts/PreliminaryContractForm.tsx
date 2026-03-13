@@ -208,6 +208,8 @@ export const PreliminaryContractForm = () => {
         setValue("totalAmount", firstReservation.price_total || 0);
         
         toast.info("Datos de la reserva más reciente cargados automáticamente");
+      } else {
+        toast.warning("Este cliente no tiene reservas activas. Complete los datos manualmente o cree una reserva primero.");
       }
     } catch (error) {
       console.error("Error searching customer:", error);
