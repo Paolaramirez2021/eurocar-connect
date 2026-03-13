@@ -123,21 +123,59 @@ export const ContractsList = ({ highlightedContractId }: ContractsListProps) => 
   };
 
   const handleResendEmail = async (contract: Contract) => {
+    if (!contract.customer_email) {
+      toast.error("El cliente no tiene email registrado");
+      return;
+    }
+
+    setResendingEmail(contract.id);
+    
     try {
       const vehicle = vehicles.find((v) => v.id === contract.vehicle_id);
-      await supabase.functions.invoke("send-contract-email", {
-        body: {
-          contractId: contract.id,
-          customerEmail: contract.customer_email,
-          customerName: contract.customer_name,
-          vehiclePlate: vehicle?.placa,
-          pdfUrl: contract.pdf_url,
+      const vehicleInfo = vehicle ? `${vehicle.marca} ${vehicle.modelo}` : "Vehículo";
+      const vehiclePlate = vehicle?.placa || "N/A";
+      
+      // Calcular días del contrato
+      const startDate = new Date(contract.start_date);
+      const endDate = new Date(contract.end_date);
+      const diasTotales = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      // Llamar al backend FastAPI para reenviar email
+      const response = await fetch('/api/send-contract-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          to: [contract.customer_email],
+          contract_pdf_url: contract.pdf_url || '#',
+          contract_data: {
+            cliente_nombre: contract.customer_name,
+            vehiculo_marca: vehicleInfo,
+            vehiculo_placa: vehiclePlate,
+            fecha_inicio: format(startDate, "dd/MM/yyyy", { locale: es }),
+            fecha_fin: format(endDate, "dd/MM/yyyy", { locale: es }),
+            dias_totales: diasTotales,
+            valor_total: contract.total_amount,
+            fecha_firma: format(new Date(contract.signed_at), "dd/MM/yyyy HH:mm", { locale: es })
+          }
+        })
       });
-      toast.success("Correo reenviado exitosamente");
-    } catch (error) {
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Error al enviar email');
+      }
+
+      const result = await response.json();
+      console.log('[ContractsList] Email reenviado:', result);
+      
+      toast.success(`Contrato reenviado a ${contract.customer_email}`);
+    } catch (error: any) {
       console.error("Error resending email:", error);
-      toast.error("Error al reenviar correo");
+      toast.error(`Error al reenviar: ${error.message}`);
+    } finally {
+      setResendingEmail(null);
     }
   };
 
