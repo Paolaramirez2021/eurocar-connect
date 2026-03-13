@@ -396,9 +396,9 @@ export const PreliminaryContractForm = () => {
       toast.success(`Contrato preliminar ${contractNumber} creado exitosamente`);
       resetForm();
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating preliminary contract:", error);
-      toast.error("Error al crear el contrato preliminar");
+      toast.error(error.message || "Error al crear el contrato preliminar");
     } finally {
       setIsSubmitting(false);
     }
