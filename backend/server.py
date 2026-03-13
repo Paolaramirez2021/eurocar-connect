@@ -54,9 +54,6 @@ class GeneratePDFRequest(BaseModel):
     html: str
     options: Optional[dict] = None
 
-# Router para rutas API (con y sin prefijo /api)
-api_router = APIRouter()
-
 # Rutas
 @app.get("/")
 async def root():
