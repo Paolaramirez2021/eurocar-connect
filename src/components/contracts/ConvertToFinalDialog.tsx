@@ -184,18 +184,33 @@ export const ConvertToFinalDialog = ({
 
       toast.success(`Contrato final ${contractNumber} creado exitosamente`);
       
-      // Send email with final contract
+      // Send email with final contract using FastAPI backend
       if (preliminaryContract.customer_email) {
         try {
-          await supabase.functions.invoke("send-contract-email", {
-            body: {
-              contractId: contractId,
-              customerEmail: preliminaryContract.customer_email,
-              customerName: preliminaryContract.customer_name,
-              vehiclePlate: vehicleInfo.split('-')[1]?.trim(),
-              pdfUrl: signatureUrl.publicUrl,
+          const response = await fetch('/api/send-contract-email', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
             },
+            body: JSON.stringify({
+              to: [preliminaryContract.customer_email],
+              contract_pdf_url: signatureUrl.publicUrl,
+              contract_data: {
+                cliente_nombre: preliminaryContract.customer_name,
+                vehiculo_marca: vehicleInfo,
+                vehiculo_placa: vehicleInfo.split('-')[1]?.trim() || '',
+                fecha_inicio: format(new Date(preliminaryContract.start_date), "dd/MM/yyyy", { locale: es }),
+                fecha_fin: format(new Date(preliminaryContract.end_date), "dd/MM/yyyy", { locale: es }),
+                dias_totales: Math.ceil((new Date(preliminaryContract.end_date).getTime() - new Date(preliminaryContract.start_date).getTime()) / (1000 * 60 * 60 * 24)),
+                valor_total: preliminaryContract.total_amount,
+                fecha_firma: format(new Date(), "dd/MM/yyyy HH:mm", { locale: es })
+              }
+            })
           });
+          
+          if (response.ok) {
+            toast.success("Contrato enviado por email al cliente");
+          }
         } catch (emailError) {
           console.error("Error sending email:", emailError);
           // No fallar si el email falla
