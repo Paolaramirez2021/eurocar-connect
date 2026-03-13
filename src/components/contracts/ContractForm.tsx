@@ -401,7 +401,7 @@ export const ContractForm = () => {
       const { data: { user } } = await supabase.auth.getUser();
 
       // Insert contract
-      const { error: insertError } = await supabase.from("contracts").insert([{
+      const { data: insertedContract, error: insertError } = await supabase.from("contracts").insert([{
         contract_number: contractNumber,
         reservation_id: data.reservationId,
         vehicle_id: data.vehicleId,
@@ -420,9 +420,48 @@ export const ContractForm = () => {
         signed_by: user?.id,
         user_agent: navigator.userAgent,
         status: "signed",
-      }]);
+      }]).select().single();
 
       if (insertError) throw insertError;
+
+      // Enviar contrato por email si el cliente tiene email
+      if (contractData.customerEmail) {
+        try {
+          toast.info("Enviando contrato por email...");
+          
+          const emailResponse = await fetch('/api/send-contract-email', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              to: [contractData.customerEmail],
+              contract_pdf_url: signatureUrl.publicUrl, // URL temporal hasta generar PDF completo
+              contract_data: {
+                cliente_nombre: contractData.customerName,
+                vehiculo_marca: vehicle.marca + ' ' + vehicle.modelo,
+                vehiculo_placa: vehicle.placa,
+                fecha_inicio: new Date(data.startDate).toLocaleDateString('es-CO'),
+                fecha_fin: new Date(data.endDate).toLocaleDateString('es-CO'),
+                dias_totales: Math.ceil((new Date(data.endDate).getTime() - new Date(data.startDate).getTime()) / (1000 * 60 * 60 * 24)),
+                valor_total: data.totalAmount,
+                fecha_firma: new Date().toLocaleDateString('es-CO')
+              }
+            })
+          });
+
+          if (emailResponse.ok) {
+            toast.success("Contrato enviado por email al cliente");
+          } else {
+            const errorData = await emailResponse.json();
+            console.error("Error enviando email:", errorData);
+            toast.warning("Contrato guardado pero no se pudo enviar el email");
+          }
+        } catch (emailError) {
+          console.error("Error enviando email:", emailError);
+          toast.warning("Contrato guardado pero no se pudo enviar el email");
+        }
+      }
 
       toast.success(`Contrato ${contractNumber} firmado exitosamente`);
       resetForm();
