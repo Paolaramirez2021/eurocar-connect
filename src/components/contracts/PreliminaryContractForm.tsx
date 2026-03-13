@@ -206,7 +206,9 @@ export const PreliminaryContractForm = () => {
         setValue("vehicleId", firstReservation.vehicle_id);
         setValue("startDate", new Date(firstReservation.fecha_inicio).toISOString().slice(0, 16));
         setValue("endDate", new Date(firstReservation.fecha_fin).toISOString().slice(0, 16));
-        setValue("totalAmount", firstReservation.price_total || 0);
+        // Usar valor_total o price_total, el que tenga valor
+        const totalAmount = firstReservation.valor_total || firstReservation.price_total || 0;
+        setValue("totalAmount", totalAmount);
         
         toast.info("Datos de la reserva más reciente cargados automáticamente");
       } else {
