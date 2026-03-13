@@ -179,8 +179,32 @@ export const ContractsList = ({ highlightedContractId }: ContractsListProps) => 
     }
   };
 
-  const handleDownload = (pdfUrl: string) => {
-    window.open(pdfUrl, "_blank");
+  const handleDownload = async (pdfUrl: string) => {
+    try {
+      // Intentar abrir directamente primero
+      const newWindow = window.open(pdfUrl, "_blank");
+      
+      // Si la URL está bloqueada o falla, intentar descargar via fetch
+      if (!newWindow || newWindow.closed) {
+        toast.info("Descargando PDF...");
+        const response = await fetch(pdfUrl);
+        if (!response.ok) {
+          throw new Error("No se pudo descargar el PDF");
+        }
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'contrato.pdf';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
+    } catch (error) {
+      console.error("Error descargando PDF:", error);
+      toast.error("Error al descargar el PDF. Verifique las políticas del bucket en Supabase.");
+    }
   };
 
   const filteredContracts = contracts.filter((contract) => {
