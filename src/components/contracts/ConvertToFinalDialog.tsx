@@ -142,10 +142,9 @@ export const ConvertToFinalDialog = ({
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Insert final contract
+      // Insert final contract - usando solo campos básicos
       const { error: insertError } = await supabase.from("contracts").insert([{
         contract_number: contractNumber,
-        contract_type: 'final',
         reservation_id: preliminaryContract.reservation_id,
         vehicle_id: preliminaryContract.vehicle_id,
         customer_id: preliminaryContract.customer_id,
@@ -163,10 +162,12 @@ export const ConvertToFinalDialog = ({
         signed_by: user?.id,
         user_agent: navigator.userAgent,
         status: "signed",
-        is_locked: true,
       }]);
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error("Error insertando contrato final:", insertError);
+        throw new Error(`Error al guardar contrato: ${insertError.message}`);
+      }
 
       // Update preliminary contract status (mark as converted)
       const { error: updateError } = await supabase
