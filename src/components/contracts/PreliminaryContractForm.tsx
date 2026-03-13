@@ -9,8 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { FileText, Loader2, Search, Send, Mail, MessageSquare } from "lucide-react";
-import jsPDF from "jspdf";
 import { Checkbox } from "@/components/ui/checkbox";
+import { generateContractHTML, ContractData } from "@/utils/contractTemplate";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 interface Vehicle {
   id: string;
