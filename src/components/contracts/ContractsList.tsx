@@ -337,8 +337,14 @@ export const ContractsList = ({ highlightedContractId }: ContractsListProps) => 
                           variant="ghost"
                           size="sm"
                           onClick={() => handleResendEmail(contract)}
+                          disabled={resendingEmail === contract.id}
+                          title="Reenviar contrato por email"
                         >
-                          <Mail className="h-4 w-4" />
+                          {resendingEmail === contract.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Mail className="h-4 w-4" />
+                          )}
                         </Button>
                       )}
                     </div>
