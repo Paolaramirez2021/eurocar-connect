@@ -65,6 +65,7 @@ export const ContractsList = ({ highlightedContractId }: ContractsListProps) => 
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [selectedPreliminary, setSelectedPreliminary] = useState<Contract | null>(null);
+  const [resendingEmail, setResendingEmail] = useState<string | null>(null);
 
   useEffect(() => {
     loadContracts();
