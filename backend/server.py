@@ -70,6 +70,94 @@ async def health_check():
         "resend_configured": bool(RESEND_API_KEY)
     }
 
+@app.post("/generate-pdf")
+async def generate_pdf(request: GeneratePDFRequest):
+    """
+    Genera un PDF a partir de HTML usando Puppeteer
+    Retorna el PDF en base64
+    """
+    try:
+        logger.info("Generando PDF desde HTML...")
+        
+        # Preparar input para el script de Node
+        input_data = json.dumps({
+            "html": request.html,
+            "options": request.options or {
+                "format": "Letter",
+                "printBackground": True,
+                "margin": {
+                    "top": "1cm",
+                    "right": "1cm",
+                    "bottom": "1cm",
+                    "left": "1cm"
+                }
+            }
+        })
+        
+        # Ejecutar script de Puppeteer
+        script_path = os.path.join(os.path.dirname(__file__), "generate_pdf.js")
+        
+        process = await asyncio.to_thread(
+            subprocess.run,
+            ["node", script_path],
+            input=input_data,
+            capture_output=True,
+            text=True,
+            timeout=60,
+            cwd=os.path.dirname(__file__)
+        )
+        
+        if process.returncode != 0:
+            logger.error(f"Error en Puppeteer: {process.stderr}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error generando PDF: {process.stderr}"
+            )
+        
+        pdf_base64 = process.stdout.strip()
+        
+        logger.info("PDF generado exitosamente")
+        
+        return {
+            "status": "success",
+            "pdf_base64": pdf_base64
+        }
+        
+    except subprocess.TimeoutExpired:
+        logger.error("Timeout generando PDF")
+        raise HTTPException(
+            status_code=500,
+            detail="Timeout generando PDF. El documento es muy grande o hay un error."
+        )
+    except Exception as e:
+        logger.error(f"Error generando PDF: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generando PDF: {str(e)}"
+        )
+
+@app.post("/generate-pdf-download")
+async def generate_pdf_download(request: GeneratePDFRequest):
+    """
+    Genera un PDF y lo retorna directamente como archivo descargable
+    """
+    try:
+        result = await generate_pdf(request)
+        pdf_bytes = base64.b64decode(result["pdf_base64"])
+        
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": "attachment; filename=contrato.pdf"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generando PDF: {str(e)}"
+        )
+
 @app.post("/send-contract-email")
 async def send_contract_email(request: ContractEmailRequest):
     """
