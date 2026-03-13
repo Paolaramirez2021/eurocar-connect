@@ -50,6 +50,10 @@ class ContractEmailRequest(BaseModel):
     contract_pdf_url: str
     contract_data: dict
 
+class GeneratePDFRequest(BaseModel):
+    html: str
+    options: Optional[dict] = None
+
 # Rutas
 @app.get("/")
 async def root():
