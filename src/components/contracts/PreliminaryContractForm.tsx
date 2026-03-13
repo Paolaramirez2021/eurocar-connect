@@ -329,7 +329,10 @@ export const PreliminaryContractForm = () => {
         .from("contracts")
         .upload(pdfFilename, pdfBlob);
 
-      if (pdfError) throw pdfError;
+      if (pdfError) {
+        console.error("Error subiendo PDF:", pdfError);
+        throw new Error(`Error al subir PDF: ${pdfError.message}`);
+      }
 
       const { data: pdfUrl } = supabase.storage
         .from("contracts")
@@ -338,11 +341,9 @@ export const PreliminaryContractForm = () => {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Insert preliminary contract
-      const { error: insertError } = await supabase.from("contracts").insert([{
+      // Insert preliminary contract - solo campos que existen en la tabla
+      const contractInsert = {
         contract_number: contractNumber,
-        contract_type: 'preliminary',
-        preliminary_status: 'sent',
         reservation_id: data.reservationId || null,
         vehicle_id: data.vehicleId,
         customer_id: data.customerId,
@@ -358,15 +359,17 @@ export const PreliminaryContractForm = () => {
         signed_by: user?.id,
         status: "preliminary",
         pdf_url: pdfUrl.publicUrl,
-        signature_url: '', // Required field but empty for preliminary
-        sent_at: new Date().toISOString(),
-        sent_via: data.sendVia,
-        whatsapp_sent: data.includeWhatsApp,
-        email_sent: data.includeEmail,
-        is_locked: false, // Preliminary contracts can be edited
-      }]);
+        signature_url: '',
+      };
+      
+      console.log("Insertando contrato:", contractInsert);
+      
+      const { error: insertError } = await supabase.from("contracts").insert([contractInsert]);
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error("Error insertando contrato:", insertError);
+        throw new Error(`Error al guardar contrato: ${insertError.message}`);
+      }
 
       // Send via email if selected
       if (data.includeEmail && selectedCustomer.email) {
