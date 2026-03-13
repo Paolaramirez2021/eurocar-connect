@@ -196,6 +196,17 @@ export const PreliminaryContractForm = () => {
       
       if (reservationsData && reservationsData.length > 0) {
         toast.success(`Se encontraron ${reservationsData.length} reserva(s) activa(s)`);
+        
+        // Cargar automáticamente la primera reserva
+        const firstReservation = reservationsData[0];
+        setSelectedReservation(firstReservation);
+        setValue("reservationId", firstReservation.id);
+        setValue("vehicleId", firstReservation.vehicle_id);
+        setValue("startDate", new Date(firstReservation.fecha_inicio).toISOString().slice(0, 16));
+        setValue("endDate", new Date(firstReservation.fecha_fin).toISOString().slice(0, 16));
+        setValue("totalAmount", firstReservation.price_total || 0);
+        
+        toast.info("Datos de la reserva más reciente cargados automáticamente");
       }
     } catch (error) {
       console.error("Error searching customer:", error);
