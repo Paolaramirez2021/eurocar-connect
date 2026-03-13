@@ -95,7 +95,7 @@ async def generate_pdf(request: GeneratePDFRequest):
         })
         
         # Ejecutar script de Puppeteer
-        script_path = os.path.join(os.path.dirname(__file__), "generate_pdf.js")
+        script_path = os.path.join(os.path.dirname(__file__), "generate_pdf.cjs")
         
         process = await asyncio.to_thread(
             subprocess.run,
