@@ -242,43 +242,137 @@ export const PreliminaryContractForm = () => {
   };
 
   const generatePreliminaryPDF = async (contractData: any, contractNumber: string): Promise<Blob> => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    
-    // Header
-    doc.setFontSize(18);
-    doc.text("CONTRATO PRELIMINAR DE ARRENDAMIENTO", pageWidth / 2, 20, { align: "center" });
-    
-    doc.setFontSize(12);
-    doc.text(`Contrato No: ${contractNumber}`, pageWidth / 2, 30, { align: "center" });
-    doc.text("(Documento Preliminar - Sin Validez Legal hasta Firma)", pageWidth / 2, 37, { align: "center" });
-    
-    // Contract details
-    let yPos = 50;
-    doc.setFontSize(11);
-    
-    doc.text(`Cliente: ${contractData.customer_name}`, 20, yPos);
-    yPos += 7;
-    doc.text(`Documento: ${contractData.customer_document}`, 20, yPos);
-    yPos += 7;
-    doc.text(`Vehículo: ${contractData.vehicle_info}`, 20, yPos);
-    yPos += 7;
-    doc.text(`Periodo: ${new Date(contractData.start_date).toLocaleDateString()} - ${new Date(contractData.end_date).toLocaleDateString()}`, 20, yPos);
-    yPos += 7;
-    doc.text(`Valor Total: $${contractData.total_amount.toLocaleString()}`, 20, yPos);
-    yPos += 15;
-    
-    // Terms
-    doc.setFontSize(10);
-    const terms = doc.splitTextToSize(DEFAULT_TERMS, pageWidth - 40);
-    doc.text(terms, 20, yPos);
-    
-    yPos = doc.internal.pageSize.getHeight() - 40;
-    doc.setFontSize(9);
-    doc.setTextColor(150, 150, 150);
-    doc.text("Este es un documento preliminar. Para formalizar el contrato, debe completar el proceso de firma.", 20, yPos, { maxWidth: pageWidth - 40 });
-    
-    return doc.output("blob");
+    // Calcular valores
+    const startDate = new Date(contractData.start_date);
+    const endDate = new Date(contractData.end_date);
+    const dias = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) || 1;
+    const valorDia = contractData.total_amount / dias;
+    const subtotal = contractData.total_amount;
+    const iva = subtotal * 0.19;
+    const total = subtotal + iva;
+
+    // Preparar datos para la plantilla
+    const templateData: ContractData = {
+      // Datos del cliente
+      cliente_nombre: contractData.customer_name,
+      cliente_documento: contractData.customer_document,
+      cliente_licencia: '',
+      cliente_direccion: '',
+      cliente_telefono: selectedCustomer?.celular || '',
+      cliente_ciudad: '',
+      cliente_email: selectedCustomer?.email || '',
+      
+      // Datos del vehículo
+      vehiculo_marca: contractData.vehicle_info,
+      vehiculo_placa: selectedReservation?.vehicles?.placa || '',
+      vehiculo_color: '',
+      vehiculo_km_salida: '',
+      
+      // Duración
+      fecha_inicio: format(startDate, "dd/MM/yyyy", { locale: es }),
+      hora_inicio: format(startDate, "HH:mm"),
+      fecha_fin: format(endDate, "dd/MM/yyyy", { locale: es }),
+      hora_fin: format(endDate, "HH:mm"),
+      dias: dias,
+      servicio: 'Turismo',
+      
+      // Valores
+      valor_dia: valorDia,
+      valor_dias: subtotal,
+      valor_adicional: 0,
+      subtotal: subtotal,
+      descuento: 0,
+      total_contrato: subtotal,
+      iva: iva,
+      total: total,
+      
+      // Reserva
+      valor_reserva: 0,
+      forma_pago: '',
+      
+      // Contrato
+      numero_contrato: contractNumber,
+      fecha_contrato: format(new Date(), "dd/MM/yyyy HH:mm", { locale: es }),
+      
+      // Deducible
+      deducible: '$3.000.000 COP',
+      
+      // Es preliminar
+      es_preliminar: true
+    };
+
+    // Generar HTML
+    const html = generateContractHTML(templateData);
+
+    try {
+      // Usar el backend para generar el PDF
+      const response = await fetch('/api/generate-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          html: html,
+          options: {
+            format: 'Letter',
+            printBackground: true,
+            margin: {
+              top: '10mm',
+              right: '10mm',
+              bottom: '10mm',
+              left: '10mm'
+            }
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Error generando PDF en el servidor');
+      }
+
+      const result = await response.json();
+      
+      // Convertir base64 a Blob
+      const byteCharacters = atob(result.pdf_base64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      return new Blob([byteArray], { type: 'application/pdf' });
+      
+    } catch (error) {
+      console.error('Error generando PDF con backend:', error);
+      toast.error('Error generando PDF. Usando versión simplificada.');
+      
+      // Fallback: generar PDF simple con jsPDF si el backend falla
+      const { default: jsPDF } = await import('jspdf');
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      
+      doc.setFontSize(18);
+      doc.text("EUROCAR RENTAL", pageWidth / 2, 20, { align: "center" });
+      doc.setFontSize(14);
+      doc.text("CONTRATO PRELIMINAR", pageWidth / 2, 30, { align: "center" });
+      doc.setFontSize(10);
+      doc.text(`No. ${contractNumber}`, pageWidth / 2, 38, { align: "center" });
+      
+      let yPos = 55;
+      doc.setFontSize(11);
+      doc.text(`Cliente: ${contractData.customer_name}`, 20, yPos);
+      yPos += 8;
+      doc.text(`Documento: ${contractData.customer_document}`, 20, yPos);
+      yPos += 8;
+      doc.text(`Vehículo: ${contractData.vehicle_info}`, 20, yPos);
+      yPos += 8;
+      doc.text(`Periodo: ${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")}`, 20, yPos);
+      yPos += 8;
+      doc.text(`Días: ${dias}`, 20, yPos);
+      yPos += 8;
+      doc.text(`Valor Total: $${contractData.total_amount.toLocaleString()}`, 20, yPos);
+      
+      return doc.output("blob");
+    }
   };
 
   const onSubmit = async (data: PreliminaryFormData) => {
