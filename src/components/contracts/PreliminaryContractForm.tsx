@@ -168,6 +168,7 @@ export const PreliminaryContractForm = () => {
       toast.success(`Cliente encontrado: ${customer.nombres} ${customer.primer_apellido}`);
 
       // Load pending/confirmed reservations for this customer
+      // Incluir todos los estados activos que ocupan calendario
       const { data: reservationsData, error: reservationsError } = await supabase
         .from("reservations")
         .select(`
@@ -184,7 +185,7 @@ export const PreliminaryContractForm = () => {
           )
         `)
         .eq("customer_id", customer.id)
-        .in("estado", ["confirmed", "pending"])
+        .in("estado", ["confirmed", "pending", "pending_with_payment", "pending_no_payment"])
         .order("fecha_inicio", { ascending: false });
 
       if (reservationsError) {
