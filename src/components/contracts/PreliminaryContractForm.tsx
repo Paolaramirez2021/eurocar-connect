@@ -479,18 +479,29 @@ export const PreliminaryContractForm = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="vehicleId">Vehículo *</Label>
-            <Select onValueChange={(value) => setValue("vehicleId", value)} value={selectedVehicleId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccione vehículo" />
-              </SelectTrigger>
-              <SelectContent>
-                {vehicles.map((vehicle) => (
-                  <SelectItem key={vehicle.id} value={vehicle.id}>
-                    {vehicle.marca} {vehicle.modelo} - {vehicle.placa}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {selectedReservation ? (
+              <div className="p-3 bg-muted rounded-lg border">
+                <p className="font-medium">
+                  {selectedReservation.vehicles.marca} {selectedReservation.vehicles.modelo}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Placa: {selectedReservation.vehicles.placa}
+                </p>
+              </div>
+            ) : (
+              <Select onValueChange={(value) => setValue("vehicleId", value)} value={selectedVehicleId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccione vehículo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {vehicles.map((vehicle) => (
+                    <SelectItem key={vehicle.id} value={vehicle.id}>
+                      {vehicle.marca} {vehicle.modelo} - {vehicle.placa}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div>
