@@ -190,17 +190,14 @@ export class ContractService {
     try {
       console.log('[ContractService] Enviando email a:', clientEmail);
       
-      // Obtener la URL del backend desde las variables de entorno
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
-      
-      // Llamar al backend API
-      const response = await fetch(`${backendUrl}/api/send-contract-email`, {
+      // Llamar al backend API (usa /api que es redirigido por Kubernetes ingress)
+      const response = await fetch('/api/send-contract-email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          to: [clientEmail, 'reservas@eurocar.com'],
+          to: [clientEmail, 'reservas@contact.eurocarental.com'],
           contract_pdf_url: contractPdfUrl,
           contract_data: contractData
         })
