@@ -35,6 +35,7 @@ interface Reservation {
   fecha_inicio: string;
   fecha_fin: string;
   price_total: number;
+  valor_total: number;
   estado: string;
   vehicles: {
     marca: string;
