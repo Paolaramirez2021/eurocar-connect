@@ -320,6 +320,23 @@ async def send_contract_email(request: ContractEmailRequest):
             detail=f"Error al enviar email: {str(e)}"
         )
 
+# Duplicar rutas con prefijo /api para compatibilidad con Kubernetes ingress
+@app.post("/api/generate-pdf")
+async def api_generate_pdf(request: GeneratePDFRequest):
+    return await generate_pdf(request)
+
+@app.post("/api/generate-pdf-download")
+async def api_generate_pdf_download(request: GeneratePDFRequest):
+    return await generate_pdf_download(request)
+
+@app.post("/api/send-contract-email")
+async def api_send_contract_email(request: ContractEmailRequest):
+    return await send_contract_email(request)
+
+@app.get("/api/health")
+async def api_health_check():
+    return await health_check()
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)
