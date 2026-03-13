@@ -62,7 +62,7 @@ async def health_check():
         "resend_configured": bool(RESEND_API_KEY)
     }
 
-@app.post("/api/send-contract-email")
+@app.post("/send-contract-email")
 async def send_contract_email(request: ContractEmailRequest):
     """
     Envía el contrato por email a múltiples destinatarios
