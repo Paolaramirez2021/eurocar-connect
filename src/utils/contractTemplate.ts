@@ -61,11 +61,11 @@ export const generateContractHTML = (data: ContractData): string => {
     body { font-family: Arial, sans-serif; font-size: 11px; line-height: 1.4; color: #333; margin: 20px; }
     .header { border-bottom: 3px solid #0066cc; padding-bottom: 10px; margin-bottom: 15px; }
     .header-content { display: table; width: 100%; }
-    .logo-section { display: table-cell; vertical-align: middle; width: 100px; }
-    .logo-img { height: 60px; }
+    .logo-section { display: table-cell; vertical-align: middle; width: 120px; }
+    .logo-img { height: 90px; }
     .company-info { display: table-cell; vertical-align: middle; padding-left: 15px; }
-    .company-name { font-size: 22px; font-weight: bold; color: #0066cc; }
-    .company-nit { font-size: 11px; color: #666; }
+    .company-name { font-size: 24px; font-weight: bold; color: #0066cc; }
+    .company-nit { font-size: 12px; color: #666; }
     .title { font-size: 14px; font-weight: bold; color: #0066cc; text-align: center; margin: 15px 0 5px 0; }
     .contract-num { text-align: center; font-size: 11px; color: #666; margin-bottom: 15px; }
     ${data.es_preliminar ? '.prelim-badge { background: #ff9800; color: white; padding: 8px; text-align: center; font-weight: bold; margin-bottom: 15px; }' : ''}
