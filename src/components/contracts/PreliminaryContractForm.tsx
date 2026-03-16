@@ -330,8 +330,10 @@ export const PreliminaryContractForm = () => {
     const startDate = new Date(reservation.fecha_inicio);
     const endDate = new Date(reservation.fecha_fin);
     const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) || 1;
-    const totalAmount = reservation.valor_total || reservation.price_total || 0;
-    const dailyRate = totalAmount / days;
+    
+    // Usar tarifa_dia_iva del vehículo (sin IVA)
+    const dailyRate = reservation.vehicles.tarifa_dia_iva || 0;
+    const totalAmount = dailyRate * days;
 
     setValue("reservationId", reservation.id);
     setValue("vehicleId", reservation.vehicle_id);
