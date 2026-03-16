@@ -574,8 +574,8 @@ export const PreliminaryContractForm = () => {
         
         <div className="mt-3 text-sm text-gray-600">
           {watchedValues.contractType === 'facturacion' 
-            ? `Siguiente contrato con facturación: EUROCAR-${nextFacturacionNumber}`
-            : `Siguiente contrato en efectivo: ${String(nextEfectivoNumber).padStart(3, '0')}`
+            ? `Siguiente contrato con prefijo: EUROCAR-${nextFacturacionNumber}`
+            : `Siguiente contrato sin prefijo: ${String(nextEfectivoNumber).padStart(3, '0')}`
           }
         </div>
       </Card>
