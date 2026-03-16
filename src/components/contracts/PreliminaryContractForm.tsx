@@ -53,6 +53,10 @@ interface Reservation {
 
 // Formulario con TODOS los campos del contrato
 interface ContractFormData {
+  // Tipo de contrato y número
+  contractType: 'facturacion' | 'efectivo';
+  contractNumber: string;
+  
   // Reserva
   reservationId?: string;
   
