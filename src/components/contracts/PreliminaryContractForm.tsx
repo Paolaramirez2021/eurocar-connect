@@ -478,6 +478,7 @@ export const PreliminaryContractForm = () => {
         start_date: `${data.startDate}T${data.startTime}`,
         end_date: `${data.endDate}T${data.endTime}`,
         total_amount: data.totalAmount,
+        terms_text: "Acepto los términos y condiciones del contrato de arrendamiento de vehículo automotor de EUROCAR RENTAL SAS según las cláusulas establecidas en www.eurocarental.com",
         terms_accepted: false,
         signed_by: user?.id,
         status: "preliminary",
