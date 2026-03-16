@@ -303,9 +303,11 @@ export const PreliminaryContractForm = () => {
 
     // Generar HTML
     const html = generateContractHTML(templateData);
+    console.log('[generatePreliminaryPDF] HTML generado, longitud:', html.length);
 
     try {
       // Usar el backend para generar el PDF
+      console.log('[generatePreliminaryPDF] Enviando a /api/generate-pdf...');
       const response = await fetch('/api/generate-pdf', {
         method: 'POST',
         headers: {
@@ -326,11 +328,16 @@ export const PreliminaryContractForm = () => {
         })
       });
 
+      console.log('[generatePreliminaryPDF] Response status:', response.status);
+      
       if (!response.ok) {
-        throw new Error('Error generando PDF en el servidor');
+        const errorText = await response.text();
+        console.error('[generatePreliminaryPDF] Error response:', errorText);
+        throw new Error(`Error generando PDF en el servidor: ${response.status}`);
       }
 
       const result = await response.json();
+      console.log('[generatePreliminaryPDF] PDF generado exitosamente, base64 length:', result.pdf_base64?.length);
       
       // Convertir base64 a Blob
       const byteCharacters = atob(result.pdf_base64);
