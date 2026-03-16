@@ -432,10 +432,16 @@ export const PreliminaryContractForm = () => {
       return;
     }
 
+    if (!data.contractNumber) {
+      toast.error("El número de contrato es requerido");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const contractId = crypto.randomUUID();
-      const contractNumber = `CTR-PRE-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+      // Usar el número de contrato del formulario
+      const contractNumber = data.contractNumber;
 
       // Generar PDF
       const pdfBlob = await generatePreliminaryPDF(data, contractNumber);
