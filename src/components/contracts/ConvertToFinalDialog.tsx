@@ -39,23 +39,7 @@ interface ConvertToFinalDialogProps {
   vehicleInfo: string;
 }
 
-const DEFAULT_TERMS = `TÉRMINOS Y CONDICIONES DEL CONTRATO DE ARRENDAMIENTO DE VEHÍCULO
-
-1. El arrendatario se compromete a usar el vehículo de manera responsable y conforme a las leyes de tránsito vigentes.
-
-2. El arrendatario es responsable de cualquier daño, multa o infracción generada durante el periodo de arrendamiento.
-
-3. El vehículo debe ser devuelto en las mismas condiciones en que fue entregado, salvo desgaste normal por uso.
-
-4. Queda prohibido subarrendar el vehículo o permitir que terceros lo conduzcan sin autorización expresa.
-
-5. El arrendatario debe notificar inmediatamente cualquier accidente, avería o robo del vehículo.
-
-6. El incumplimiento de cualquiera de estas cláusulas puede resultar en la terminación inmediata del contrato.
-
-7. El arrendatario acepta que la firma digital y la huella capturada tienen validez como consentimiento expreso.
-
-Al firmar este documento, el arrendatario declara haber leído y aceptado todos los términos y condiciones.`;
+const DEFAULT_TERMS = TERMINOS_CONDICIONES;
 
 export const ConvertToFinalDialog = ({ 
   preliminaryContract, 
