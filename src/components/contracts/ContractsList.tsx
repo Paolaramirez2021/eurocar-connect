@@ -350,11 +350,13 @@ export const ContractsList = ({ highlightedContractId }: ContractsListProps) => 
                           Firmar
                         </Button>
                       )}
+                      {/* Botón Descargar PDF - para todos los contratos con PDF */}
                       {contract.pdf_url && (
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDownload(contract.pdf_url)}
+                          title={contract.status === 'signed' ? "Descargar contrato firmado" : "Descargar contrato preliminar"}
                         >
                           <Download className="h-4 w-4" />
                         </Button>
