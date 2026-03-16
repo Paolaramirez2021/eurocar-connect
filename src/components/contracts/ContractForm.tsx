@@ -57,6 +57,7 @@ interface ContractFormData {
   endDate: string;
   totalAmount: number;
   termsAccepted: boolean;
+  privacyAccepted: boolean;
 }
 
 const DEFAULT_TERMS = `TÉRMINOS Y CONDICIONES DEL CONTRATO DE ARRENDAMIENTO DE VEHÍCULO
