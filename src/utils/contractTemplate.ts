@@ -4,7 +4,6 @@
  */
 
 export interface ContractData {
-  // Datos del cliente
   cliente_nombre: string;
   cliente_documento: string;
   cliente_licencia: string;
@@ -12,22 +11,16 @@ export interface ContractData {
   cliente_telefono: string;
   cliente_ciudad: string;
   cliente_email: string;
-  
-  // Datos del vehículo
   vehiculo_marca: string;
   vehiculo_placa: string;
   vehiculo_color: string;
   vehiculo_km_salida: string;
-  
-  // Duración del contrato
   fecha_inicio: string;
   hora_inicio: string;
   fecha_fin: string;
   hora_fin: string;
   dias: number;
   servicio: string;
-  
-  // Valores
   valor_dia: number;
   valor_dias: number;
   valor_adicional: number;
@@ -36,25 +29,18 @@ export interface ContractData {
   total_contrato: number;
   iva: number;
   total: number;
-  
-  // Reserva y pago
   valor_reserva: number;
   forma_pago: string;
-  
-  // Contrato
   numero_contrato: string;
   fecha_contrato: string;
-  
-  // Deducible del seguro
   deducible: string;
-  
-  // Firma (opcional, para contrato final)
   firma_url?: string;
   huella_url?: string;
-  
-  // Es preliminar?
   es_preliminar?: boolean;
 }
+
+// Logo EUROCAR en base64
+const LOGO_BASE64 = "LOGO_PLACEHOLDER";
 
 export const generateContractHTML = (data: ContractData): string => {
   const formatCurrency = (value: number) => {
@@ -73,36 +59,49 @@ export const generateContractHTML = (data: ContractData): string => {
   <title>Contrato EUROCAR - ${data.numero_contrato}</title>
   <style>
     body { font-family: Arial, sans-serif; font-size: 11px; line-height: 1.4; color: #333; margin: 20px; }
-    .header { text-align: center; border-bottom: 3px solid #0066cc; padding-bottom: 10px; margin-bottom: 15px; }
-    .logo-img { max-height: 80px; margin-bottom: 5px; }
-    .title { font-size: 16px; font-weight: bold; color: #0066cc; text-align: center; margin: 10px 0; }
-    .contract-num { text-align: center; font-size: 12px; color: #666; margin-bottom: 15px; }
+    .header { border-bottom: 3px solid #0066cc; padding-bottom: 10px; margin-bottom: 15px; }
+    .header-content { display: table; width: 100%; }
+    .logo-section { display: table-cell; vertical-align: middle; width: 100px; }
+    .logo-img { height: 60px; }
+    .company-info { display: table-cell; vertical-align: middle; padding-left: 15px; }
+    .company-name { font-size: 22px; font-weight: bold; color: #0066cc; }
+    .company-nit { font-size: 11px; color: #666; }
+    .title { font-size: 14px; font-weight: bold; color: #0066cc; text-align: center; margin: 15px 0 5px 0; }
+    .contract-num { text-align: center; font-size: 11px; color: #666; margin-bottom: 15px; }
     ${data.es_preliminar ? '.prelim-badge { background: #ff9800; color: white; padding: 8px; text-align: center; font-weight: bold; margin-bottom: 15px; }' : ''}
-    .section { margin-bottom: 15px; }
-    .section-title { background: #0066cc; color: white; padding: 5px 10px; font-weight: bold; font-size: 11px; margin-bottom: 8px; }
-    .row { margin-bottom: 4px; }
-    .label { font-weight: bold; display: inline-block; width: 150px; }
-    .value { border-bottom: 1px solid #ccc; display: inline-block; min-width: 200px; padding-left: 5px; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-    th, td { border: 1px solid #ccc; padding: 5px; text-align: left; font-size: 10px; }
+    .section { margin-bottom: 12px; }
+    .section-title { background: #0066cc; color: white; padding: 4px 8px; font-weight: bold; font-size: 10px; margin-bottom: 6px; }
+    .row { margin-bottom: 3px; }
+    .label { font-weight: bold; display: inline-block; width: 140px; font-size: 10px; }
+    .value { border-bottom: 1px solid #ccc; display: inline-block; min-width: 180px; padding-left: 5px; font-size: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+    th, td { border: 1px solid #ccc; padding: 4px; text-align: left; font-size: 9px; }
     th { background: #f0f0f0; }
     .two-col { width: 100%; }
     .two-col td { width: 50%; vertical-align: top; border: none; padding: 0 10px 0 0; }
-    .values-table td { padding: 3px 8px; }
+    .values-table td { padding: 2px 6px; font-size: 9px; }
     .values-table .total { background: #0066cc; color: white; font-weight: bold; }
-    .clausulas { font-size: 9px; text-align: justify; }
-    .clausulas p { margin-bottom: 6px; }
+    .clausulas { font-size: 8px; text-align: justify; }
+    .clausulas p { margin-bottom: 5px; }
     .clausulas strong { color: #0066cc; }
-    .signatures { margin-top: 30px; }
+    .signatures { margin-top: 25px; }
     .sig-box { display: inline-block; width: 45%; text-align: center; vertical-align: top; }
-    .sig-line { border-bottom: 1px solid #333; height: 50px; margin-bottom: 5px; }
-    .footer { text-align: center; font-size: 8px; color: #666; margin-top: 20px; border-top: 1px solid #ccc; padding-top: 10px; }
+    .sig-line { border-bottom: 1px solid #333; height: 40px; margin-bottom: 5px; }
+    .footer { text-align: center; font-size: 7px; color: #666; margin-top: 15px; border-top: 1px solid #ccc; padding-top: 8px; }
   </style>
 </head>
 <body>
 
 <div class="header">
-  <img src="https://customer-assets.emergentagent.com/job_313627ba-9e69-435e-baf8-af6c082182e1/artifacts/796emrqm_image.png" class="logo-img" alt="EUROCAR RENTAL">
+  <div class="header-content">
+    <div class="logo-section">
+      <img src="data:image/png;base64,${LOGO_BASE64}" class="logo-img" alt="EUROCAR">
+    </div>
+    <div class="company-info">
+      <div class="company-name">EUROCAR RENTAL SAS</div>
+      <div class="company-nit">NIT: 900269555</div>
+    </div>
+  </div>
 </div>
 
 <div class="title">CONTRATO DE ARRENDAMIENTO DE VEHÍCULO AUTOMOTOR</div>
@@ -127,7 +126,7 @@ ${data.es_preliminar ? '<div class="prelim-badge">⚠ DOCUMENTO PRELIMINAR - SIN
 <td>
   <div class="section">
     <div class="section-title">EL ARRENDADOR</div>
-    <div style="background: #f5f5f5; padding: 10px; font-size: 10px;">
+    <div style="background: #f5f5f5; padding: 8px; font-size: 9px;">
       <strong>EUROCAR RENTAL SAS</strong><br>
       NIT: 900269555<br>
       AV CALLE 26 69C-03 LOCAL 105<br>
@@ -205,53 +204,43 @@ ${data.es_preliminar ? '<div class="prelim-badge">⚠ DOCUMENTO PRELIMINAR - SIN
   <div class="section-title">7. CLÁUSULAS Y CONDICIONES</div>
   <div class="clausulas">
     <p><strong>A.</strong> En caso de accidente: si es choque simple comunicarse de inmediato con EL ARRENDADOR, seguir indicaciones del funcionario. Si es choque complejo comunicarse de inmediato con EL ARRENDADOR, solicitar intervención de autoridades de tránsito y por ningún motivo haga arreglos al vehículo.</p>
-    
     <p><strong>B.</strong> El ARRENDATARIO se compromete a responder por multas, comparendos o inmovilizaciones ocasionados durante el periodo de renta y debe pagar el valor total de la sanción más 10% por gastos administrativos.</p>
-    
     <p><strong>C.</strong> La cancelación de la reserva tiene una penalidad equivalente al 30% del valor total de la renta.</p>
-    
     <p><strong>D.</strong> El valor de la hora adicional es el 10% de la tarifa día, a partir de la quinta (5) hora adicional se cobrará el día completo.</p>
-    
     <p><strong>E.</strong> En caso de que EL ARRENDATARIO haga entrega del vehículo antes del tiempo pactado en el contrato no habrá devolución de dinero.</p>
-    
     <p><strong>F.</strong> El vehículo se entrega limpio y full de combustible. EL ARRENDATARIO debe regresarlo en las mismas condiciones, de lo contrario se aplicará un sobrecosto por esos conceptos.</p>
-    
     <p><strong>G.</strong> En caso de extender la renta, EL ARRENDATARIO debe informar con anticipación a EL ARRENDADOR y realizar el pago correspondiente.</p>
-    
     <p><strong>H.</strong> Evite fumar dentro del vehículo, de lo contrario debe asumir el costo del lavado de la tapicería.</p>
-    
     <p><strong>I. SEGUROS:</strong> El seguro no tiene cobertura si el vehículo es utilizado para trabajar con plataformas, piques, pruebas de seguridad o manejo defensivo, tampoco tiene cobertura por maltrato al vehículo, robo de accesorios, ni lucro cesante por tiempo de inutilidad por mal uso. Será total responsabilidad por parte de EL ARRENDATARIO si el vehículo es usado bajo efectos de alcohol o sustancias psicoactivas, o por uso en actividades ilícitas. El seguro tiene una protección del 80% del valor comercial del vehículo, quedando a cargo de EL ARRENDATARIO el 20% no cubierto por la póliza con un deducible mínimo de <strong>XXXXXXXXXXXXX</strong>. EL ARRENDATARIO ACEPTA los seguros, cláusulas y condiciones estipuladas en el presente contrato y autoriza a EL ARRENDADOR para hacer uso de la garantía o descontar de la tarjeta de crédito de EL ARRENDATARIO el valor causado por cualquiera de estos conceptos.</p>
-    
     <p><strong>J.</strong> El ARRENDATARIO autoriza a EL ARRENDADOR al tratamiento de sus datos personales conforme a la ley 1581 de 2012, el Decreto 1377 de 2013 y demás normas concordantes, de acuerdo a las políticas de tratamiento de datos que se encuentran en www.eurocarental.com</p>
-    
     <p><strong>K.</strong> EL ARRENDATARIO acepta que conoce los términos y condiciones que se encuentran en www.eurocarental.com</p>
   </div>
 </div>
 
 <div class="section">
-  <p style="font-size: 9px; text-align: justify; margin-bottom: 10px;">
+  <p style="font-size: 8px; text-align: justify; margin-bottom: 8px;">
     <strong>Firma Digital:</strong> El presente documento lo firma el ARRENDATARIO por medio de firma simple (trazo manual digitalizado), acompañado de huella digital y foto para demostrar la autenticidad de la persona, además se identifica la IP, fecha, hora y se envía al correo electrónico de EL ARRENDATARIO la copia de este contrato.
   </p>
 </div>
 
 <div class="signatures">
   <div class="sig-box">
-    <div class="sig-line">${data.firma_url ? `<img src="${data.firma_url}" style="max-height:45px;">` : ''}</div>
+    <div class="sig-line">${data.firma_url ? `<img src="${data.firma_url}" style="max-height:35px;">` : ''}</div>
     <strong>EL ARRENDATARIO</strong><br>
-    DOC: ${data.cliente_documento}<br>
-    NOMBRE: ${data.cliente_nombre}
+    <span style="font-size:9px">DOC: ${data.cliente_documento}<br>
+    NOMBRE: ${data.cliente_nombre}</span>
   </div>
   <div class="sig-box">
     <div class="sig-line"></div>
     <strong>EL ARRENDADOR</strong><br>
-    EUROCAR RENTAL SAS<br>
-    NIT: 900269555
+    <span style="font-size:9px">EUROCAR RENTAL SAS<br>
+    NIT: 900269555</span>
   </div>
 </div>
 
 <div class="footer">
   ${data.es_preliminar ? 'Este es un documento preliminar enviado para revisión. Para formalizar el contrato debe completar el proceso de firma digital.' : 'Documento firmado digitalmente.'}
-  <br><br>
+  <br>
   <strong>EUROCAR RENTAL SAS</strong> | AV CALLE 26 69C-03 LOCAL 105 | BOGOTÁ - COLOMBIA | www.eurocarental.com | Tel: 320 834 1163
 </div>
 
