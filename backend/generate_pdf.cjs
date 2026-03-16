@@ -46,9 +46,10 @@ async function generatePDF() {
       }
     });
 
-    // Convertir a base64 y enviar a stdout
-    const base64 = pdf.toString('base64');
-    console.log(base64);
+    // Convertir Buffer a base64 correctamente
+    const base64 = Buffer.from(pdf).toString('base64');
+    // Escribir directamente a stdout sin console.log para evitar problemas
+    process.stdout.write(base64);
 
   } catch (error) {
     console.error('Error:', error.message);
