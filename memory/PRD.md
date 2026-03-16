@@ -93,7 +93,10 @@ Sistema completo de gestión de alquiler de vehículos para EUROCAR RENTAL, con 
 
 ## Última Actualización
 Fecha: 16 de Marzo, 2025
-Sesión: Implementación de apertura forzada de cámara para foto del cliente
-- Modificado `/app/src/components/contracts/ContractPhotoCapture.tsx`
-- Agregado soporte para dispositivos móviles con `capture="user"`
-- Fallback automático a input nativo si MediaDevices API falla
+Sesión: Mejoras en sistema de contratos
+- Términos y Condiciones y Política de Datos actualizados con documentos oficiales de EUROCAR
+- Modales para visualizar documentos legales completos
+- Checkboxes separados para aceptación de términos y política de datos
+- Conversión de contrato preliminar a final ahora mantiene el mismo número de contrato
+- El contrato se actualiza (no se crea uno nuevo) al firmar
+- Badge "Firmado" en verde para contratos finales
