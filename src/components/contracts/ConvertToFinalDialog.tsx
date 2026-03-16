@@ -7,9 +7,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { SignatureCanvas } from "./SignatureCanvas";
 import { FingerprintCapture } from "./FingerprintCapture";
 import { ContractPhotoCapture } from "./ContractPhotoCapture";
+import { LegalDocumentsModal, TERMINOS_CONDICIONES } from "./LegalDocumentsModal";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, FileSignature, ArrowRight } from "lucide-react";
+import { Loader2, FileSignature, ArrowRight, FileText, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
