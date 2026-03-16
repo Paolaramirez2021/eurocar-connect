@@ -28,9 +28,10 @@ async function generatePDF() {
 
     const page = await browser.newPage();
     
-    // Configurar contenido HTML
+    // Configurar contenido HTML con timeout más corto
     await page.setContent(html, {
-      waitUntil: 'networkidle0'
+      waitUntil: 'domcontentloaded',
+      timeout: 10000
     });
 
     // Generar PDF
