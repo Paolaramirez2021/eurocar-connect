@@ -540,6 +540,46 @@ export const PreliminaryContractForm = () => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {/* Número de Contrato */}
+      <Card className="p-6 bg-blue-50 border-blue-200">
+        <h3 className="text-lg font-semibold mb-4 text-blue-700">Número de Contrato</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label>Tipo de Contrato *</Label>
+            <Select 
+              value={watchedValues.contractType} 
+              onValueChange={(v: 'facturacion' | 'efectivo') => setValue("contractType", v)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="facturacion">Con Facturación Electrónica (EUROCAR-XXX)</SelectItem>
+                <SelectItem value="efectivo">Sin Facturación / Efectivo (001, 002...)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div>
+            <Label>Número de Contrato *</Label>
+            <Input 
+              {...register("contractNumber", { required: true })}
+              className="font-bold text-lg bg-white"
+              readOnly
+            />
+            {loadingNumbers && <p className="text-sm text-gray-500 mt-1">Cargando siguiente número...</p>}
+          </div>
+        </div>
+        
+        <div className="mt-3 text-sm text-gray-600">
+          {watchedValues.contractType === 'facturacion' 
+            ? `Siguiente contrato con facturación: EUROCAR-${nextFacturacionNumber}`
+            : `Siguiente contrato en efectivo: ${String(nextEfectivoNumber).padStart(3, '0')}`
+          }
+        </div>
+      </Card>
+
       {/* Buscar Cliente */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
