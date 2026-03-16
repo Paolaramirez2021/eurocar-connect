@@ -72,18 +72,15 @@ Sistema completo de gestión de alquiler de vehículos para EUROCAR RENTAL, con 
 ## Tareas Pendientes
 
 ### 🔴 P0 - Inmediato
-1. Probar flujo completo de contrato con usuario real
-2. Verificar que emails lleguen correctamente a destinatarios
+1. **Verificación del usuario**: Probar flujo completo de contrato en dispositivo móvil para confirmar que la cámara se abre directamente
 
 ### 🟡 P1 - Próximo
-1. Implementar generación de PDF con template completo (ContractTemplate.tsx)
-2. Subir PDF generado a Supabase Storage
-3. Historial de contratos con descarga de PDF
+1. Push de cambios a GitHub (rama emergent-dev) - Usar "Save to GitHub"
+2. Refactorizar `PreliminaryContractForm.tsx` (900+ líneas) en sub-componentes
 
 ### 🟢 P2 - Futuro
 1. Mejorar políticas RLS de Supabase (actualmente muy permisivas)
-2. Push de cambios a GitHub (rama emergent-dev)
-3. Integración con huellero digital USB/Bluetooth
+2. Integración con huellero digital USB/Bluetooth
 
 ## Notas Técnicas
 - El backend FastAPI corre en puerto 8001, accesible vía /api desde el frontend
