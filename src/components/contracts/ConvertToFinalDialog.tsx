@@ -310,22 +310,60 @@ export const ConvertToFinalDialog = ({
 
           {/* Terms */}
           <Card className="p-6">
-            <Label className="text-base font-semibold mb-3 block">Términos y Condiciones</Label>
-            <div className="h-48 overflow-y-auto p-4 bg-muted rounded-lg text-sm whitespace-pre-wrap">
-              {DEFAULT_TERMS}
-            </div>
-            <div className="flex items-start space-x-2 mt-4">
-              <Checkbox
-                id="terms"
-                checked={termsAccepted}
-                onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
-              />
-              <Label
-                htmlFor="terms"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                He leído y acepto los términos y condiciones del contrato
-              </Label>
+            <Label className="text-base font-semibold mb-3 block">Documentos Legales</Label>
+            
+            <div className="space-y-4">
+              {/* Términos y Condiciones */}
+              <div className="flex items-start space-x-3 p-4 border rounded-lg bg-muted/30">
+                <Checkbox
+                  id="terms"
+                  checked={termsAccepted}
+                  onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
+                  className="mt-0.5"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-primary" />
+                    <LegalDocumentsModal 
+                      type="terms"
+                      trigger={
+                        <button type="button" className="text-primary hover:underline font-medium text-left">
+                          Términos y Condiciones
+                        </button>
+                      }
+                    />
+                  </div>
+                  <Label htmlFor="terms" className="text-sm text-muted-foreground cursor-pointer">
+                    He leído y acepto los términos y condiciones del contrato de arrendamiento *
+                  </Label>
+                </div>
+              </div>
+
+              {/* Política de Tratamiento de Datos */}
+              <div className="flex items-start space-x-3 p-4 border rounded-lg bg-muted/30">
+                <Checkbox
+                  id="privacy"
+                  checked={privacyAccepted}
+                  onCheckedChange={(checked) => setPrivacyAccepted(checked as boolean)}
+                  className="mt-0.5"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-primary" />
+                    <LegalDocumentsModal 
+                      type="privacy"
+                      trigger={
+                        <button type="button" className="text-primary hover:underline font-medium text-left">
+                          Política de Tratamiento de Datos Personales
+                        </button>
+                      }
+                    />
+                  </div>
+                  <Label htmlFor="privacy" className="text-sm text-muted-foreground cursor-pointer">
+                    Autorizo el tratamiento de mis datos personales según la política de EUROCAR RENTAL SAS *
+                  </Label>
+                </div>
+              </div>
             </div>
           </Card>
 
