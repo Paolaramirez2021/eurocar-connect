@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { FileText, Loader2, Search, Send, Mail, MessageSquare } from "lucide-react";
+import { FileText, Loader2, Search, Send } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { generateContractHTML, ContractData } from "@/utils/contractTemplate";
 import { format } from "date-fns";
@@ -19,6 +19,7 @@ interface Vehicle {
   placa: string;
   marca: string;
   modelo: string;
+  color?: string;
 }
 
 interface Customer {
@@ -29,6 +30,9 @@ interface Customer {
   cedula_pasaporte: string;
   email: string | null;
   celular: string;
+  direccion?: string;
+  ciudad?: string;
+  licencia_conduccion?: string;
 }
 
 interface Reservation {
@@ -43,40 +47,55 @@ interface Reservation {
     marca: string;
     modelo: string;
     placa: string;
+    color?: string;
   };
 }
 
-interface PreliminaryFormData {
+// Formulario con TODOS los campos del contrato
+interface ContractFormData {
+  // Reserva
   reservationId?: string;
-  vehicleId: string;
+  
+  // Datos del Cliente (Arrendatario)
   customerId: string;
+  customerName: string;
+  customerDocument: string;
+  customerLicense: string;
+  customerAddress: string;
+  customerPhone: string;
+  customerCity: string;
+  customerEmail: string;
+  
+  // Vehículo
+  vehicleId: string;
+  vehicleBrand: string;
+  vehiclePlate: string;
+  vehicleColor: string;
+  vehicleKmOut: string;
+  
+  // Duración
   startDate: string;
+  startTime: string;
   endDate: string;
+  endTime: string;
+  serviceType: string;
+  
+  // Valores
+  dailyRate: number;
+  additionalValue: number;
+  discount: number;
+  depositAmount: number;
+  paymentMethod: string;
   totalAmount: number;
+  
+  // Opciones de envío
   sendVia: string;
   includeWhatsApp: boolean;
   includeEmail: boolean;
 }
 
-const DEFAULT_TERMS = `TÉRMINOS Y CONDICIONES DEL CONTRATO DE ARRENDAMIENTO DE VEHÍCULO
-
-1. El arrendatario se compromete a usar el vehículo de manera responsable y conforme a las leyes de tránsito vigentes.
-
-2. El arrendatario es responsable de cualquier daño, multa o infracción generada durante el periodo de arrendamiento.
-
-3. El vehículo debe ser devuelto en las mismas condiciones en que fue entregado, salvo desgaste normal por uso.
-
-4. Queda prohibido subarrendar el vehículo o permitir que terceros lo conduzcan sin autorización expresa.
-
-5. El arrendatario debe notificar inmediatamente cualquier accidente, avería o robo del vehículo.
-
-6. El incumplimiento de cualquiera de estas cláusulas puede resultar en la terminación inmediata del contrato.
-
-Al aceptar este contrato preliminar, el arrendatario manifiesta su interés en formalizar el arrendamiento.`;
-
 export const PreliminaryContractForm = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -84,13 +103,32 @@ export const PreliminaryContractForm = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<PreliminaryFormData>({
+  const { register, handleSubmit, watch, setValue, getValues, formState: { errors } } = useForm<ContractFormData>({
     defaultValues: {
       reservationId: "",
-      vehicleId: "",
       customerId: "",
+      customerName: "",
+      customerDocument: "",
+      customerLicense: "",
+      customerAddress: "",
+      customerPhone: "",
+      customerCity: "",
+      customerEmail: "",
+      vehicleId: "",
+      vehicleBrand: "",
+      vehiclePlate: "",
+      vehicleColor: "",
+      vehicleKmOut: "",
       startDate: "",
+      startTime: "08:00",
       endDate: "",
+      endTime: "08:00",
+      serviceType: "Turismo",
+      dailyRate: 0,
+      additionalValue: 0,
+      discount: 0,
+      depositAmount: 0,
+      paymentMethod: "",
       totalAmount: 0,
       sendVia: "manual",
       includeWhatsApp: false,
@@ -98,51 +136,33 @@ export const PreliminaryContractForm = () => {
     }
   });
 
-  const selectedVehicleId = watch("vehicleId");
-  const selectedCustomerId = watch("customerId");
-  const sendVia = watch("sendVia");
-  const includeWhatsApp = watch("includeWhatsApp");
-  const includeEmail = watch("includeEmail");
+  const watchedValues = watch();
 
   useEffect(() => {
     loadVehicles();
-    loadCustomers();
   }, []);
 
+  // Calcular valores automáticamente
   useEffect(() => {
-    if (selectedCustomerId) {
-      const customer = customers.find(c => c.id === selectedCustomerId);
-      setSelectedCustomer(customer || null);
+    const startDate = watchedValues.startDate ? new Date(watchedValues.startDate) : null;
+    const endDate = watchedValues.endDate ? new Date(watchedValues.endDate) : null;
+    
+    if (startDate && endDate && watchedValues.dailyRate > 0) {
+      const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) || 1;
+      const subtotal = (watchedValues.dailyRate * days) + watchedValues.additionalValue - watchedValues.discount;
+      setValue("totalAmount", subtotal);
     }
-  }, [selectedCustomerId, customers]);
+  }, [watchedValues.startDate, watchedValues.endDate, watchedValues.dailyRate, watchedValues.additionalValue, watchedValues.discount]);
 
   const loadVehicles = async () => {
     const { data, error } = await supabase
       .from("vehicles")
-      .select("id, placa, marca, modelo")
-      .eq("estado", "disponible")
+      .select("id, placa, marca, modelo, color")
       .order("placa");
 
-    if (error) {
-      toast.error("Error al cargar vehículos");
-      return;
+    if (!error && data) {
+      setVehicles(data as Vehicle[]);
     }
-
-    setVehicles(data as Vehicle[] || []);
-  };
-
-  const loadCustomers = async () => {
-    const { data, error } = await supabase
-      .from("customers")
-      .select("id, nombres, primer_apellido, segundo_apellido, cedula_pasaporte, email, celular")
-      .order("nombres");
-
-    if (error) {
-      toast.error("Error al cargar clientes");
-      return;
-    }
-
-    setCustomers(data || []);
   };
 
   const searchCustomerByDocument = async () => {
@@ -153,6 +173,7 @@ export const PreliminaryContractForm = () => {
 
     setIsSearching(true);
     try {
+      // Buscar cliente
       const { data: customer, error: customerError } = await supabase
         .from("customers")
         .select("*")
@@ -167,11 +188,20 @@ export const PreliminaryContractForm = () => {
       }
 
       setSelectedCustomer(customer);
+      
+      // Llenar datos del cliente
       setValue("customerId", customer.id);
+      setValue("customerName", `${customer.nombres} ${customer.primer_apellido} ${customer.segundo_apellido || ''}`.trim());
+      setValue("customerDocument", customer.cedula_pasaporte);
+      setValue("customerPhone", customer.celular || '');
+      setValue("customerEmail", customer.email || '');
+      setValue("customerAddress", customer.direccion || '');
+      setValue("customerCity", customer.ciudad || '');
+      setValue("customerLicense", customer.licencia_conduccion || '');
+      
       toast.success(`Cliente encontrado: ${customer.nombres} ${customer.primer_apellido}`);
 
-      // Load pending/confirmed reservations for this customer
-      // Incluir todos los estados activos que ocupan calendario
+      // Buscar reservas activas
       const { data: reservationsData, error: reservationsError } = await supabase
         .from("reservations")
         .select(`
@@ -185,7 +215,8 @@ export const PreliminaryContractForm = () => {
           vehicles (
             marca,
             modelo,
-            placa
+            placa,
+            color
           )
         `)
         .eq("customer_id", customer.id)
@@ -203,19 +234,10 @@ export const PreliminaryContractForm = () => {
         toast.success(`Se encontraron ${reservationsData.length} reserva(s) activa(s)`);
         
         // Cargar automáticamente la primera reserva
-        const firstReservation = reservationsData[0];
-        setSelectedReservation(firstReservation);
-        setValue("reservationId", firstReservation.id);
-        setValue("vehicleId", firstReservation.vehicle_id);
-        setValue("startDate", new Date(firstReservation.fecha_inicio).toISOString().slice(0, 16));
-        setValue("endDate", new Date(firstReservation.fecha_fin).toISOString().slice(0, 16));
-        // Usar valor_total o price_total, el que tenga valor
-        const totalAmount = firstReservation.valor_total || firstReservation.price_total || 0;
-        setValue("totalAmount", totalAmount);
-        
-        toast.info("Datos de la reserva más reciente cargados automáticamente");
+        const res = reservationsData[0];
+        loadReservationData(res);
       } else {
-        toast.warning("Este cliente no tiene reservas activas. Complete los datos manualmente o cree una reserva primero.");
+        toast.warning("Este cliente no tiene reservas activas. Complete los datos manualmente.");
       }
     } catch (error) {
       console.error("Error searching customer:", error);
@@ -225,180 +247,123 @@ export const PreliminaryContractForm = () => {
     }
   };
 
-  const loadReservationData = (reservationId: string) => {
-    const reservation = reservations.find(r => r.id === reservationId);
-    if (!reservation) return;
-
+  const loadReservationData = (reservation: Reservation) => {
     setSelectedReservation(reservation);
+    
+    const startDate = new Date(reservation.fecha_inicio);
+    const endDate = new Date(reservation.fecha_fin);
+    const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) || 1;
+    const totalAmount = reservation.valor_total || reservation.price_total || 0;
+    const dailyRate = totalAmount / days;
+
     setValue("reservationId", reservation.id);
     setValue("vehicleId", reservation.vehicle_id);
-    setValue("startDate", new Date(reservation.fecha_inicio).toISOString().slice(0, 16));
-    setValue("endDate", new Date(reservation.fecha_fin).toISOString().slice(0, 16));
-    // Usar valor_total o price_total
-    const totalAmount = reservation.valor_total || reservation.price_total || 0;
+    setValue("vehicleBrand", `${reservation.vehicles.marca} ${reservation.vehicles.modelo}`);
+    setValue("vehiclePlate", reservation.vehicles.placa);
+    setValue("vehicleColor", reservation.vehicles.color || '');
+    setValue("startDate", startDate.toISOString().slice(0, 10));
+    setValue("startTime", startDate.toISOString().slice(11, 16) || "08:00");
+    setValue("endDate", endDate.toISOString().slice(0, 10));
+    setValue("endTime", endDate.toISOString().slice(11, 16) || "08:00");
+    setValue("dailyRate", Math.round(dailyRate));
     setValue("totalAmount", totalAmount);
-
-    toast.success("Datos de la reserva cargados automáticamente");
   };
 
-  const generatePreliminaryPDF = async (contractData: any, contractNumber: string): Promise<Blob> => {
-    // Calcular valores
-    const startDate = new Date(contractData.start_date);
-    const endDate = new Date(contractData.end_date);
-    const dias = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) || 1;
-    const valorDia = contractData.total_amount / dias;
-    const subtotal = contractData.total_amount;
-    const iva = subtotal * 0.19;
-    const total = subtotal + iva;
+  const generatePreliminaryPDF = async (data: ContractFormData, contractNumber: string): Promise<Blob> => {
+    const startDate = new Date(`${data.startDate}T${data.startTime}`);
+    const endDate = new Date(`${data.endDate}T${data.endTime}`);
+    const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) || 1;
+    
+    const valorDias = data.dailyRate * days;
+    const subtotal = valorDias + data.additionalValue;
+    const totalConDescuento = subtotal - data.discount;
+    const iva = totalConDescuento * 0.19;
+    const total = totalConDescuento + iva;
 
-    // Preparar datos para la plantilla
     const templateData: ContractData = {
-      // Datos del cliente
-      cliente_nombre: contractData.customer_name,
-      cliente_documento: contractData.customer_document,
-      cliente_licencia: '',
-      cliente_direccion: '',
-      cliente_telefono: selectedCustomer?.celular || '',
-      cliente_ciudad: '',
-      cliente_email: selectedCustomer?.email || '',
-      
-      // Datos del vehículo
-      vehiculo_marca: contractData.vehicle_info,
-      vehiculo_placa: selectedReservation?.vehicles?.placa || '',
-      vehiculo_color: '',
-      vehiculo_km_salida: '',
-      
-      // Duración
+      cliente_nombre: data.customerName,
+      cliente_documento: data.customerDocument,
+      cliente_licencia: data.customerLicense,
+      cliente_direccion: data.customerAddress,
+      cliente_telefono: data.customerPhone,
+      cliente_ciudad: data.customerCity,
+      cliente_email: data.customerEmail,
+      vehiculo_marca: data.vehicleBrand,
+      vehiculo_placa: data.vehiclePlate,
+      vehiculo_color: data.vehicleColor,
+      vehiculo_km_salida: data.vehicleKmOut,
       fecha_inicio: format(startDate, "dd/MM/yyyy", { locale: es }),
-      hora_inicio: format(startDate, "HH:mm"),
+      hora_inicio: data.startTime,
       fecha_fin: format(endDate, "dd/MM/yyyy", { locale: es }),
-      hora_fin: format(endDate, "HH:mm"),
-      dias: dias,
-      servicio: 'Turismo',
-      
-      // Valores
-      valor_dia: valorDia,
-      valor_dias: subtotal,
-      valor_adicional: 0,
+      hora_fin: data.endTime,
+      dias: days,
+      servicio: data.serviceType,
+      valor_dia: data.dailyRate,
+      valor_dias: valorDias,
+      valor_adicional: data.additionalValue,
       subtotal: subtotal,
-      descuento: 0,
-      total_contrato: subtotal,
+      descuento: data.discount,
+      total_contrato: totalConDescuento,
       iva: iva,
       total: total,
-      
-      // Reserva
-      valor_reserva: 0,
-      forma_pago: '',
-      
-      // Contrato
+      valor_reserva: data.depositAmount,
+      forma_pago: data.paymentMethod,
       numero_contrato: contractNumber,
       fecha_contrato: format(new Date(), "dd/MM/yyyy HH:mm", { locale: es }),
-      
-      // Deducible
-      deducible: '$3.000.000 COP',
-      
-      // Es preliminar
+      deducible: "XXXXXXXXXXXXX",
       es_preliminar: true
     };
 
-    // Generar HTML
     const html = generateContractHTML(templateData);
     console.log('[generatePreliminaryPDF] HTML generado, longitud:', html.length);
 
     try {
-      // Usar el backend para generar el PDF
-      console.log('[generatePreliminaryPDF] Enviando a /api/generate-pdf...');
       const response = await fetch('/api/generate-pdf', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           html: html,
           options: {
             format: 'Letter',
             printBackground: true,
-            margin: {
-              top: '10mm',
-              right: '10mm',
-              bottom: '10mm',
-              left: '10mm'
-            }
+            margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' }
           }
         })
       });
 
-      console.log('[generatePreliminaryPDF] Response status:', response.status);
-      
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('[generatePreliminaryPDF] Error response:', errorText);
-        throw new Error(`Error generando PDF en el servidor: ${response.status}`);
+        throw new Error(`Error del servidor: ${response.status}`);
       }
 
       const result = await response.json();
-      console.log('[generatePreliminaryPDF] PDF generado exitosamente, base64 length:', result.pdf_base64?.length);
-      
-      // Convertir base64 a Blob
       const byteCharacters = atob(result.pdf_base64);
       const byteNumbers = new Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) {
         byteNumbers[i] = byteCharacters.charCodeAt(i);
       }
-      const byteArray = new Uint8Array(byteNumbers);
-      return new Blob([byteArray], { type: 'application/pdf' });
+      return new Blob([new Uint8Array(byteNumbers)], { type: 'application/pdf' });
       
     } catch (error: any) {
-      console.error('Error generando PDF con backend:', error);
+      console.error('Error generando PDF:', error);
       toast.error(`Error generando PDF: ${error.message}`);
-      throw error; // Re-lanzar el error para que se maneje arriba
+      throw error;
     }
   };
 
-  const onSubmit = async (data: PreliminaryFormData) => {
-    if (!selectedCustomer) {
-      toast.error("Debe seleccionar un cliente");
+  const onSubmit = async (data: ContractFormData) => {
+    if (!data.customerName || !data.vehiclePlate) {
+      toast.error("Complete los datos del cliente y vehículo");
       return;
     }
 
     setIsSubmitting(true);
-
     try {
-      // Get vehicle info
-      let vehicle;
-      if (selectedReservation) {
-        vehicle = {
-          id: selectedReservation.vehicle_id,
-          placa: selectedReservation.vehicles.placa,
-          marca: selectedReservation.vehicles.marca,
-          modelo: selectedReservation.vehicles.modelo,
-        };
-      } else {
-        vehicle = vehicles.find(v => v.id === data.vehicleId);
-      }
-
-      if (!vehicle) {
-        toast.error("Error: Vehículo no encontrado");
-        return;
-      }
-
       const contractId = crypto.randomUUID();
-      const contractNumber = `CTR-PRE-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
+      const contractNumber = `CTR-PRE-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
 
-      const customerName = `${selectedCustomer.nombres} ${selectedCustomer.primer_apellido} ${selectedCustomer.segundo_apellido || ''}`.trim();
-      const vehicleInfo = `${vehicle.marca} ${vehicle.modelo} - ${vehicle.placa}`;
-
-      const contractData = {
-        customer_name: customerName,
-        customer_document: selectedCustomer.cedula_pasaporte,
-        vehicle_info: vehicleInfo,
-        start_date: data.startDate,
-        end_date: data.endDate,
-        total_amount: data.totalAmount,
-      };
-
-      // Generate PDF
-      const pdfBlob = await generatePreliminaryPDF(contractData, contractNumber);
+      // Generar PDF
+      const pdfBlob = await generatePreliminaryPDF(data, contractNumber);
       const pdfFilename = `preliminary/${contractId}_preliminary_${Date.now()}.pdf`;
       
       const { data: pdfUpload, error: pdfError } = await supabase.storage
@@ -406,7 +371,6 @@ export const PreliminaryContractForm = () => {
         .upload(pdfFilename, pdfBlob);
 
       if (pdfError) {
-        console.error("Error subiendo PDF:", pdfError);
         throw new Error(`Error al subir PDF: ${pdfError.message}`);
       }
 
@@ -414,145 +378,120 @@ export const PreliminaryContractForm = () => {
         .from("contracts")
         .getPublicUrl(pdfUpload.path);
 
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Insert preliminary contract - solo campos que existen en la tabla
-      const contractInsert = {
+      // Guardar contrato
+      const { error: insertError } = await supabase.from("contracts").insert([{
         contract_number: contractNumber,
         reservation_id: data.reservationId || null,
-        vehicle_id: data.vehicleId,
+        vehicle_id: data.vehicleId || null,
         customer_id: data.customerId,
-        customer_name: customerName,
-        customer_document: selectedCustomer.cedula_pasaporte,
-        customer_email: selectedCustomer.email,
-        customer_phone: selectedCustomer.celular,
-        start_date: data.startDate,
-        end_date: data.endDate,
+        customer_name: data.customerName,
+        customer_document: data.customerDocument,
+        customer_email: data.customerEmail,
+        customer_phone: data.customerPhone,
+        start_date: `${data.startDate}T${data.startTime}`,
+        end_date: `${data.endDate}T${data.endTime}`,
         total_amount: data.totalAmount,
-        terms_text: DEFAULT_TERMS,
         terms_accepted: false,
         signed_by: user?.id,
         status: "preliminary",
         pdf_url: pdfUrl.publicUrl,
         signature_url: '',
-      };
-      
-      console.log("Insertando contrato:", contractInsert);
-      
-      const { error: insertError } = await supabase.from("contracts").insert([contractInsert]);
+      }]);
 
       if (insertError) {
-        console.error("Error insertando contrato:", insertError);
         throw new Error(`Error al guardar contrato: ${insertError.message}`);
       }
 
-      // Send via email if selected
-      if (data.includeEmail && selectedCustomer.email) {
-        await supabase.functions.invoke("send-contract-email", {
-          body: {
-            contractId: contractId,
-            customerEmail: selectedCustomer.email,
-            customerName: customerName,
-            vehiclePlate: vehicle.placa,
-            pdfUrl: pdfUrl.publicUrl,
-          },
-        });
-      }
-
-      // Show WhatsApp link if selected
-      if (data.includeWhatsApp && selectedCustomer.celular) {
-        const whatsappMessage = encodeURIComponent(
-          `Hola ${customerName}, te enviamos el contrato preliminar de arrendamiento del vehículo ${vehicleInfo}. Puedes revisarlo aquí: ${pdfUrl.publicUrl}`
-        );
-        const whatsappUrl = `https://wa.me/${selectedCustomer.celular.replace(/\D/g, '')}?text=${whatsappMessage}`;
-        window.open(whatsappUrl, '_blank');
+      // Enviar email si corresponde
+      if (data.includeEmail && data.customerEmail) {
+        try {
+          await fetch('/api/send-contract-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: [data.customerEmail],
+              contract_pdf_url: pdfUrl.publicUrl,
+              contract_data: {
+                cliente_nombre: data.customerName,
+                vehiculo_marca: data.vehicleBrand,
+                vehiculo_placa: data.vehiclePlate,
+                fecha_inicio: data.startDate,
+                fecha_fin: data.endDate,
+                valor_total: data.totalAmount
+              }
+            })
+          });
+          toast.success("Email enviado al cliente");
+        } catch (e) {
+          toast.warning("Contrato guardado pero no se pudo enviar el email");
+        }
       }
 
       toast.success(`Contrato preliminar ${contractNumber} creado exitosamente`);
-      resetForm();
+      
+      // Reset form
+      window.location.reload();
 
     } catch (error: any) {
-      console.error("Error creating preliminary contract:", error);
-      toast.error(error.message || "Error al crear el contrato preliminar");
+      console.error("Error:", error);
+      toast.error(error.message || "Error al crear el contrato");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const resetForm = () => {
-    setValue("vehicleId", "");
-    setValue("customerId", "");
-    setValue("startDate", "");
-    setValue("endDate", "");
-    setValue("totalAmount", 0);
-    setValue("sendVia", "manual");
-    setValue("includeWhatsApp", false);
-    setValue("includeEmail", false);
-    setSelectedCustomer(null);
-    setSelectedReservation(null);
-    setSearchDocument("");
-    setReservations([]);
+  // Calcular días y totales para mostrar
+  const calculateDays = () => {
+    if (!watchedValues.startDate || !watchedValues.endDate) return 0;
+    const start = new Date(watchedValues.startDate);
+    const end = new Date(watchedValues.endDate);
+    return Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) || 1;
   };
 
-  const isFormValid = selectedVehicleId && selectedCustomerId && watch("startDate") && 
-                      watch("endDate") && watch("totalAmount") > 0;
+  const days = calculateDays();
+  const valorDias = watchedValues.dailyRate * days;
+  const subtotal = valorDias + watchedValues.additionalValue;
+  const totalConDescuento = subtotal - watchedValues.discount;
+  const iva = totalConDescuento * 0.19;
+  const totalFinal = totalConDescuento + iva;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {/* Buscar Cliente */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Search className="h-5 w-5 text-primary" />
+          <Search className="h-5 w-5" />
           Buscar Cliente
         </h3>
-
-        <div className="flex gap-2 mb-4">
-          <div className="flex-1">
-            <Input
-              placeholder="Ingrese cédula o documento del cliente"
-              value={searchDocument}
-              onChange={(e) => setSearchDocument(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && searchCustomerByDocument()}
-            />
-          </div>
-          <Button
-            type="button"
-            onClick={searchCustomerByDocument}
-            disabled={isSearching}
-          >
-            {isSearching ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Search className="h-4 w-4" />
-            )}
+        <div className="flex gap-2">
+          <Input
+            placeholder="Ingrese cédula o documento del cliente"
+            value={searchDocument}
+            onChange={(e) => setSearchDocument(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), searchCustomerByDocument())}
+            className="flex-1"
+          />
+          <Button type="button" onClick={searchCustomerByDocument} disabled={isSearching}>
+            {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
           </Button>
         </div>
-
-        {selectedCustomer && (
-          <div className="p-3 bg-muted rounded-lg mb-4">
-            <p className="text-sm font-medium">
-              {selectedCustomer.nombres} {selectedCustomer.primer_apellido} {selectedCustomer.segundo_apellido}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {selectedCustomer.cedula_pasaporte} • {selectedCustomer.celular}
-            </p>
-            {selectedCustomer.email && (
-              <p className="text-xs text-muted-foreground">{selectedCustomer.email}</p>
-            )}
-          </div>
-        )}
-
-        {reservations.length > 0 && (
-          <div className="space-y-2">
-            <Label>Reservas Activas</Label>
-            <Select onValueChange={loadReservationData}>
+        
+        {reservations.length > 1 && (
+          <div className="mt-4">
+            <Label>Seleccionar Reserva</Label>
+            <Select onValueChange={(id) => {
+              const res = reservations.find(r => r.id === id);
+              if (res) loadReservationData(res);
+            }}>
               <SelectTrigger>
-                <SelectValue placeholder="Cargar datos desde reserva..." />
+                <SelectValue placeholder="Seleccione una reserva" />
               </SelectTrigger>
               <SelectContent>
                 {reservations.map((res) => (
                   <SelectItem key={res.id} value={res.id}>
-                    {res.vehicles.marca} {res.vehicles.modelo} - {new Date(res.fecha_inicio).toLocaleDateString()}
+                    {res.vehicles.marca} {res.vehicles.modelo} ({res.vehicles.placa}) - {format(new Date(res.fecha_inicio), "dd/MM/yyyy")}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -561,130 +500,305 @@ export const PreliminaryContractForm = () => {
         )}
       </Card>
 
+      {/* 1. IDENTIFICACIÓN DE LAS PARTES */}
       <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4">Datos del Contrato</h3>
+        <h3 className="text-lg font-semibold mb-4 text-blue-600">1. IDENTIFICACIÓN DE LAS PARTES</h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="vehicleId">Vehículo *</Label>
-            {selectedReservation ? (
-              <div className="p-3 bg-muted rounded-lg border">
-                <p className="font-medium">
-                  {selectedReservation.vehicles.marca} {selectedReservation.vehicles.modelo}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Placa: {selectedReservation.vehicles.placa}
-                </p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* EL ARRENDATARIO */}
+          <div className="space-y-4">
+            <h4 className="font-semibold bg-blue-600 text-white px-3 py-1">EL ARRENDATARIO</h4>
+            
+            <div>
+              <Label>Nombre / Razón Social *</Label>
+              <Input {...register("customerName", { required: true })} placeholder="Nombre completo" />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Documento Identidad *</Label>
+                <Input {...register("customerDocument", { required: true })} placeholder="Cédula/Pasaporte" />
               </div>
-            ) : (
-              <Select onValueChange={(value) => setValue("vehicleId", value)} value={selectedVehicleId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccione vehículo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {vehicles.map((vehicle) => (
-                    <SelectItem key={vehicle.id} value={vehicle.id}>
-                      {vehicle.marca} {vehicle.modelo} - {vehicle.placa}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+              <div>
+                <Label>Licencia Conducción</Label>
+                <Input {...register("customerLicense")} placeholder="No. Licencia" />
+              </div>
+            </div>
+            
+            <div>
+              <Label>Dirección</Label>
+              <Input {...register("customerAddress")} placeholder="Dirección completa" />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Teléfono *</Label>
+                <Input {...register("customerPhone", { required: true })} placeholder="Celular" />
+              </div>
+              <div>
+                <Label>Ciudad / País</Label>
+                <Input {...register("customerCity")} placeholder="Ciudad" />
+              </div>
+            </div>
+            
+            <div>
+              <Label>Correo Electrónico</Label>
+              <Input {...register("customerEmail")} type="email" placeholder="email@ejemplo.com" />
+            </div>
           </div>
 
-          <div>
-            <Label htmlFor="totalAmount">Valor Total *</Label>
-            <Input
-              id="totalAmount"
-              type="number"
-              {...register("totalAmount", { required: true, min: 0 })}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="startDate">Fecha Inicio *</Label>
-            <Input
-              id="startDate"
-              type="datetime-local"
-              {...register("startDate", { required: true })}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="endDate">Fecha Fin *</Label>
-            <Input
-              id="endDate"
-              type="datetime-local"
-              {...register("endDate", { required: true })}
-            />
+          {/* EL ARRENDADOR */}
+          <div className="space-y-4">
+            <h4 className="font-semibold bg-blue-600 text-white px-3 py-1">EL ARRENDADOR</h4>
+            <div className="bg-gray-100 p-4 rounded text-sm">
+              <p className="font-bold">EUROCAR RENTAL SAS</p>
+              <p>NIT: 900269555</p>
+              <p>AV CALLE 26 69C-03 LOCAL 105</p>
+              <p>BOGOTÁ - COLOMBIA</p>
+              <p>Tel: 320 834 1163 - 313 209 4156</p>
+              <p>reservas@eurocarental.com</p>
+            </div>
           </div>
         </div>
       </Card>
 
+      {/* 2. VEHÍCULO */}
       <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Send className="h-5 w-5 text-primary" />
-          Envío del Contrato
-        </h3>
-
-        <div className="space-y-4">
+        <h3 className="text-lg font-semibold mb-4 text-blue-600">2. VEHÍCULO</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
-            <Label htmlFor="sendVia">Método de Envío</Label>
-            <Select onValueChange={(value) => setValue("sendVia", value)} value={sendVia}>
+            <Label>Marca / Modelo *</Label>
+            <Input {...register("vehicleBrand", { required: true })} placeholder="Ej: Toyota Corolla" />
+          </div>
+          <div>
+            <Label>Placa *</Label>
+            <Input {...register("vehiclePlate", { required: true })} placeholder="ABC123" />
+          </div>
+          <div>
+            <Label>Color</Label>
+            <Input {...register("vehicleColor")} placeholder="Color del vehículo" />
+          </div>
+          <div>
+            <Label>KM Salida</Label>
+            <Input {...register("vehicleKmOut")} placeholder="Kilometraje actual" />
+          </div>
+        </div>
+        
+        {vehicles.length > 0 && !selectedReservation && (
+          <div className="mt-4">
+            <Label>O seleccionar vehículo disponible:</Label>
+            <Select onValueChange={(id) => {
+              const v = vehicles.find(v => v.id === id);
+              if (v) {
+                setValue("vehicleId", v.id);
+                setValue("vehicleBrand", `${v.marca} ${v.modelo}`);
+                setValue("vehiclePlate", v.placa);
+                setValue("vehicleColor", v.color || '');
+              }
+            }}>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccione un vehículo" />
+              </SelectTrigger>
+              <SelectContent>
+                {vehicles.map((v) => (
+                  <SelectItem key={v.id} value={v.id}>
+                    {v.marca} {v.modelo} - {v.placa}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </Card>
+
+      {/* 3. DURACIÓN DEL CONTRATO */}
+      <Card className="p-6">
+        <h3 className="text-lg font-semibold mb-4 text-blue-600">3. DURACIÓN DEL CONTRATO</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div>
+            <Label>Fecha Inicio *</Label>
+            <Input {...register("startDate", { required: true })} type="date" />
+          </div>
+          <div>
+            <Label>Hora Inicio</Label>
+            <Input {...register("startTime")} type="time" />
+          </div>
+          <div>
+            <Label>Fecha Fin *</Label>
+            <Input {...register("endDate", { required: true })} type="date" />
+          </div>
+          <div>
+            <Label>Hora Fin</Label>
+            <Input {...register("endTime")} type="time" />
+          </div>
+          <div>
+            <Label>Tipo Servicio</Label>
+            <Select value={watchedValues.serviceType} onValueChange={(v) => setValue("serviceType", v)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="manual">Manual (solo generar)</SelectItem>
-                <SelectItem value="digital">Digital (Email/WhatsApp)</SelectItem>
+                <SelectItem value="Turismo">Turismo</SelectItem>
+                <SelectItem value="Empresarial">Empresarial</SelectItem>
+                <SelectItem value="Aeropuerto">Aeropuerto</SelectItem>
+                <SelectItem value="Otro">Otro</SelectItem>
               </SelectContent>
             </Select>
           </div>
+        </div>
+        
+        {days > 0 && (
+          <div className="mt-4 p-3 bg-blue-50 rounded">
+            <span className="font-semibold">Total días: {days}</span>
+          </div>
+        )}
+      </Card>
 
-          {sendVia === "digital" && (
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="includeEmail"
-                  checked={includeEmail}
-                  onCheckedChange={(checked) => setValue("includeEmail", checked as boolean)}
-                  disabled={!selectedCustomer?.email}
+      {/* 4. VALOR DEL CONTRATO */}
+      <Card className="p-6">
+        <h3 className="text-lg font-semibold mb-4 text-blue-600">4. VALOR DEL CONTRATO</h3>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Valor Día *</Label>
+                <Input 
+                  {...register("dailyRate", { valueAsNumber: true })} 
+                  type="number" 
+                  placeholder="0"
                 />
-                <Label htmlFor="includeEmail" className="flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  Enviar por Email
-                  {!selectedCustomer?.email && (
-                    <span className="text-xs text-muted-foreground">(sin email registrado)</span>
-                  )}
-                </Label>
               </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="includeWhatsApp"
-                  checked={includeWhatsApp}
-                  onCheckedChange={(checked) => setValue("includeWhatsApp", checked as boolean)}
+              <div>
+                <Label>Valor Adicional</Label>
+                <Input 
+                  {...register("additionalValue", { valueAsNumber: true })} 
+                  type="number" 
+                  placeholder="0"
                 />
-                <Label htmlFor="includeWhatsApp" className="flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4" />
-                  Enviar por WhatsApp
-                </Label>
               </div>
             </div>
-          )}
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Descuento</Label>
+                <Input 
+                  {...register("discount", { valueAsNumber: true })} 
+                  type="number" 
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label>Valor Reserva/Anticipo</Label>
+                <Input 
+                  {...register("depositAmount", { valueAsNumber: true })} 
+                  type="number" 
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <Label>Forma de Pago</Label>
+              <Select value={watchedValues.paymentMethod} onValueChange={(v) => setValue("paymentMethod", v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccione forma de pago" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Efectivo">Efectivo</SelectItem>
+                  <SelectItem value="Tarjeta Crédito">Tarjeta Crédito</SelectItem>
+                  <SelectItem value="Tarjeta Débito">Tarjeta Débito</SelectItem>
+                  <SelectItem value="Transferencia">Transferencia</SelectItem>
+                  <SelectItem value="Nequi">Nequi</SelectItem>
+                  <SelectItem value="Daviplata">Daviplata</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Resumen de valores */}
+          <div className="bg-gray-50 p-4 rounded space-y-2">
+            <h4 className="font-semibold mb-3">RESUMEN</h4>
+            <div className="flex justify-between">
+              <span>Valor día:</span>
+              <span>${watchedValues.dailyRate.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Valor {days} días:</span>
+              <span>${valorDias.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Valor adicional:</span>
+              <span>${watchedValues.additionalValue.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Subtotal:</span>
+              <span>${subtotal.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between text-red-600">
+              <span>Descuento:</span>
+              <span>-${watchedValues.discount.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Total contrato:</span>
+              <span>${totalConDescuento.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>IVA 19%:</span>
+              <span>${Math.round(iva).toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between font-bold text-lg border-t pt-2 bg-blue-600 text-white px-2 -mx-2">
+              <span>TOTAL:</span>
+              <span>${Math.round(totalFinal).toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between text-green-600 mt-2">
+              <span>Reserva recibida:</span>
+              <span>${watchedValues.depositAmount.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between font-semibold">
+              <span>Saldo pendiente:</span>
+              <span>${Math.round(totalFinal - watchedValues.depositAmount).toLocaleString()}</span>
+            </div>
+          </div>
         </div>
       </Card>
 
-      <Button
-        type="submit"
-        disabled={!isFormValid || isSubmitting}
-        className="w-full"
-        size="lg"
+      {/* Opciones de envío */}
+      <Card className="p-6">
+        <h3 className="text-lg font-semibold mb-4">Opciones de Envío</h3>
+        
+        <div className="flex flex-wrap gap-6">
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="includeEmail"
+              checked={watchedValues.includeEmail}
+              onCheckedChange={(checked) => setValue("includeEmail", !!checked)}
+            />
+            <Label htmlFor="includeEmail">Enviar por Email</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="includeWhatsApp"
+              checked={watchedValues.includeWhatsApp}
+              onCheckedChange={(checked) => setValue("includeWhatsApp", !!checked)}
+            />
+            <Label htmlFor="includeWhatsApp">Enviar por WhatsApp</Label>
+          </div>
+        </div>
+      </Card>
+
+      {/* Botón Generar */}
+      <Button 
+        type="submit" 
+        className="w-full py-6 text-lg"
+        disabled={isSubmitting}
       >
         {isSubmitting ? (
           <>
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            Generando contrato...
+            Generando Contrato...
           </>
         ) : (
           <>
@@ -696,3 +810,5 @@ export const PreliminaryContractForm = () => {
     </form>
   );
 };
+
+export default PreliminaryContractForm;
