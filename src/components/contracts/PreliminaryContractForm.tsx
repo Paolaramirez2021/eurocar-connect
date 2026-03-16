@@ -444,8 +444,9 @@ export const PreliminaryContractForm = () => {
       return new Blob([new Uint8Array(byteNumbers)], { type: 'application/pdf' });
       
     } catch (error: any) {
-      console.error('Error generando PDF:', error);
-      toast.error(`Error generando PDF: ${error.message}`);
+      console.error('[generatePreliminaryPDF] Error completo:', error);
+      const errorMsg = error.message || 'Error desconocido al generar PDF';
+      toast.error(`Error generando PDF: ${errorMsg}`);
       throw error;
     }
   };
