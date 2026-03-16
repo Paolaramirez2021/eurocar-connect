@@ -225,6 +225,17 @@ export const ContractPhotoCapture = ({ onPhotoChange }: ContractPhotoCaptureProp
         <p className="text-xs text-muted-foreground">
           * Foto obligatoria del cliente para verificación de identidad.
         </p>
+
+        {/* Input oculto para captura en móviles - fuerza apertura de cámara */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="user"
+          onChange={handleFileCapture}
+          className="hidden"
+          data-testid="camera-input"
+        />
       </div>
     </Card>
   );
