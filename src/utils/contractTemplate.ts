@@ -164,7 +164,7 @@ ${data.es_preliminar ? '<div class="prelim-badge">⚠ DOCUMENTO PRELIMINAR - SIN
 </table>
 
 <div class="info-text">
-  <strong>NOTA:</strong> Las tarifas incluyen seguros contra todo riesgo, SOAT, impuestos, revisión técnico mecánica y kit de carretera. No incluyen combustible, peajes, parqueaderos ni multas. Km ilimitados.
+  Las tarifas incluyen SOAT, seguro contra todo riesgo, revisión técnico mecánica, kit de carretera e impuestos. No incluyen combustible, peajes ni parqueaderos. Km ilimitados (único operador en Colombia).
 </div>
 
 <table class="two-col">
