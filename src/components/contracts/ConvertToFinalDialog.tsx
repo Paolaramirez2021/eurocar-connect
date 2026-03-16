@@ -63,8 +63,8 @@ export const ConvertToFinalDialog = ({
       return;
     }
 
-    if (!termsAccepted) {
-      toast.error("Debe aceptar los términos y condiciones");
+    if (!termsAccepted || !privacyAccepted) {
+      toast.error("Debe aceptar los términos y condiciones y la política de datos");
       return;
     }
 
