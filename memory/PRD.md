@@ -88,8 +88,8 @@ Sistema completo de gestión de alquiler de vehículos para EUROCAR RENTAL, con 
 - El proyecto usa ES modules, scripts CommonJS deben tener extensión .cjs
 
 ## URLs
-- Preview: https://github-connect-70.preview.emergentagent.com
-- Backend API: https://github-connect-70.preview.emergentagent.com/api/
+- Preview: https://eurocar-rental-1.preview.emergentagent.com
+- Backend API: https://eurocar-rental-1.preview.emergentagent.com/api/
 
 ## Última Actualización
 Fecha: 13 de Marzo, 2025
