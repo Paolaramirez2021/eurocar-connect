@@ -270,9 +270,9 @@ export const PreliminaryContractForm = () => {
       setValue("customerDocument", customer.cedula_pasaporte);
       setValue("customerPhone", customer.celular || '');
       setValue("customerEmail", customer.email || '');
-      setValue("customerAddress", customer.direccion || '');
+      setValue("customerAddress", customer.direccion_residencia || customer.direccion || '');
       setValue("customerCity", customer.ciudad || '');
-      setValue("customerLicense", customer.licencia_conduccion || '');
+      setValue("customerLicense", customer.licencia_numero || customer.licencia_conduccion || '');
       
       toast.success(`Cliente encontrado: ${customer.nombres} ${customer.primer_apellido}`);
 
