@@ -84,15 +84,23 @@ export const ContractPhotoCapture = ({ onPhotoChange }: ContractPhotoCaptureProp
       
     } catch (error: any) {
       console.error("Error al acceder a la cámara:", error);
-      if (error.name === "NotAllowedError") {
-        toast.error("Permiso de cámara denegado. Por favor habilite el acceso a la cámara en su navegador.");
-      } else if (error.name === "NotFoundError") {
-        toast.error("No se encontró ninguna cámara en este dispositivo.");
+      
+      // Siempre intentar fallback al input nativo con capture="user"
+      if (fileInputRef.current) {
+        if (error.name === "NotAllowedError") {
+          toast.info("Abriendo cámara nativa...");
+        } else if (error.name === "NotFoundError") {
+          toast.info("Usando captura de imagen...");
+        } else {
+          toast.info("Usando cámara alternativa...");
+        }
+        fileInputRef.current.click();
       } else {
-        // Fallback: usar input file si MediaDevices falla
-        if (fileInputRef.current) {
-          toast.info("Usando cámara nativa del dispositivo...");
-          fileInputRef.current.click();
+        // Solo mostrar error si no hay fallback disponible
+        if (error.name === "NotAllowedError") {
+          toast.error("Permiso de cámara denegado. Por favor habilite el acceso a la cámara en su navegador.");
+        } else if (error.name === "NotFoundError") {
+          toast.error("No se encontró ninguna cámara en este dispositivo.");
         } else {
           toast.error("Error al abrir la cámara: " + error.message);
         }
