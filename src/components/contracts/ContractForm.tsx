@@ -639,21 +639,60 @@ export const ContractForm = () => {
       </Card>
 
       <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4">Términos y Condiciones</h3>
-        <ScrollArea className="h-64 w-full rounded-md border p-4 mb-4">
-          <div className="text-sm whitespace-pre-line">
-            {DEFAULT_TERMS}
+        <h3 className="text-lg font-semibold mb-4">Documentos Legales</h3>
+        
+        <div className="space-y-4">
+          {/* Términos y Condiciones */}
+          <div className="flex items-start space-x-3 p-4 border rounded-lg bg-muted/30">
+            <Checkbox
+              id="termsAccepted"
+              checked={termsAccepted}
+              onCheckedChange={(checked) => setValue("termsAccepted", checked as boolean)}
+              className="mt-0.5"
+            />
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-primary" />
+                <LegalDocumentsModal 
+                  type="terms"
+                  trigger={
+                    <button type="button" className="text-primary hover:underline font-medium text-left">
+                      Términos y Condiciones
+                    </button>
+                  }
+                />
+              </div>
+              <Label htmlFor="termsAccepted" className="text-sm text-muted-foreground cursor-pointer">
+                He leído y acepto los términos y condiciones del contrato de arrendamiento *
+              </Label>
+            </div>
           </div>
-        </ScrollArea>
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="termsAccepted"
-            checked={termsAccepted}
-            onCheckedChange={(checked) => setValue("termsAccepted", checked as boolean)}
-          />
-          <Label htmlFor="termsAccepted" className="cursor-pointer">
-            Acepto los términos y condiciones del contrato *
-          </Label>
+
+          {/* Política de Tratamiento de Datos */}
+          <div className="flex items-start space-x-3 p-4 border rounded-lg bg-muted/30">
+            <Checkbox
+              id="privacyAccepted"
+              checked={privacyAccepted}
+              onCheckedChange={(checked) => setValue("privacyAccepted", checked as boolean)}
+              className="mt-0.5"
+            />
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-primary" />
+                <LegalDocumentsModal 
+                  type="privacy"
+                  trigger={
+                    <button type="button" className="text-primary hover:underline font-medium text-left">
+                      Política de Tratamiento de Datos Personales
+                    </button>
+                  }
+                />
+              </div>
+              <Label htmlFor="privacyAccepted" className="text-sm text-muted-foreground cursor-pointer">
+                Autorizo el tratamiento de mis datos personales según la política de EUROCAR RENTAL SAS *
+              </Label>
+            </div>
+          </div>
         </div>
       </Card>
 
