@@ -135,19 +135,29 @@ export const ConvertToFinalDialog = ({
       const { data: { user } } = await supabase.auth.getUser();
 
       // Actualizar el contrato existente (cambiar de preliminary a signed)
-      const { error: updateError } = await supabase
+      const updateData: Record<string, any> = {
+        signature_url: signatureUrl.publicUrl,
+        terms_accepted: true,
+        signed_by: user?.id,
+        user_agent: navigator.userAgent,
+        status: "signed",
+      };
+
+      // Agregar campos opcionales solo si tienen valor
+      if (fingerprintUrl) {
+        updateData.fingerprint_url = fingerprintUrl;
+      }
+      if (contractPhotoUrl?.publicUrl) {
+        updateData.photo_url = contractPhotoUrl.publicUrl;
+      }
+
+      console.log("[ConvertToFinal] Actualizando contrato:", contractId, updateData);
+
+      const { error: updateError, data: updatedContract } = await supabase
         .from("contracts")
-        .update({
-          signature_url: signatureUrl.publicUrl,
-          fingerprint_url: fingerprintUrl || null,
-          photo_url: contractPhotoUrl.publicUrl,
-          terms_accepted: true,
-          signed_by: user?.id,
-          user_agent: navigator.userAgent,
-          status: "signed",
-          signed_at: new Date().toISOString(),
-        } as any)
-        .eq("id", contractId);
+        .update(updateData)
+        .eq("id", contractId)
+        .select();
 
       if (updateError) {
         console.error("Error actualizando contrato:", updateError);
