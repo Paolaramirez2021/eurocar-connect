@@ -66,6 +66,7 @@ interface ContractFormData {
   customerName: string;
   customerDocument: string;
   customerLicense: string;
+  customerLicenseExpiry: string;
   customerAddress: string;
   customerPhone: string;
   customerCity: string;
