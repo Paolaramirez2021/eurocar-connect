@@ -106,9 +106,14 @@ export const PreliminaryContractForm = () => {
   const [searchDocument, setSearchDocument] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [nextFacturacionNumber, setNextFacturacionNumber] = useState(100);
+  const [nextEfectivoNumber, setNextEfectivoNumber] = useState(1);
+  const [loadingNumbers, setLoadingNumbers] = useState(true);
 
   const { register, handleSubmit, watch, setValue, getValues, formState: { errors } } = useForm<ContractFormData>({
     defaultValues: {
+      contractType: 'facturacion',
+      contractNumber: '',
       reservationId: "",
       customerId: "",
       customerName: "",
@@ -142,9 +147,75 @@ export const PreliminaryContractForm = () => {
 
   const watchedValues = watch();
 
+  // Cargar los últimos números de contrato
   useEffect(() => {
+    loadNextContractNumbers();
     loadVehicles();
   }, []);
+
+  // Actualizar el número de contrato cuando cambia el tipo
+  useEffect(() => {
+    if (!loadingNumbers) {
+      if (watchedValues.contractType === 'facturacion') {
+        setValue('contractNumber', `EUROCAR-${nextFacturacionNumber}`);
+      } else {
+        setValue('contractNumber', String(nextEfectivoNumber).padStart(3, '0'));
+      }
+    }
+  }, [watchedValues.contractType, nextFacturacionNumber, nextEfectivoNumber, loadingNumbers]);
+
+  const loadNextContractNumbers = async () => {
+    setLoadingNumbers(true);
+    try {
+      // Buscar el último contrato con prefijo EUROCAR-
+      const { data: facturacionContracts } = await supabase
+        .from("contracts")
+        .select("contract_number")
+        .like("contract_number", "EUROCAR-%")
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      let maxFacturacion = 99; // Empezar desde 100
+      if (facturacionContracts && facturacionContracts.length > 0) {
+        facturacionContracts.forEach(c => {
+          const match = c.contract_number.match(/EUROCAR-(\d+)/);
+          if (match) {
+            const num = parseInt(match[1]);
+            if (num > maxFacturacion) maxFacturacion = num;
+          }
+        });
+      }
+      setNextFacturacionNumber(maxFacturacion + 1);
+
+      // Buscar el último contrato sin prefijo (solo números)
+      const { data: efectivoContracts } = await supabase
+        .from("contracts")
+        .select("contract_number")
+        .not("contract_number", "like", "EUROCAR-%")
+        .not("contract_number", "like", "CTR-%")
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      let maxEfectivo = 0;
+      if (efectivoContracts && efectivoContracts.length > 0) {
+        efectivoContracts.forEach(c => {
+          // Solo números (001, 002, etc)
+          const num = parseInt(c.contract_number);
+          if (!isNaN(num) && num > maxEfectivo) maxEfectivo = num;
+        });
+      }
+      setNextEfectivoNumber(maxEfectivo + 1);
+
+      // Establecer el número inicial
+      setValue('contractNumber', `EUROCAR-${maxFacturacion + 1}`);
+      
+    } catch (error) {
+      console.error("Error loading contract numbers:", error);
+      setValue('contractNumber', 'EUROCAR-100');
+    } finally {
+      setLoadingNumbers(false);
+    }
+  };
 
   // Calcular valores automáticamente
   useEffect(() => {
