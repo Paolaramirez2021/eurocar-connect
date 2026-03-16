@@ -69,15 +69,17 @@ export const ConvertToFinalDialog = ({
     }
 
     if (!contractPhotoDataUrl) {
-      toast.error("Debe capturar una foto del contrato");
+      toast.error("Debe capturar una foto del cliente");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const contractId = crypto.randomUUID();
-      const contractNumber = `CTR-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
+      // Usar el mismo ID del contrato preliminar
+      const contractId = preliminaryContract.id;
+      // Mantener el mismo número de contrato
+      const contractNumber = preliminaryContract.contract_number;
 
       // Upload signature
       const signatureResponse = await fetch(signatureDataUrl);
@@ -94,16 +96,20 @@ export const ConvertToFinalDialog = ({
         .from("contracts")
         .getPublicUrl(signatureUpload.path);
 
-      // Upload contract photo
+      // Upload contract photo (foto del cliente)
       const contractPhotoResponse = await fetch(contractPhotoDataUrl);
       const contractPhotoBlob = await contractPhotoResponse.blob();
-      const contractPhotoFilename = `contract-photos/${contractId}_photo_${Date.now()}.png`;
+      const contractPhotoFilename = `photos/${contractId}_photo_${Date.now()}.png`;
       
       const { data: contractPhotoUpload, error: contractPhotoError } = await supabase.storage
         .from("contracts")
         .upload(contractPhotoFilename, contractPhotoBlob);
 
       if (contractPhotoError) throw contractPhotoError;
+
+      const { data: contractPhotoUrl } = supabase.storage
+        .from("contracts")
+        .getPublicUrl(contractPhotoUpload.path);
 
       // Upload fingerprint if exists
       let fingerprintUrl: string | undefined;
@@ -128,47 +134,27 @@ export const ConvertToFinalDialog = ({
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Insert final contract - usando solo campos básicos
-      const { error: insertError } = await supabase.from("contracts").insert([{
-        contract_number: contractNumber,
-        reservation_id: preliminaryContract.reservation_id,
-        vehicle_id: preliminaryContract.vehicle_id,
-        customer_id: preliminaryContract.customer_id,
-        customer_name: preliminaryContract.customer_name,
-        customer_document: preliminaryContract.customer_document,
-        customer_email: preliminaryContract.customer_email,
-        customer_phone: preliminaryContract.customer_phone,
-        start_date: preliminaryContract.start_date,
-        end_date: preliminaryContract.end_date,
-        total_amount: preliminaryContract.total_amount,
-        signature_url: signatureUrl.publicUrl,
-        fingerprint_url: fingerprintUrl,
-        terms_text: DEFAULT_TERMS,
-        terms_accepted: termsAccepted,
-        signed_by: user?.id,
-        user_agent: navigator.userAgent,
-        status: "signed",
-      }]);
-
-      if (insertError) {
-        console.error("Error insertando contrato final:", insertError);
-        throw new Error(`Error al guardar contrato: ${insertError.message}`);
-      }
-
-      // Update preliminary contract status (mark as converted)
+      // Actualizar el contrato existente (cambiar de preliminary a signed)
       const { error: updateError } = await supabase
         .from("contracts")
-        .update({ 
-          status: 'converted'
+        .update({
+          signature_url: signatureUrl.publicUrl,
+          fingerprint_url: fingerprintUrl || null,
+          photo_url: contractPhotoUrl.publicUrl,
+          terms_accepted: true,
+          signed_by: user?.id,
+          user_agent: navigator.userAgent,
+          status: "signed",
+          signed_at: new Date().toISOString(),
         } as any)
-        .eq("id", preliminaryContract.id);
+        .eq("id", contractId);
 
       if (updateError) {
-        console.error("Error updating preliminary contract:", updateError);
-        // Don't fail the whole operation if this fails
+        console.error("Error actualizando contrato:", updateError);
+        throw new Error(`Error al actualizar contrato: ${updateError.message}`);
       }
 
-      toast.success(`Contrato final ${contractNumber} creado exitosamente`);
+      toast.success(`Contrato ${contractNumber} firmado exitosamente`);
       
       // Send email with final contract using FastAPI backend
       if (preliminaryContract.customer_email) {
@@ -180,7 +166,7 @@ export const ConvertToFinalDialog = ({
             },
             body: JSON.stringify({
               to: [preliminaryContract.customer_email],
-              contract_pdf_url: signatureUrl.publicUrl,
+              contract_pdf_url: preliminaryContract.pdf_url,
               contract_data: {
                 cliente_nombre: preliminaryContract.customer_name,
                 vehiculo_marca: vehicleInfo,
@@ -209,7 +195,7 @@ export const ConvertToFinalDialog = ({
 
     } catch (error) {
       console.error("Error converting to final contract:", error);
-      toast.error("Error al convertir el contrato");
+      toast.error("Error al firmar el contrato");
     } finally {
       setIsSubmitting(false);
     }
