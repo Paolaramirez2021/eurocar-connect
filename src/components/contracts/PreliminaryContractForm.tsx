@@ -348,37 +348,10 @@ export const PreliminaryContractForm = () => {
       const byteArray = new Uint8Array(byteNumbers);
       return new Blob([byteArray], { type: 'application/pdf' });
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generando PDF con backend:', error);
-      toast.error('Error generando PDF. Usando versión simplificada.');
-      
-      // Fallback: generar PDF simple con jsPDF si el backend falla
-      const { default: jsPDF } = await import('jspdf');
-      const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.getWidth();
-      
-      doc.setFontSize(18);
-      doc.text("EUROCAR RENTAL", pageWidth / 2, 20, { align: "center" });
-      doc.setFontSize(14);
-      doc.text("CONTRATO PRELIMINAR", pageWidth / 2, 30, { align: "center" });
-      doc.setFontSize(10);
-      doc.text(`No. ${contractNumber}`, pageWidth / 2, 38, { align: "center" });
-      
-      let yPos = 55;
-      doc.setFontSize(11);
-      doc.text(`Cliente: ${contractData.customer_name}`, 20, yPos);
-      yPos += 8;
-      doc.text(`Documento: ${contractData.customer_document}`, 20, yPos);
-      yPos += 8;
-      doc.text(`Vehículo: ${contractData.vehicle_info}`, 20, yPos);
-      yPos += 8;
-      doc.text(`Periodo: ${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")}`, 20, yPos);
-      yPos += 8;
-      doc.text(`Días: ${dias}`, 20, yPos);
-      yPos += 8;
-      doc.text(`Valor Total: $${contractData.total_amount.toLocaleString()}`, 20, yPos);
-      
-      return doc.output("blob");
+      toast.error(`Error generando PDF: ${error.message}`);
+      throw error; // Re-lanzar el error para que se maneje arriba
     }
   };
 
