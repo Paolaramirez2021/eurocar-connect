@@ -542,8 +542,9 @@ export const PreliminaryContractForm = () => {
       window.location.reload();
 
     } catch (error: any) {
-      console.error("Error:", error);
-      toast.error(error.message || "Error al crear el contrato");
+      console.error("[onSubmit] Error completo:", error);
+      const errorMsg = error.message || "Error al crear el contrato";
+      toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
