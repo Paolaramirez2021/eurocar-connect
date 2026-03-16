@@ -681,7 +681,7 @@ export const PreliminaryContractForm = () => {
               <p>AV CALLE 26 69C-03 LOCAL 105</p>
               <p>BOGOTÁ - COLOMBIA</p>
               <p>Tel: 320 834 1163 - 313 209 4156</p>
-              <p>reservas@eurocarental.com</p>
+              <p>jennygomez@eurocarental.com</p>
             </div>
           </div>
         </div>
