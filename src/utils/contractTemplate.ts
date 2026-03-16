@@ -7,6 +7,7 @@ export interface ContractData {
   cliente_nombre: string;
   cliente_documento: string;
   cliente_licencia: string;
+  cliente_licencia_vencimiento: string;
   cliente_direccion: string;
   cliente_telefono: string;
   cliente_ciudad: string;
