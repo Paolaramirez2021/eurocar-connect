@@ -54,18 +54,13 @@ const Contracts = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="preliminary">Contrato Preliminar</TabsTrigger>
-            <TabsTrigger value="final">Contrato Final</TabsTrigger>
             <TabsTrigger value="history">Historial</TabsTrigger>
           </TabsList>
 
           <TabsContent value="preliminary" className="mt-6">
             <PreliminaryContractForm />
-          </TabsContent>
-
-          <TabsContent value="final" className="mt-6">
-            <ContractForm />
           </TabsContent>
 
         <TabsContent value="history" className="mt-6">
