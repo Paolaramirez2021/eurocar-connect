@@ -480,7 +480,7 @@ export const ContractForm = () => {
 
   const isFormValid = selectedVehicleId && selectedCustomerId && watch("startDate") && 
                       watch("endDate") && watch("totalAmount") > 0 && 
-                      signatureDataUrl && termsAccepted;
+                      signatureDataUrl && termsAccepted && privacyAccepted;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
