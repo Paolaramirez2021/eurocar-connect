@@ -121,6 +121,7 @@ export const PreliminaryContractForm = () => {
       customerName: "",
       customerDocument: "",
       customerLicense: "",
+      customerLicenseExpiry: "",
       customerAddress: "",
       customerPhone: "",
       customerCity: "",
