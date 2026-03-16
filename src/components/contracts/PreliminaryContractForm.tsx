@@ -420,12 +420,22 @@ export const PreliminaryContractForm = () => {
         })
       });
 
+      console.log('[generatePreliminaryPDF] Response status:', response.status);
+
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Error del servidor: ${response.status}`);
+        console.error('[generatePreliminaryPDF] Error response:', errorText);
+        throw new Error(`Error del servidor: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
+      
+      if (!result.pdf_base64) {
+        throw new Error('No se recibió el PDF del servidor');
+      }
+      
+      console.log('[generatePreliminaryPDF] PDF base64 recibido, longitud:', result.pdf_base64.length);
+      
       const byteCharacters = atob(result.pdf_base64);
       const byteNumbers = new Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) {
