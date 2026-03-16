@@ -109,11 +109,13 @@ export const generateContractHTML = (data: ContractData): string => {
 
 ${data.es_preliminar ? '<div class="prelim-badge">⚠ DOCUMENTO PRELIMINAR - SIN VALIDEZ LEGAL HASTA FIRMA DEFINITIVA</div>' : ''}
 
+<div class="section-title">1. IDENTIFICACIÓN DE LAS PARTES</div>
+
 <table class="two-col">
 <tr>
 <td>
   <div class="section">
-    <div class="section-title">1. EL ARRENDATARIO</div>
+    <div class="section-title">EL ARRENDATARIO</div>
     <div class="row"><span class="label">NOMBRE/RAZÓN SOCIAL:</span> <span class="value">${data.cliente_nombre}</span></div>
     <div class="row"><span class="label">DOCUMENTO IDENTIDAD:</span> <span class="value">${data.cliente_documento}</span></div>
     <div class="row"><span class="label">LICENCIA CONDUCCIÓN:</span> <span class="value">${data.cliente_licencia || 'N/A'}</span></div>
