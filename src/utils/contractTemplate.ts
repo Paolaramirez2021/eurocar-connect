@@ -164,7 +164,7 @@ ${data.es_preliminar ? '<div class="prelim-badge">⚠ DOCUMENTO PRELIMINAR - SIN
 </table>
 
 <div class="info-text">
-  Las tarifas incluyen SOAT, seguro contra todo riesgo, revisión técnico mecánica, kit de carretera e impuestos. No incluyen combustible, peajes ni parqueaderos. Km ilimitados (único operador en Colombia).
+  Servicio a Viajar: Bogotá | Término contrato: 2 días - 400 kms / km adicional $3.000
 </div>
 
 <table class="two-col">
