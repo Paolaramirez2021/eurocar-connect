@@ -74,8 +74,7 @@ export const generateContractHTML = (data: ContractData): string => {
   <style>
     body { font-family: Arial, sans-serif; font-size: 11px; line-height: 1.4; color: #333; margin: 20px; }
     .header { text-align: center; border-bottom: 3px solid #0066cc; padding-bottom: 10px; margin-bottom: 15px; }
-    .logo { font-size: 28px; font-weight: bold; color: #0066cc; }
-    .subtitle { font-size: 12px; color: #666; }
+    .logo-img { max-height: 80px; margin-bottom: 5px; }
     .title { font-size: 16px; font-weight: bold; color: #0066cc; text-align: center; margin: 10px 0; }
     .contract-num { text-align: center; font-size: 12px; color: #666; margin-bottom: 15px; }
     ${data.es_preliminar ? '.prelim-badge { background: #ff9800; color: white; padding: 8px; text-align: center; font-weight: bold; margin-bottom: 15px; }' : ''}
@@ -103,8 +102,7 @@ export const generateContractHTML = (data: ContractData): string => {
 <body>
 
 <div class="header">
-  <div class="logo">EUROCAR RENTAL</div>
-  <div class="subtitle">ALQUILER DE VEHÍCULOS</div>
+  <img src="https://customer-assets.emergentagent.com/job_313627ba-9e69-435e-baf8-af6c082182e1/artifacts/796emrqm_image.png" class="logo-img" alt="EUROCAR RENTAL">
 </div>
 
 <div class="title">CONTRATO DE ARRENDAMIENTO DE VEHÍCULO AUTOMOTOR</div>
