@@ -13,8 +13,9 @@ import { FingerprintCapture } from "./FingerprintCapture";
 import { ContractPhotoCapture } from "./ContractPhotoCapture";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { FileText, Loader2, Search } from "lucide-react";
+import { FileText, Loader2, Search, Shield } from "lucide-react";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
+import { LegalDocumentsModal, TERMINOS_CONDICIONES, POLITICA_DATOS } from "./LegalDocumentsModal";
 import jsPDF from "jspdf";
 
 interface Vehicle {
