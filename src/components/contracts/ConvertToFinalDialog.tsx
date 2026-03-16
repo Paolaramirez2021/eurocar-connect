@@ -52,6 +52,7 @@ export const ConvertToFinalDialog = ({
   const [fingerprintDataUrl, setFingerprintDataUrl] = useState<string | null>(null);
   const [contractPhotoDataUrl, setContractPhotoDataUrl] = useState<string | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!preliminaryContract) return null;
