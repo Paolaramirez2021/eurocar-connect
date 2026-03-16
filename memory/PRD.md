@@ -92,5 +92,8 @@ Sistema completo de gestión de alquiler de vehículos para EUROCAR RENTAL, con 
 - Backend API: https://eurocar-rental-1.preview.emergentagent.com/api/
 
 ## Última Actualización
-Fecha: 13 de Marzo, 2025
-Sesión: Reenvío de contratos por email implementado
+Fecha: 16 de Marzo, 2025
+Sesión: Implementación de apertura forzada de cámara para foto del cliente
+- Modificado `/app/src/components/contracts/ContractPhotoCapture.tsx`
+- Agregado soporte para dispositivos móviles con `capture="user"`
+- Fallback automático a input nativo si MediaDevices API falla
