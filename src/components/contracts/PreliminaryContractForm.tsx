@@ -48,6 +48,7 @@ interface Reservation {
     modelo: string;
     placa: string;
     color?: string;
+    tarifa_dia_iva?: number;
   };
 }
 
