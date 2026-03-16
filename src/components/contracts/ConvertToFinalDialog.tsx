@@ -164,6 +164,8 @@ export const ConvertToFinalDialog = ({
         throw new Error(`Error al actualizar contrato: ${updateError.message}`);
       }
 
+      console.log("[ConvertToFinal] Contrato actualizado:", updatedContract);
+
       toast.success(`Contrato ${contractNumber} firmado exitosamente`);
       
       // Send email with final contract using FastAPI backend
