@@ -134,7 +134,7 @@ ${data.es_preliminar ? '<div class="prelim-badge">⚠ DOCUMENTO PRELIMINAR - SIN
       AV CALLE 26 69C-03 LOCAL 105<br>
       BOGOTÁ - COLOMBIA<br>
       Tel: 320 834 1163 - 313 209 4156<br>
-      reservas@eurocarental.com
+      jennygomez@eurocarental.com
     </div>
   </div>
 </td>
