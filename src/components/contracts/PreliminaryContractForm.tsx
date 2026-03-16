@@ -555,8 +555,8 @@ export const PreliminaryContractForm = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="facturacion">Con Facturación Electrónica (EUROCAR-XXX)</SelectItem>
-                <SelectItem value="efectivo">Sin Facturación / Efectivo (001, 002...)</SelectItem>
+                <SelectItem value="facturacion">Con Prefijo (EUROCAR-XXX)</SelectItem>
+                <SelectItem value="efectivo">Sin Prefijo (001, 002...)</SelectItem>
               </SelectContent>
             </Select>
           </div>
