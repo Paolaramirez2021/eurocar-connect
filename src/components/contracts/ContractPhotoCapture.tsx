@@ -14,6 +14,10 @@ export const ContractPhotoCapture = ({ onPhotoChange }: ContractPhotoCaptureProp
   const [stream, setStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Detectar si es un dispositivo móvil
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
   // Limpiar stream cuando se desmonta el componente
   useEffect(() => {
@@ -24,7 +28,40 @@ export const ContractPhotoCapture = ({ onPhotoChange }: ContractPhotoCaptureProp
     };
   }, [stream]);
 
+  // Manejar captura desde input file (móviles)
+  const handleFileCapture = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Por favor capture una imagen válida");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      setPreview(dataUrl);
+      onPhotoChange(dataUrl);
+      toast.success("Foto del cliente capturada");
+    };
+    reader.readAsDataURL(file);
+    
+    // Limpiar el input para permitir recapturar
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const startCamera = async () => {
+    // En dispositivos móviles, usar el input nativo con capture="user"
+    // Esto fuerza la apertura de la cámara directamente
+    if (isMobile && fileInputRef.current) {
+      fileInputRef.current.click();
+      return;
+    }
+
+    // En desktop, usar MediaDevices API
     setIsCapturing(true);
     
     try {
@@ -52,7 +89,13 @@ export const ContractPhotoCapture = ({ onPhotoChange }: ContractPhotoCaptureProp
       } else if (error.name === "NotFoundError") {
         toast.error("No se encontró ninguna cámara en este dispositivo.");
       } else {
-        toast.error("Error al abrir la cámara: " + error.message);
+        // Fallback: usar input file si MediaDevices falla
+        if (fileInputRef.current) {
+          toast.info("Usando cámara nativa del dispositivo...");
+          fileInputRef.current.click();
+        } else {
+          toast.error("Error al abrir la cámara: " + error.message);
+        }
       }
       setIsCapturing(false);
     }
