@@ -41,6 +41,9 @@ interface Contract {
   reservation_id: string | null;
   status: string;
   pdf_url: string;
+  signature_url?: string;
+  fingerprint_url?: string;
+  photo_url?: string;
   was_offline: boolean;
   synced_at: string;
   contract_type?: string;
