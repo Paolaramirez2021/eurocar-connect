@@ -134,7 +134,7 @@ ${data.es_preliminar ? '<div class="prelim-badge">⚠ DOCUMENTO PRELIMINAR - SIN
   <div class="section-title">2. CONDUCTORES AUTORIZADOS</div>
   <table>
     <tr><th>#</th><th>DOCUMENTO IDENTIDAD</th><th>N. LICENCIA</th><th>VENCIMIENTO</th></tr>
-    <tr><td>1</td><td>${data.cliente_documento}</td><td>${data.cliente_licencia || 'N/A'}</td><td>N/A</td></tr>
+    <tr><td>1</td><td>${data.cliente_documento}</td><td>${data.cliente_licencia || 'N/A'}</td><td>${data.cliente_licencia_vencimiento || 'N/A'}</td></tr>
     <tr><td>2</td><td></td><td></td><td></td></tr>
     <tr><td>3</td><td></td><td></td><td></td></tr>
   </table>
@@ -162,6 +162,10 @@ ${data.es_preliminar ? '<div class="prelim-badge">⚠ DOCUMENTO PRELIMINAR - SIN
 </td>
 </tr>
 </table>
+
+<div class="info-text">
+  <strong>NOTA:</strong> Las tarifas incluyen seguros contra todo riesgo, SOAT, impuestos, revisión técnico mecánica y kit de carretera. No incluyen combustible, peajes, parqueaderos ni multas. Km ilimitados.
+</div>
 
 <table class="two-col">
 <tr>
