@@ -372,6 +372,7 @@ export const PreliminaryContractForm = () => {
       cliente_nombre: data.customerName,
       cliente_documento: data.customerDocument,
       cliente_licencia: data.customerLicense,
+      cliente_licencia_vencimiento: data.customerLicenseExpiry,
       cliente_direccion: data.customerAddress,
       cliente_telefono: data.customerPhone,
       cliente_ciudad: data.customerCity,
