@@ -135,6 +135,7 @@ export const ConvertToFinalDialog = ({
       const { data: { user } } = await supabase.auth.getUser();
 
       // Actualizar el contrato existente (cambiar de preliminary a signed)
+      // Nota: Solo usamos campos que existen en la tabla contracts
       const updateData: Record<string, any> = {
         signature_url: signatureUrl.publicUrl,
         terms_accepted: true,
@@ -143,12 +144,9 @@ export const ConvertToFinalDialog = ({
         status: "signed",
       };
 
-      // Agregar campos opcionales solo si tienen valor
+      // Agregar huella si existe
       if (fingerprintUrl) {
         updateData.fingerprint_url = fingerprintUrl;
-      }
-      if (contractPhotoUrl?.publicUrl) {
-        updateData.photo_url = contractPhotoUrl.publicUrl;
       }
 
       console.log("[ConvertToFinal] Actualizando contrato:", contractId, updateData);
