@@ -276,6 +276,13 @@ export const PreliminaryContractForm = () => {
       setValue("customerAddress", customer.direccion_residencia || customer.direccion || '');
       setValue("customerCity", customer.ciudad || '');
       setValue("customerLicense", customer.licencia_numero || customer.licencia_conduccion || '');
+      // Formatear fecha de vencimiento de licencia
+      if (customer.licencia_fecha_vencimiento) {
+        const fechaVenc = new Date(customer.licencia_fecha_vencimiento);
+        setValue("customerLicenseExpiry", fechaVenc.toLocaleDateString('es-CO'));
+      } else {
+        setValue("customerLicenseExpiry", '');
+      }
       
       toast.success(`Cliente encontrado: ${customer.nombres} ${customer.primer_apellido}`);
 
