@@ -291,7 +291,8 @@ export const PreliminaryContractForm = () => {
             marca,
             modelo,
             placa,
-            color
+            color,
+            tarifa_dia_iva
           )
         `)
         .eq("customer_id", customer.id)
