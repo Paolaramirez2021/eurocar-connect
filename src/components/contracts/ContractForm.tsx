@@ -85,12 +85,14 @@ export const ContractForm = () => {
       endDate: "",
       totalAmount: 0,
       termsAccepted: false,
+      privacyAccepted: false,
     }
   });
 
   const selectedVehicleId = watch("vehicleId");
   const selectedCustomerId = watch("customerId");
   const termsAccepted = watch("termsAccepted");
+  const privacyAccepted = watch("privacyAccepted");
 
   useEffect(() => {
     loadVehicles();
