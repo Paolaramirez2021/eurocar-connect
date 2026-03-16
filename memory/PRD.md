@@ -38,7 +38,10 @@ Sistema completo de gestión de alquiler de vehículos para EUROCAR RENTAL, con 
 - Formulario de contrato con búsqueda de cliente por documento
 - Captura de firma digital (canvas)
 - Captura de huella digital (cámara/archivo)
-- Captura de foto del cliente
+- **Captura de foto del cliente** - Fuerza apertura de cámara (frontal) directamente
+  - Móviles: Usa input nativo con `capture="user"` para abrir cámara directamente
+  - Desktop: Usa MediaDevices API con facingMode "user"
+  - Fallback automático si MediaDevices falla
 - Términos y condiciones con aceptación
 - Generación de PDF con Puppeteer
 - Envío automático de contrato por email (Resend)
