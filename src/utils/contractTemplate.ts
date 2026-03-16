@@ -60,13 +60,8 @@ export const generateContractHTML = (data: ContractData): string => {
   <title>Contrato EUROCAR - ${data.numero_contrato}</title>
   <style>
     body { font-family: Arial, sans-serif; font-size: 11px; line-height: 1.4; color: #333; margin: 20px; }
-    .header { border-bottom: 3px solid #0066cc; padding-bottom: 10px; margin-bottom: 15px; }
-    .header-content { display: table; width: 100%; }
-    .logo-section { display: table-cell; vertical-align: middle; width: 120px; }
-    .logo-img { height: 90px; }
-    .company-info { display: table-cell; vertical-align: middle; padding-left: 15px; }
-    .company-name { font-size: 24px; font-weight: bold; color: #0066cc; }
-    .company-nit { font-size: 12px; color: #666; }
+    .header { text-align: center; border-bottom: 3px solid #0066cc; padding-bottom: 10px; margin-bottom: 15px; }
+    .logo-img { height: 100px; }
     .title { font-size: 14px; font-weight: bold; color: #0066cc; text-align: center; margin: 15px 0 5px 0; }
     .contract-num { text-align: center; font-size: 11px; color: #666; margin-bottom: 15px; }
     ${data.es_preliminar ? '.prelim-badge { background: #ff9800; color: white; padding: 8px; text-align: center; font-weight: bold; margin-bottom: 15px; }' : ''}
@@ -82,6 +77,7 @@ export const generateContractHTML = (data: ContractData): string => {
     .two-col td { width: 50%; vertical-align: top; border: none; padding: 0 10px 0 0; }
     .values-table td { padding: 2px 6px; font-size: 9px; }
     .values-table .total { background: #0066cc; color: white; font-weight: bold; }
+    .info-text { font-size: 9px; text-align: justify; background: #f9f9f9; padding: 8px; margin: 10px 0; border-left: 3px solid #0066cc; }
     .clausulas { font-size: 8px; text-align: justify; }
     .clausulas p { margin-bottom: 5px; }
     .clausulas strong { color: #0066cc; }
@@ -94,15 +90,7 @@ export const generateContractHTML = (data: ContractData): string => {
 <body>
 
 <div class="header">
-  <div class="header-content">
-    <div class="logo-section">
-      <img src="data:image/png;base64,${LOGO_BASE64}" class="logo-img" alt="EUROCAR">
-    </div>
-    <div class="company-info">
-      <div class="company-name">EUROCAR RENTAL SAS</div>
-      <div class="company-nit">NIT: 900269555</div>
-    </div>
-  </div>
+  <img src="data:image/png;base64,${LOGO_BASE64}" class="logo-img" alt="EUROCAR RENTAL">
 </div>
 
 <div class="title">CONTRATO DE ARRENDAMIENTO DE VEHÍCULO AUTOMOTOR</div>
