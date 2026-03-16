@@ -228,32 +228,24 @@ export const ContractsList = ({ highlightedContractId }: ContractsListProps) => 
   });
 
   const getStatusBadge = (contract: Contract) => {
-    // Preliminary contracts
-    if (contract.contract_type === 'preliminary') {
+    // Contratos firmados (finales)
+    if (contract.status === "signed") {
+      return <Badge className="bg-green-600">Firmado</Badge>;
+    }
+    
+    // Contratos preliminares
+    if (contract.status === 'preliminary') {
       if (contract.annulled_at) {
         return <Badge variant="destructive">Anulado</Badge>;
       }
-      switch (contract.preliminary_status) {
-        case 'sent':
-          return <Badge variant="outline">Enviado</Badge>;
-        case 'viewed':
-          return <Badge variant="secondary">Visto</Badge>;
-        case 'accepted':
-          return <Badge className="bg-green-600">Aceptado</Badge>;
-        case 'converted':
-          return <Badge className="bg-blue-600">Convertido</Badge>;
-        default:
-          return <Badge variant="outline">Preliminar</Badge>;
-      }
+      return <Badge variant="outline">Preliminar</Badge>;
     }
     
-    // Final contracts
+    // Otros estados
     if (contract.was_offline && !contract.synced_at) {
       return <Badge variant="outline">Pendiente Sync</Badge>;
     }
-    if (contract.status === "signed") {
-      return <Badge variant="default">Firmado</Badge>;
-    }
+    
     return <Badge variant="secondary">{contract.status}</Badge>;
   };
 
