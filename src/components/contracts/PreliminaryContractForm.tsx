@@ -666,14 +666,32 @@ export const PreliminaryContractForm = () => {
               <Input {...register("customerName", { required: true })} placeholder="Nombre completo" />
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
-                <Label>Documento Identidad *</Label>
-                <Input {...register("customerDocument", { required: true })} placeholder="Cédula/Pasaporte" />
+                <Label>Tipo Documento</Label>
+                <Select 
+                  onValueChange={(value) => setValue("customerDocumentType", value)} 
+                  value={watchedValues.customerDocumentType || "cedula"}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cedula">Cédula</SelectItem>
+                    <SelectItem value="cedula_extranjeria">C. Extranjería</SelectItem>
+                    <SelectItem value="pasaporte">Pasaporte</SelectItem>
+                    <SelectItem value="pep">PEP</SelectItem>
+                    <SelectItem value="ppt">PPT</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
-                <Label>Licencia Conducción</Label>
-                <Input {...register("customerLicense")} placeholder="No. Licencia" />
+                <Label>No. Documento *</Label>
+                <Input {...register("customerDocument", { required: true })} placeholder="Número" />
+              </div>
+              <div>
+                <Label>No. Licencia</Label>
+                <Input {...register("customerLicense")} placeholder="Licencia" />
               </div>
             </div>
             
