@@ -250,7 +250,7 @@ ${esFinal ? '<div class="final-badge">✓ CONTRATO FIRMADO DIGITALMENTE</div>' :
 
 <div class="signatures">
   <div class="sig-box">
-    <div class="sig-line">${data.firma_url ? `<img src="${data.firma_url}" style="max-height:35px;">` : ''}</div>
+    <div class="sig-line">${data.firma_url ? `<img src="${data.firma_url}" class="signature-img" alt="Firma">` : ''}</div>
     <strong>EL ARRENDATARIO</strong><br>
     <span style="font-size:9px">DOC: ${data.cliente_documento}<br>
     NOMBRE: ${data.cliente_nombre}</span>
@@ -262,6 +262,38 @@ ${esFinal ? '<div class="final-badge">✓ CONTRATO FIRMADO DIGITALMENTE</div>' :
     NIT: 900269555</span>
   </div>
 </div>
+
+${esFinal ? `
+<div class="verification-section">
+  <div class="section-title">8. VERIFICACIÓN DE IDENTIDAD</div>
+  <div class="verification-grid">
+    ${data.foto_cliente_url ? `
+    <div class="verification-item">
+      <img src="${data.foto_cliente_url}" alt="Foto Cliente">
+      <p>Foto del Cliente</p>
+    </div>
+    ` : ''}
+    ${data.documento_frente_url ? `
+    <div class="verification-item">
+      <img src="${data.documento_frente_url}" alt="Documento Frente">
+      <p>Documento (Frente)</p>
+    </div>
+    ` : ''}
+    ${data.documento_reverso_url ? `
+    <div class="verification-item">
+      <img src="${data.documento_reverso_url}" alt="Documento Reverso">
+      <p>Documento (Reverso)</p>
+    </div>
+    ` : ''}
+    ${data.huella_url ? `
+    <div class="verification-item">
+      <img src="${data.huella_url}" alt="Huella Digital">
+      <p>Huella Digital</p>
+    </div>
+    ` : ''}
+  </div>
+</div>
+` : ''}
 
 <div class="footer">
   ${data.es_preliminar ? 'Este es un documento preliminar enviado para revisión. Para formalizar el contrato debe completar el proceso de firma digital.' : 'Documento firmado digitalmente.'}
