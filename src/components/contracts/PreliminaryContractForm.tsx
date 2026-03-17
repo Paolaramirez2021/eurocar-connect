@@ -65,6 +65,7 @@ interface ContractFormData {
   // Datos del Cliente (Arrendatario)
   customerId: string;
   customerName: string;
+  customerDocumentType: string;
   customerDocument: string;
   customerLicense: string;
   customerLicenseExpiry: string;
