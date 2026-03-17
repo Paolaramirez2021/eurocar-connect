@@ -406,7 +406,7 @@ export const PreliminaryContractForm = () => {
       forma_pago: data.paymentMethod,
       numero_contrato: contractNumber,
       fecha_contrato: format(new Date(), "dd/MM/yyyy HH:mm", { locale: es }),
-      deducible: "XXXXXXXXXXXXX",
+      deducible: data.deducible || "No especificado",
       es_preliminar: true
     };
 
