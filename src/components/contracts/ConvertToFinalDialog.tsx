@@ -160,22 +160,68 @@ export const ConvertToFinalDialog = ({
         fingerprintUrl = fingerprintUrlData.publicUrl;
       }
 
+      // Upload document front photo
+      let documentFrontUrl: string | undefined;
+      if (documentPhotos.front) {
+        const docFrontResponse = await fetch(documentPhotos.front);
+        const docFrontBlob = await docFrontResponse.blob();
+        const docFrontFilename = `documents/${contractId}_doc_front_${Date.now()}.png`;
+        
+        const { data: docFrontUpload, error: docFrontError } = await supabase.storage
+          .from("contracts")
+          .upload(docFrontFilename, docFrontBlob);
+
+        if (docFrontError) throw docFrontError;
+
+        const { data: docFrontUrlData } = supabase.storage
+          .from("contracts")
+          .getPublicUrl(docFrontUpload.path);
+
+        documentFrontUrl = docFrontUrlData.publicUrl;
+      }
+
+      // Upload document back photo (only for cedula)
+      let documentBackUrl: string | undefined;
+      if (documentPhotos.back && needsBackPhoto) {
+        const docBackResponse = await fetch(documentPhotos.back);
+        const docBackBlob = await docBackResponse.blob();
+        const docBackFilename = `documents/${contractId}_doc_back_${Date.now()}.png`;
+        
+        const { data: docBackUpload, error: docBackError } = await supabase.storage
+          .from("contracts")
+          .upload(docBackFilename, docBackBlob);
+
+        if (docBackError) throw docBackError;
+
+        const { data: docBackUrlData } = supabase.storage
+          .from("contracts")
+          .getPublicUrl(docBackUpload.path);
+
+        documentBackUrl = docBackUrlData.publicUrl;
+      }
+
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
 
       // Actualizar el contrato existente (cambiar de preliminary a signed)
-      // Nota: Solo usamos campos que existen en la tabla contracts
       const updateData: Record<string, any> = {
         signature_url: signatureUrl.publicUrl,
+        photo_url: contractPhotoUrl.publicUrl,
         terms_accepted: true,
         signed_by: user?.id,
         user_agent: navigator.userAgent,
         status: "signed",
       };
 
-      // Agregar huella si existe
+      // Agregar campos opcionales
       if (fingerprintUrl) {
         updateData.fingerprint_url = fingerprintUrl;
+      }
+      if (documentFrontUrl) {
+        updateData.document_front_url = documentFrontUrl;
+      }
+      if (documentBackUrl) {
+        updateData.document_back_url = documentBackUrl;
       }
 
       console.log("[ConvertToFinal] Actualizando contrato:", contractId, updateData);
