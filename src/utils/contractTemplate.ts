@@ -106,6 +106,13 @@ export const generateContractHTML = (data: ContractData): string => {
     .sig-box { display: inline-block; width: 45%; text-align: center; vertical-align: top; }
     .sig-line { border-bottom: 1px solid #333; height: 40px; margin-bottom: 5px; }
     .footer { text-align: center; font-size: 7px; color: #666; margin-top: 15px; border-top: 1px solid #ccc; padding-top: 8px; }
+    .verification-section { margin-top: 20px; page-break-inside: avoid; }
+    .verification-grid { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; }
+    .verification-item { text-align: center; width: 150px; }
+    .verification-item img { max-width: 140px; max-height: 100px; border: 1px solid #ccc; border-radius: 4px; }
+    .verification-item p { font-size: 8px; color: #666; margin-top: 4px; }
+    .final-badge { background: #28a745; color: white; padding: 8px; text-align: center; font-weight: bold; margin-bottom: 15px; }
+    .signature-img { max-height: 50px; max-width: 150px; }
   </style>
 </head>
 <body>
