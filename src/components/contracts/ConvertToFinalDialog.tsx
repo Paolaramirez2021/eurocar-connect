@@ -290,11 +290,14 @@ export const ConvertToFinalDialog = ({
     setSignatureDataUrl(null);
     setFingerprintDataUrl(null);
     setContractPhotoDataUrl(null);
+    setDocumentPhotos({ front: null, back: null });
     setTermsAccepted(false);
     setPrivacyAccepted(false);
   };
 
-  const isFormValid = signatureDataUrl && termsAccepted && privacyAccepted && contractPhotoDataUrl;
+  const isFormValid = signatureDataUrl && termsAccepted && privacyAccepted && 
+                      contractPhotoDataUrl && documentPhotos.front && 
+                      (needsBackPhoto ? documentPhotos.back : true);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
