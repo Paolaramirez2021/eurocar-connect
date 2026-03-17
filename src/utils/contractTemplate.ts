@@ -120,7 +120,8 @@ ${data.es_preliminar ? '<div class="prelim-badge">⚠ DOCUMENTO PRELIMINAR - SIN
   <div class="section">
     <div class="section-title">EL ARRENDATARIO</div>
     <div class="row"><span class="label">NOMBRE/RAZÓN SOCIAL:</span> <span class="value">${data.cliente_nombre}</span></div>
-    <div class="row"><span class="label">DOCUMENTO IDENTIDAD:</span> <span class="value">${data.cliente_documento}</span></div>
+    <div class="row"><span class="label">TIPO DOCUMENTO:</span> <span class="value">${tipoDoc}</span></div>
+    <div class="row"><span class="label">No. DOCUMENTO:</span> <span class="value">${data.cliente_documento}</span></div>
     <div class="row"><span class="label">LICENCIA CONDUCCIÓN:</span> <span class="value">${data.cliente_licencia || 'N/A'}</span></div>
     <div class="row"><span class="label">DIRECCIÓN:</span> <span class="value">${data.cliente_direccion || 'N/A'}</span></div>
     <div class="row"><span class="label">TELÉFONO:</span> <span class="value">${data.cliente_telefono}</span></div>
