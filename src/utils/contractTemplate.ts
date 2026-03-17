@@ -125,6 +125,7 @@ export const generateContractHTML = (data: ContractData): string => {
 <div class="contract-num">No. ${data.numero_contrato} | Fecha: ${data.fecha_contrato}</div>
 
 ${data.es_preliminar ? '<div class="prelim-badge">⚠ DOCUMENTO PRELIMINAR - SIN VALIDEZ LEGAL HASTA FIRMA DEFINITIVA</div>' : ''}
+${esFinal ? '<div class="final-badge">✓ CONTRATO FIRMADO DIGITALMENTE</div>' : ''}
 
 <div class="section-title">1. IDENTIFICACIÓN DE LAS PARTES</div>
 
