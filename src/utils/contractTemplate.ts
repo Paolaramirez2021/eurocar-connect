@@ -70,6 +70,9 @@ export const generateContractHTML = (data: ContractData): string => {
   };
 
   const tipoDoc = formatDocumentType(data.cliente_tipo_documento);
+  
+  // Determinar si es contrato final (tiene firma y no es preliminar)
+  const esFinal = !data.es_preliminar && data.firma_url;
 
   return `<!DOCTYPE html>
 <html lang="es">
