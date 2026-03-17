@@ -21,6 +21,7 @@ interface CustomerFormData {
   nombres: string;
   primer_apellido: string;
   segundo_apellido?: string;
+  tipo_documento: string;
   cedula_pasaporte: string;
   email?: string;
   celular: string;
