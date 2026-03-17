@@ -373,14 +373,20 @@ export const ConvertToFinalDialog = ({
 
           {/* Contract Photo */}
           <Card className="p-6">
-            <h4 className="font-semibold mb-4">Foto del Contrato *</h4>
+            <h4 className="font-semibold mb-4">Foto del Cliente *</h4>
             <ContractPhotoCapture onPhotoChange={setContractPhotoDataUrl} />
             {contractPhotoDataUrl && (
               <div className="mt-4 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                <p className="text-sm text-green-800 dark:text-green-200">✓ Foto capturada</p>
+                <p className="text-sm text-green-800 dark:text-green-200">✓ Foto del cliente capturada</p>
               </div>
             )}
           </Card>
+
+          {/* Document Photo */}
+          <DocumentPhotoCapture 
+            documentType={documentType}
+            onPhotosChange={setDocumentPhotos}
+          />
 
           {/* Terms */}
           <Card className="p-6">
