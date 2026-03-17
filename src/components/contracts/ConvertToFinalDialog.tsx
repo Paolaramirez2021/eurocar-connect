@@ -278,9 +278,10 @@ export const ConvertToFinalDialog = ({
       onOpenChange(false);
       resetForm();
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error converting to final contract:", error);
-      toast.error("Error al firmar el contrato");
+      console.error("Error details:", JSON.stringify(error, null, 2));
+      toast.error(`Error al firmar: ${error?.message || 'Error desconocido'}`);
     } finally {
       setIsSubmitting(false);
     }
