@@ -211,6 +211,7 @@ export const ConvertToFinalDialog = ({
         signed_by: user?.id,
         user_agent: navigator.userAgent,
         status: "signed",
+        is_locked: false, // Desbloquear para permitir la actualización
       };
 
       // Agregar campos opcionales
