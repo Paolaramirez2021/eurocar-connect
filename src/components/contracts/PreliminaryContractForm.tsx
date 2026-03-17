@@ -121,6 +121,7 @@ export const PreliminaryContractForm = () => {
       reservationId: "",
       customerId: "",
       customerName: "",
+      customerDocumentType: "cedula",
       customerDocument: "",
       customerLicense: "",
       customerLicenseExpiry: "",
