@@ -36,8 +36,12 @@ export interface ContractData {
   numero_contrato: string;
   fecha_contrato: string;
   deducible: string;
+  // Campos para contrato firmado
   firma_url?: string;
   huella_url?: string;
+  foto_cliente_url?: string;
+  documento_frente_url?: string;
+  documento_reverso_url?: string;
   es_preliminar?: boolean;
 }
 
