@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { SignatureCanvas } from "./SignatureCanvas";
 import { FingerprintCapture } from "./FingerprintCapture";
 import { ContractPhotoCapture } from "./ContractPhotoCapture";
+import { DocumentPhotoCapture } from "./DocumentPhotoCapture";
 import { LegalDocumentsModal, TERMINOS_CONDICIONES } from "./LegalDocumentsModal";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
