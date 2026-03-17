@@ -52,11 +52,29 @@ export const ConvertToFinalDialog = ({
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
   const [fingerprintDataUrl, setFingerprintDataUrl] = useState<string | null>(null);
   const [contractPhotoDataUrl, setContractPhotoDataUrl] = useState<string | null>(null);
+  const [documentPhotos, setDocumentPhotos] = useState<{ front: string | null; back: string | null }>({ front: null, back: null });
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!preliminaryContract) return null;
+
+  // Detectar tipo de documento basado en el número de documento
+  const getDocumentType = (): "cedula" | "pasaporte" | "" => {
+    const doc = preliminaryContract.customer_document || "";
+    // Si tiene más de 10 caracteres o contiene letras, es pasaporte
+    if (doc.length > 10 || /[a-zA-Z]/.test(doc)) {
+      return "pasaporte";
+    }
+    // Si es numérico y menor a 11 dígitos, es cédula
+    if (/^\d+$/.test(doc) && doc.length <= 10) {
+      return "cedula";
+    }
+    return "cedula"; // Por defecto asumir cédula
+  };
+
+  const documentType = getDocumentType();
+  const needsBackPhoto = documentType === "cedula";
 
   const handleConvert = async () => {
     if (!signatureDataUrl) {
