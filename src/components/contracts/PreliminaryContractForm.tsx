@@ -93,6 +93,7 @@ interface ContractFormData {
   additionalValue: number;
   discount: number;
   depositAmount: number;
+  deducible: string;
   paymentMethod: string;
   totalAmount: number;
   
