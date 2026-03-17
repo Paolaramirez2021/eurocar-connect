@@ -27,6 +27,7 @@ interface Customer {
   nombres: string;
   primer_apellido: string;
   segundo_apellido: string | null;
+  tipo_documento: string | null;
   cedula_pasaporte: string;
   email: string | null;
   celular: string;
