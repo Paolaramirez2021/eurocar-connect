@@ -9,6 +9,7 @@ import { FingerprintCapture } from "./FingerprintCapture";
 import { ContractPhotoCapture } from "./ContractPhotoCapture";
 import { DocumentPhotoCapture } from "./DocumentPhotoCapture";
 import { LegalDocumentsModal, TERMINOS_CONDICIONES } from "./LegalDocumentsModal";
+import { generateContractHTML, ContractData } from "@/utils/contractTemplate";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, FileSignature, ArrowRight, FileText, Shield } from "lucide-react";
