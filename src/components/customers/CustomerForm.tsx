@@ -555,7 +555,7 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
               <ul className="list-disc list-inside mt-1 space-y-1">
                 {errors.nombres && <li>Nombres</li>}
                 {errors.primer_apellido && <li>Primer Apellido</li>}
-                {errors.cedula_pasaporte && <li>Cédula/Pasaporte</li>}
+                {errors.cedula_pasaporte && <li>Número de Documento</li>}
                 {errors.celular && <li>Celular</li>}
               </ul>
             </div>
