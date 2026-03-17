@@ -92,6 +92,16 @@ export const ConvertToFinalDialog = ({
       return;
     }
 
+    if (!documentPhotos.front) {
+      toast.error("Debe capturar la foto del documento de identidad");
+      return;
+    }
+
+    if (needsBackPhoto && !documentPhotos.back) {
+      toast.error("Debe capturar ambos lados de la cédula");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
