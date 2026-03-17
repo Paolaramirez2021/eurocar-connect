@@ -889,6 +889,17 @@ export const PreliminaryContractForm = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            <div>
+              <Label>Valor Deducible del Seguro</Label>
+              <Input 
+                {...register("deducible")} 
+                placeholder="Ej: $3.000.000 COP"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Valor mínimo del deducible del seguro (20% no cubierto)
+              </p>
+            </div>
           </div>
 
           {/* Resumen de valores */}
