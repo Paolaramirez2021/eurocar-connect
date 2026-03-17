@@ -148,10 +148,10 @@ ${data.es_preliminar ? '<div class="prelim-badge">⚠ DOCUMENTO PRELIMINAR - SIN
 <div class="section">
   <div class="section-title">2. CONDUCTORES AUTORIZADOS</div>
   <table>
-    <tr><th>#</th><th>DOCUMENTO IDENTIDAD</th><th>N. LICENCIA</th><th>VENCIMIENTO</th></tr>
-    <tr><td>1</td><td>${data.cliente_documento}</td><td>${data.cliente_licencia || 'N/A'}</td><td>${data.cliente_licencia_vencimiento || 'N/A'}</td></tr>
-    <tr><td>2</td><td></td><td></td><td></td></tr>
-    <tr><td>3</td><td></td><td></td><td></td></tr>
+    <tr><th>#</th><th>TIPO DOC</th><th>No. DOCUMENTO</th><th>N. LICENCIA</th><th>VENCIMIENTO</th></tr>
+    <tr><td>1</td><td>${tipoDoc}</td><td>${data.cliente_documento}</td><td>${data.cliente_licencia || 'N/A'}</td><td>${data.cliente_licencia_vencimiento || 'N/A'}</td></tr>
+    <tr><td>2</td><td></td><td></td><td></td><td></td></tr>
+    <tr><td>3</td><td></td><td></td><td></td><td></td></tr>
   </table>
 </div>
 
