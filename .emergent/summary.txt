@@ -1,143 +1,178 @@
 <analysis>**original_problem_statement:**
-The user initially wanted to connect their existing GitHub repository () to the Emergent workspace and set it up for development on a new  branch.
+The user's primary goal is to build a comprehensive rental management application, . The development has focused on creating a robust contract generation and management system.
 
-Over the course of the session, the user requested several features and bug fixes:
-1.  **Setup & Preview**: Install dependencies and run the application so it's visible in the preview.
-2.  **Bug Fix (Finance Calendars)**: Correct the finance report calendars to show the full date range for maintenance events, not just the start date.
-3.  **Feature (Edit Maintenance)**: Add functionality to edit maintenance records (cost, details) and ensure the changes reflect in the finance module.
-4.  **Troubleshooting (RLS)**: Resolve issues where edits to maintenance and clients were not saving. This was diagnosed as a Row Level Security (RLS) issue in Supabase, which the user then fixed by adding the correct  policies.
-5.  **Bug Fix (Finance Calculations)**: Adjust the main finance dashboard to calculate income on a monthly, non-cumulative basis.
-6.  **Feature (Consistent Sorting)**: Unify the sorting order of vehicle lists across all calendars and reports to be by daily price () from lowest to highest.
-7.  **Feature (Contract System)**: Implement a complete contract generation system based on a provided PDF. This includes creating an HTML template, generating a PDF with Puppeteer, capturing signatures, uploading the PDF to Supabase Storage, saving the URL, and emailing the contract to the customer and the company.
+Initial requirements included setting up the repository, fixing bugs related to finance and vehicle lists, and implementing an edit maintenance feature. The core of the work has been the contract system:
+- A detailed preliminary contract form.
+- An automatic, sequential contract numbering system.
+- Server-side PDF generation using FastAPI and Puppeteer, matching a specific user-provided design.
+- Uploading generated PDFs to Supabase Storage.
+- Emailing contracts via Resend integration.
+
+Recent feature requests have refined the contract signing and data capture process:
+1.  **Legal Document Acceptance**: Implement separate modals and checkboxes for Terms and Conditions and Data Privacy Policy, with content extracted from user-provided  files.
+2.  **Contract Finalization Logic**: Change the process so that finalizing a preliminary contract *updates* its status to signed instead of creating a new contract, thereby preserving the original contract number.
+3.  **Document Photo Capture**: Add functionality to the signing process to capture photos of the customer's ID (front and back for Cédula, single photo for Pasaporte), similar to a Zan-style signature process.
+4.  **Customer Data Enhancement**: Add a Tipo de documento (Document Type) field to the customer creation form and carry this information through to the contract form and the final PDF.
+5.  **Editable Deductible**: Add a field in the preliminary contract form for an agent to manually enter the insurance deductible amount, which should then appear in the PDF.
+6.  **Final PDF Layout**: Update the final, signed PDF to display the captured signatures, photos (customer, documents, fingerprint), and remove any preliminary watermarks or banners.
 
 **User's preferred language**:
-Spanish. The user primarily communicates in Spanish. The next agent MUST respond in Spanish.
+Spanish. The user exclusively communicates in Spanish. The next agent MUST respond in Spanish.
 
 **what currently exists?**
-The user's full-stack application (React/Vite + Supabase) is cloned from GitHub and running in the workspace on the  branch. The application preview is functional. Several bug fixes and features have been implemented, including corrections to finance calculations, date range displays, and the addition of an edit feature for maintenance records. Vehicle lists across the application are now sorted by price.
+The application is a full-stack project with a React/Vite frontend and a FastAPI backend. It integrates with Supabase for the database, storage, and auth, and uses Resend for emails.
 
-A new FastAPI backend has been added to the project in the  directory to handle server-side tasks like PDF generation and emailing. The scaffolding for the contract generation system has been started, including creating new components, services, backend files, and installing necessary libraries (, ).
+The contract generation system is partially functional. Users can create preliminary contracts, which auto-populate customer and reservation data. The UI has been updated to include modals for legal documents and separate acceptance checkboxes.
+
+The contract signing dialog () has been significantly enhanced to capture:
+- Customer photo.
+- Document photos (front and back, conditional on document type).
+- Digital signature.
+- Fingerprint.
+
+The logic to *update* an existing contract upon signing (rather than creating a new one) has been implemented in the frontend code, but is blocked by a database error. SQL scripts have been provided to the user to add the necessary columns (, , , ) to the database.
 
 **Last working item**:
-*   **Last item agent was working**: The agent was setting up the contract generation system, specifically the email-sending functionality using Resend. It created a simple FastAPI backend, configured it to run with supervisor, and asked the user for the necessary credentials.
-*   **Status**: BLOCKED
-*   **Agent Testing Done**: N
-*   **Which testing method agent to use?**: both. The agent should test the new backend endpoints (e.g., via ) and the entire frontend flow that triggers contract generation and emailing.
-*   **User Testing Done**: N
+- **Last item agent was working**: The agent was working on two parallel items when the session ended:
+    1.  **Fixing a critical bug**: A Cannot modify a locked contract error that occurs when trying to sign and finalize a contract. This is the main blocker.
+    2.  **Updating the PDF template**: A user request to modify  to correctly display the final, signed version of the contract with all captured images (signature, photos, etc.) and remove the preliminary banner.
+- **Status**: IN PROGRESS
+- **Agent Testing Done**: N
+- **Which testing method agent to use?**: both.
+    - **Backend**: Use  or the Supabase SQL Editor to investigate the database triggers and policies, which are the likely cause of the blocker.
+    - **Frontend**: Once the backend issue is resolved, use the testing agent to perform a full end-to-end test of the contract signing flow.
+- **User Testing Done**: Y (User confirmed the Cannot modify a locked contract error persists after trying the agent's suggested fixes).
 
 **All Pending/In progress Issue list**:
-There are no outstanding bugs. The current focus is on a new feature implementation.
+- **Issue 1**: Cannot modify a locked contract error when signing. (Priority: P0 - CRITICAL BLOCKER)
+
+  **Issues Detail:**
+  - **Issue 1: Cannot modify a locked contract Error**
+     - **Attempted fixes**:
+       - The agent provided permissive RLS policies for the  table. The error persisted.
+       - The agent discovered an  boolean column. They provided SQL to . The error persisted.
+       - The agent modified the frontend code to explicitly set  in the update payload. The error persisted.
+     - **Next debug checklist**:
+       1.  **INVESTIGATE DATABASE TRIGGERS**. This is the most likely cause and was not fully investigated. Execute the following SQL in the Supabase editor to find the culprit:
+           
+       2.  Based on the trigger found, either disable it () or drop it ().
+       3.  As a sanity check, create a **brand new preliminary contract** and try to sign it, in case existing contracts are in a permanently invalid state.
+       4.  Re-verify the RLS policies for  on the  table in the Supabase dashboard.
+     - **Why fix this issue and what will be achieved with the fix?**: This is the application's core workflow. The user cannot finalize or legally complete any contract until this is fixed.
+     - **Status**: IN PROGRESS
+     - **Is recurring issue?**: Y
+     - **Should Test frontend/backend/both after fix?**: Both
+     - **Blocked on other issue**: None. This is the main blocker.
 
 **In progress Task List**:
-*   **Task 1**: Complete the contract generation system. (PRIORITY: P0)
-    *   **Where to resume**: The agent has just asked the user for their Resend API key and the desired sender email address. The next step is to receive these credentials from the user.
-    *   **What will be achieved with this?**: A full system for creating, signing, storing, and emailing rental contracts as per the user's detailed requirements.
-    *   **Status**: BLOCKED (Waiting for user to provide Resend API key and sender email).
-    *   **Should Test frontend/backend/both after fix?**: Both.
-    *   **Blocked on something**: User input (Resend credentials).
+- **Task 1**: Update Final PDF Template (Priority: P1)
+     - **Where to resume**: The agent was about to edit . The task is to modify the JSX within this file.
+     - **What will be achieved with this?**: The PDF for a signed contract will show the actual signature, customer photo, and document photos, and will not have the preliminary banner. The data for these images (e.g., , ) is already being saved to the database (or is intended to be, pending the bug fix).
+     - **Status**: IN PROGRESS
+     - **Should Test frontend/backend/both after fix?**: Frontend (requires generating a final PDF).
+     - **Blocked on something**: Blocked by the Cannot modify a locked contract issue. The implementation can be done, but it cannot be tested until a contract can be successfully signed.
 
 **Upcoming and Future Tasks**
 *   **Upcoming Tasks**:
-    1.  **Implement Contract HTML Template (P0)**: Create the  component to visually match the user's provided PDF, including all static text and dynamic  fields.
-    2.  **Implement PDF Generation Flow (P0)**: Connect the frontend  to the backend API. The backend will take the HTML from the template, populate it with data, use Puppeteer to convert it to a PDF, and upload it to the  bucket in Supabase Storage.
-    3.  **Implement Signature & Data Population (P1)**: Integrate the existing  component. When the user signs, populate the template with the signature, fingerprint, and all other dynamic data from the reservation.
-    4.  **Implement Email Sending (P1)**: Once the Resend key is provided, implement the logic in the backend to email the generated PDF to the customer and .
-    5.  **Implement Contract History (P2)**: Modify the Historial section to display generated contracts and include a button to download the PDF from the  stored in the  table.
+    1.  **User Verification (P0)**: After the locked contract bug is fixed and the PDF template is updated, guide the user to perform a full end-to-end test of the contract creation and signing flow.
 *   **Future Tasks**:
-    1.  **Push Changes to GitHub**: After all features are complete and verified by the user, guide the user to use the Save to GitHub functionality to push all commits from the  branch to their repository.
+    1.  **Push Changes to GitHub (P1)**: Guide the user to use the Save to GitHub functionality.
+    2.  **Refactor Large Components (P2)**: The components  (>980 lines) and  (~500 lines) are too large and should be broken down into smaller, manageable sub-components.
+    3.  **Secure RLS Policies (P2)**: The current database policies are insecure (). They should be replaced with more granular policies (e.g., users can only update their own records).
 
 **Completed work in this session**
-*   **GitHub & Environment Setup**: Cloned the user's repository, installed dependencies, and configured the preview to run successfully on the  branch.
-*   **Finance Calendar Fix**: Corrected logic in  and  to display the full date range for maintenance events.
-*   **Maintenance Edit Feature**: Added an Edit button and form to  to allow updating maintenance costs and details.
-*   **RLS Troubleshooting**: Guided the user to identify and fix Row Level Security (RLS) policies in Supabase, enabling  operations for  and  tables.
-*   **Finance Calculation Fix**: Reworked logic in  to calculate income on a monthly, non-cumulative basis.
-*   **Standardized Sorting**: Updated all vehicle lists across multiple components to sort by price () from lowest to highest.
-*   **Contract System Scaffolding**: Began the setup for contract generation by creating backend files, installing Puppeteer/Resend, and creating frontend component/service stubs.
+- Implemented a robust camera capture feature with a fallback mechanism for browsers that block the MediaDevices API.
+- Added modals and separate checkboxes for Terms and Conditions and Data Privacy Policy to the contract forms, extracting content from user-provided DOCX files.
+- Implemented a new component () to capture photos of identity documents (Cédula or Pasaporte) during the signing process.
+- Updated the customer creation form to include a Tipo de Documento (Document Type) field and provided the necessary SQL to alter the  table.
+- Propagated the Tipo de Documento field to the preliminary contract form and the final PDF template.
+- Added an editable Valor Deducible (Deductible Value) field to the contract form and the PDF template.
+- Investigated and identified the  column as a key factor in the Cannot modify a locked contract error.
+
+**Earlier issues found/mentioned but not fixed**
+- **Issue 1: Insecure Supabase RLS Policies**
+   - **Debug checklist**: Review RLS policies on all tables, especially , in the Supabase dashboard.
+   - **Why to solve this issue and what will be achieved with this?**: To prevent unauthorized data access in a production environment. The current policies were set to be overly permissive as a temporary fix.
+   - **Should Test frontend/backend/both after fix**: Both.
+   - **Is recurring issue?**: N
 
 **Known issue recurrence from previous fork**
-*   N/A
+- N/A
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-*   **Frontend**: React, Vite, TypeScript, Tailwind CSS, shadcn/ui, React Query
-*   **Backend**: Supabase (PostgreSQL, Auth, Storage)
-*   **New Backend Service**: A self-contained FastAPI backend has been introduced to handle server-side operations (PDF generation, email) that are not suitable for the client-side. This service is managed by .
+*   **Frontend**: React, Vite, TypeScript, Tailwind CSS, shadcn/ui, 
+*   **Backend**: FastAPI (Python), Puppeteer (via a Node.js script) for PDF generation.
+*   **Database & Storage**: Supabase (PostgreSQL, Storage, RLS, Triggers).
+*   **Architecture**: React frontend interacts with Supabase directly for most CRUD and with a FastAPI backend for server-side PDF generation/emailing.
 
 **key DB schema**
-*   **vehicles**: uid=0(root) gid=0(root) groups=0(root) (uuid),  (text),  (numeric)
-*   **maintenance**: uid=0(root) gid=0(root) groups=0(root) (uuid),  (numeric),  (timestamp),  (timestamp)
-*   **contracts**: uid=0(root) gid=0(root) groups=0(root) (uuid),  (text),  (uuid)
-*   **customers**: Contains customer details, updated via an edit form.
+-   **contracts**:
+    -    (boolean): A column that seems to be preventing updates. **This is central to the main bug.**
+    -   Added columns:  (TEXT),  (TEXT),  (TEXT).
+-   **customers**:
+    -   Added column:  (TEXT).
 
 **changes in tech stack**
-*   A new FastAPI backend service was added to the existing React+Supabase architecture to support server-side PDF generation (with Puppeteer) and email sending (with Resend).
+- No changes in technology stack.
 
 **All files of reference**
-*   **Modified**:
-    *   : Allowed preview host.
-    *   : Added edit feature and sorting.
-    *   : Fixed date ranges and added sorting.
-    *   : Fixed date ranges and added sorting.
-    *   : Fixed monthly calculations and added sorting.
-    *   : Added sorting.
-    *   : Added sorting.
-*   **Created**:
-    *   : To store Supabase and other frontend keys.
-    *   : The new FastAPI application.
-    *   : For backend-specific keys (e.g., Resend).
-    *   : To run the new backend process.
-    *   : New components for the contract feature.
-    *   : To handle API calls for contracts.
-    *   : To set up storage policies.
+*   : Primary file for the contract signing logic and the current bug.
+*   : Target file for the next PDF layout implementation task.
+*   : The main, very large contract creation form.
+*   : Modified to include the document type.
+*   : New component for capturing ID photos.
+
+**Areas that need refactoring**:
+*    is over 980 lines long and needs to be broken down into smaller components.
+*    is approaching 500 lines and should also be refactored.
 
 **key api endpoints**
-*   **New Backend API (running on port 8001, prefixed with ):**
-    *   : (Planned) Endpoint to handle the entire contract generation, upload, and database update flow.
-    *   : (Planned) Endpoint to handle sending the contract via email.
+*   ****: Receives HTML, returns a base64 PDF.
+*   ****: Sends an email.
+The current critical bug is not related to these API endpoints but to direct Supabase client interaction ().
 
 **Critical Info for New Agent**
-*   The project now includes a small FastAPI backend in . This is a new addition to the original architecture. Remember to restart it (backend: stopped
-backend: started) after changing its code or  file.
-*   The immediate next step is **blocked** waiting for the user to provide their **Resend API Key** and **sender email**. You must ask for these to proceed.
-*   The user fixed their database's Row Level Security (RLS) policies by allowing all s. This is insecure. While not the current task, it's good practice to remind the user to implement a more secure policy (e.g., ) before going to production.
-*   All work is on the  branch. No changes have been pushed to the user's GitHub yet. The user will need guidance on using the Save to GitHub button at the end.
+*   **The #1 priority is fixing the Cannot modify a locked contract error.** The user is completely blocked from using the core feature of the app.
+*   The cause is almost certainly a **database TRIGGER** on the  table that sets  and prevents further updates. Your first action should be to run the SQL command to list triggers on that table.
+*   Do not get distracted by other feature requests until this blocker is resolved. You can implement the PDF template changes, but you cannot test them.
+*   The user is very responsive and provides screenshots from their F12 console. Analyze them carefully for clues.
 
 **documents and test reports created in this job**
-*   The user uploaded a contract PDF: 
+-  (updated with recent changes)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User**: Asks to sort vehicle lists in finance reports by price (). **Status**: Done.
-2.  **User**: Provides the  table schema, confirming the field is . **Status**: Done.
-3.  **User**: Requests a full contract generation system based on a PDF. **Status**: In Progress.
-4.  **User**: Uploads the contract PDF. **Status**: Done.
-5.  **User**: Confirms the agent's integration plan (Resend/Puppeteer). **Status**: Done.
-6.  **User**: sigamos (let's continue). **Status**: Done.
-7.  **User**: continuemos (let's continue) [x2]. **Status**: Done.
-8.  **User**: listo cree el bucket y ya tenfggo la api key de redend (ok, I created the bucket and I have the Resend API key). **Status**: Acknowledged.
-9.  **Agent**: Asks the user to provide the Resend API key and sender email. **Status**: Awaiting Response.
-10. **User**: (Pending) Needs to provide the Resend API key and sender email. **Status**: PENDING.
+10. **User**: Asks for help, there's an error signing the contract.
+9.  **Agent**: Investigates, suggests it might be missing columns, and asks the user to confirm they ran the provided SQL.
+8.  **User**: Provides F12 console screenshot.
+7.  **Agent**: Doesn't see the specific error and asks the user to check policies.
+6.  **User**: Provides another screenshot clearly showing the error toast: .
+5.  **Agent**: Identifies this as an RLS policy issue and provides permissive SQL policies to fix it.
+4.  **User**: Reports the error persists even after running the SQL.
+3.  **Agent**: Suspects a database trigger. Asks user to run SQL to check for triggers and also check for an  column.
+2.  **User**: Provides a screenshot of the  table columns, which confirms the existence of the  column.
+1.  **User**: Asks to update the final PDF to show signatures/photos and remove the preliminary banner (new request). The agent begins working on this new task.
 
 **Project Health Check:**
-*   **Broken**: None. The application is running.
-*   **Mocked**: The new contract generation system is incomplete and not yet functional.
+*   **Broken**: The contract signing flow is critically broken due to the Cannot modify a locked contract database error.
+*   **Mocked**: N/A
 
 **3rd Party Integrations**
-*   **Supabase** (PostgreSQL, Auth, Storage) — Requires User Key (already provided and configured).
-*   **Resend** (Email) — Requires User API Key (pending from user).
-*   **Puppeteer** (PDF Generation) — No key required.
+*   **Supabase**: PostgreSQL, Auth, and Storage. Requires user-provided keys.
+*   **Resend**: Email service. Requires user-provided API key.
+*   **Puppeteer**: Server-side PDF generation. No key required.
 
 **Testing status**
-*   **Testing agent used after significant changes**: NO
-*   **Troubleshoot agent used after agent stuck in loop**: NO
-*   **Test files created**: []
-*   **Known regressions**: None currently.
+-   **Testing agent used after significant changes**: NO
+-   **Troubleshoot agent used after agent stuck in loop**: NO
+-   **Test files created**: []
+-   **Known regressions**: The contract signing functionality, which may have worked previously, is now broken.
 
 **Credentials to test flow:**
 *   Supabase credentials are in .
-*   The Resend API key is required from the user to test the email flow.
+*   Resend API key is in .
 
 **What agent forgot to execute**
-*   The agent has not yet guided the user to push any of the implemented changes to their GitHub repository using the Save to GitHub feature. This is a crucial final step for the session's work.</analysis>
+-   The agent failed to follow through on the most critical debugging step: obtaining the list of **database triggers** from the user. They identified triggers as the likely cause but were sidetracked by the user's new request to update the PDF template before resolving the blocker.</analysis>
