@@ -273,6 +273,7 @@ export const PreliminaryContractForm = () => {
       // Llenar datos del cliente
       setValue("customerId", customer.id);
       setValue("customerName", `${customer.nombres} ${customer.primer_apellido} ${customer.segundo_apellido || ''}`.trim());
+      setValue("customerDocumentType", customer.tipo_documento || 'cedula');
       setValue("customerDocument", customer.cedula_pasaporte);
       setValue("customerPhone", customer.celular || '');
       setValue("customerEmail", customer.email || '');
