@@ -370,10 +370,28 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
                 <Input id="segundo_apellido" {...register("segundo_apellido")} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="cedula_pasaporte">Cédula/Pasaporte *</Label>
+                <Label htmlFor="tipo_documento">Tipo de Documento *</Label>
+                <Select 
+                  onValueChange={(value) => setValue("tipo_documento", value)} 
+                  value={watch("tipo_documento") || "cedula"}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cedula">Cédula de Ciudadanía</SelectItem>
+                    <SelectItem value="cedula_extranjeria">Cédula de Extranjería</SelectItem>
+                    <SelectItem value="pasaporte">Pasaporte</SelectItem>
+                    <SelectItem value="pep">PEP (Permiso Especial de Permanencia)</SelectItem>
+                    <SelectItem value="ppt">PPT (Permiso por Protección Temporal)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cedula_pasaporte">Número de Documento *</Label>
                 <Input 
                   id="cedula_pasaporte" 
-                  {...register("cedula_pasaporte", { required: "Cédula o pasaporte es obligatorio" })} 
+                  {...register("cedula_pasaporte", { required: "Número de documento es obligatorio" })} 
                   className={errors.cedula_pasaporte ? "border-red-500" : ""}
                 />
                 {errors.cedula_pasaporte && <span className="text-xs text-red-500">{errors.cedula_pasaporte.message}</span>}
