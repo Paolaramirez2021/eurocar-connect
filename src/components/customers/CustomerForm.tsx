@@ -107,6 +107,7 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
       nombres: "",
       primer_apellido: "",
       segundo_apellido: "",
+      tipo_documento: "cedula",
       cedula_pasaporte: "",
       email: "",
       celular: "",
