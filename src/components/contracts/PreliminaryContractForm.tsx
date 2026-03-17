@@ -144,6 +144,7 @@ export const PreliminaryContractForm = () => {
       additionalValue: 0,
       discount: 0,
       depositAmount: 0,
+      deducible: "",
       paymentMethod: "",
       totalAmount: 0,
       sendVia: "manual",
