@@ -374,6 +374,7 @@ export const PreliminaryContractForm = () => {
 
     const templateData: ContractData = {
       cliente_nombre: data.customerName,
+      cliente_tipo_documento: data.customerDocumentType,
       cliente_documento: data.customerDocument,
       cliente_licencia: data.customerLicense,
       cliente_licencia_vencimiento: data.customerLicenseExpiry,
