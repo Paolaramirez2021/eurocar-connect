@@ -54,6 +54,19 @@ export const generateContractHTML = (data: ContractData): string => {
     }).format(value);
   };
 
+  const formatDocumentType = (type: string | undefined) => {
+    const types: Record<string, string> = {
+      'cedula': 'C.C.',
+      'cedula_extranjeria': 'C.E.',
+      'pasaporte': 'Pasaporte',
+      'pep': 'PEP',
+      'ppt': 'PPT'
+    };
+    return types[type || 'cedula'] || 'C.C.';
+  };
+
+  const tipoDoc = formatDocumentType(data.cliente_tipo_documento);
+
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
