@@ -256,8 +256,14 @@ export const ConvertToFinalDialog = ({
         numero_contrato: contractNumber,
         fecha_contrato: format(new Date(), "dd/MM/yyyy HH:mm", { locale: es }),
         deducible: 'Según póliza',
-        // Campos del contrato firmado
+        // Campos del contrato firmado - usar base64 para el PDF
         es_preliminar: false,
+        firma_base64: signatureDataUrl || undefined,
+        huella_base64: fingerprintDataUrl || undefined,
+        foto_cliente_base64: contractPhotoDataUrl || undefined,
+        documento_frente_base64: documentPhotos.front || undefined,
+        documento_reverso_base64: documentPhotos.back || undefined,
+        // También guardar URLs para referencia
         firma_url: signatureUrl.publicUrl,
         huella_url: fingerprintUrl,
         foto_cliente_url: contractPhotoUrl.publicUrl,
