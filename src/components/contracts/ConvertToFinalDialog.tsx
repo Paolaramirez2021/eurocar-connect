@@ -204,15 +204,131 @@ export const ConvertToFinalDialog = ({
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
 
+      // Obtener datos del vehículo y cliente para regenerar el PDF
+      const { data: vehicleData } = await supabase
+        .from("vehicles")
+        .select("brand, model, plate, color")
+        .eq("id", preliminaryContract.vehicle_id)
+        .single();
+
+      const { data: customerData } = await supabase
+        .from("customers")
+        .select("license_number, license_expiry, address, city, tipo_documento")
+        .eq("id", preliminaryContract.customer_id)
+        .single();
+
+      // Calcular días
+      const startDate = new Date(preliminaryContract.start_date);
+      const endDate = new Date(preliminaryContract.end_date);
+      const dias = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      // Generar PDF final con firma y fotos
+      const templateData: ContractData = {
+        cliente_nombre: preliminaryContract.customer_name,
+        cliente_tipo_documento: customerData?.tipo_documento || 'cedula',
+        cliente_documento: preliminaryContract.customer_document,
+        cliente_licencia: customerData?.license_number || 'N/A',
+        cliente_licencia_vencimiento: customerData?.license_expiry || 'N/A',
+        cliente_direccion: customerData?.address || 'N/A',
+        cliente_telefono: preliminaryContract.customer_phone || 'N/A',
+        cliente_ciudad: customerData?.city || 'Colombia',
+        cliente_email: preliminaryContract.customer_email || 'N/A',
+        vehiculo_marca: vehicleData ? `${vehicleData.brand} ${vehicleData.model}` : vehicleInfo,
+        vehiculo_placa: vehicleData?.plate || '',
+        vehiculo_color: vehicleData?.color || 'N/A',
+        vehiculo_km_salida: 'N/A',
+        fecha_inicio: format(startDate, "dd/MM/yyyy", { locale: es }),
+        hora_inicio: format(startDate, "HH:mm", { locale: es }),
+        fecha_fin: format(endDate, "dd/MM/yyyy", { locale: es }),
+        hora_fin: format(endDate, "HH:mm", { locale: es }),
+        dias: dias,
+        servicio: 'Turismo',
+        valor_dia: Math.round(preliminaryContract.total_amount / dias),
+        valor_dias: preliminaryContract.total_amount,
+        valor_adicional: 0,
+        subtotal: preliminaryContract.total_amount,
+        descuento: 0,
+        total_contrato: preliminaryContract.total_amount,
+        iva: Math.round(preliminaryContract.total_amount * 0.19),
+        total: Math.round(preliminaryContract.total_amount * 1.19),
+        valor_reserva: 0,
+        forma_pago: 'N/A',
+        numero_contrato: contractNumber,
+        fecha_contrato: format(new Date(), "dd/MM/yyyy HH:mm", { locale: es }),
+        deducible: 'Según póliza',
+        // Campos del contrato firmado
+        es_preliminar: false,
+        firma_url: signatureUrl.publicUrl,
+        huella_url: fingerprintUrl,
+        foto_cliente_url: contractPhotoUrl.publicUrl,
+        documento_frente_url: documentFrontUrl,
+        documento_reverso_url: documentBackUrl,
+      };
+
+      console.log("[ConvertToFinal] Generando PDF final con datos:", templateData);
+
+      // Generar HTML del contrato final
+      const html = generateContractHTML(templateData);
+
+      // Llamar al backend para generar el PDF
+      const pdfResponse = await fetch('/api/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          html: html,
+          options: {
+            format: 'Letter',
+            printBackground: true,
+            margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' }
+          }
+        })
+      });
+
+      if (!pdfResponse.ok) {
+        throw new Error('Error al generar PDF final');
+      }
+
+      const pdfResult = await pdfResponse.json();
+      
+      if (!pdfResult.pdf_base64) {
+        throw new Error('No se recibió el PDF del servidor');
+      }
+
+      // Convertir base64 a blob
+      const byteCharacters = atob(pdfResult.pdf_base64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const pdfBlob = new Blob([byteArray], { type: 'application/pdf' });
+
+      // Subir PDF final
+      const pdfFilename = `final/${contractId}_final_${Date.now()}.pdf`;
+      const { data: pdfUpload, error: pdfUploadError } = await supabase.storage
+        .from("contracts")
+        .upload(pdfFilename, pdfBlob);
+
+      if (pdfUploadError) {
+        throw new Error(`Error al subir PDF: ${pdfUploadError.message}`);
+      }
+
+      const { data: finalPdfUrl } = supabase.storage
+        .from("contracts")
+        .getPublicUrl(pdfUpload.path);
+
+      console.log("[ConvertToFinal] PDF final subido:", finalPdfUrl.publicUrl);
+
       // Actualizar el contrato existente (cambiar de preliminary a signed)
       const updateData: Record<string, any> = {
         signature_url: signatureUrl.publicUrl,
         photo_url: contractPhotoUrl.publicUrl,
+        pdf_url: finalPdfUrl.publicUrl, // Nueva URL del PDF final
         terms_accepted: true,
         signed_by: user?.id,
         user_agent: navigator.userAgent,
         status: "signed",
-        is_locked: false, // Desbloquear para permitir la actualización
+        is_locked: false,
       };
 
       // Agregar campos opcionales
@@ -253,14 +369,14 @@ export const ConvertToFinalDialog = ({
             },
             body: JSON.stringify({
               to: [preliminaryContract.customer_email],
-              contract_pdf_url: preliminaryContract.pdf_url,
+              contract_pdf_url: finalPdfUrl.publicUrl, // Usar el nuevo PDF final
               contract_data: {
                 cliente_nombre: preliminaryContract.customer_name,
                 vehiculo_marca: vehicleInfo,
-                vehiculo_placa: vehicleInfo.split('-')[1]?.trim() || '',
-                fecha_inicio: format(new Date(preliminaryContract.start_date), "dd/MM/yyyy", { locale: es }),
-                fecha_fin: format(new Date(preliminaryContract.end_date), "dd/MM/yyyy", { locale: es }),
-                dias_totales: Math.ceil((new Date(preliminaryContract.end_date).getTime() - new Date(preliminaryContract.start_date).getTime()) / (1000 * 60 * 60 * 24)),
+                vehiculo_placa: vehicleData?.plate || '',
+                fecha_inicio: format(startDate, "dd/MM/yyyy", { locale: es }),
+                fecha_fin: format(endDate, "dd/MM/yyyy", { locale: es }),
+                dias_totales: dias,
                 valor_total: preliminaryContract.total_amount,
                 fecha_firma: format(new Date(), "dd/MM/yyyy HH:mm", { locale: es })
               }
