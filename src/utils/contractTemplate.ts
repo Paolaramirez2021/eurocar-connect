@@ -36,12 +36,18 @@ export interface ContractData {
   numero_contrato: string;
   fecha_contrato: string;
   deducible: string;
-  // Campos para contrato firmado
+  // Campos para contrato firmado (pueden ser URL o base64)
   firma_url?: string;
   huella_url?: string;
   foto_cliente_url?: string;
   documento_frente_url?: string;
   documento_reverso_url?: string;
+  // Campos en base64 para el PDF (tienen prioridad sobre URL)
+  firma_base64?: string;
+  huella_base64?: string;
+  foto_cliente_base64?: string;
+  documento_frente_base64?: string;
+  documento_reverso_base64?: string;
   es_preliminar?: boolean;
 }
 
