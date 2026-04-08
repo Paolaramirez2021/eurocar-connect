@@ -31,7 +31,7 @@ async function generatePDF() {
     // Configurar contenido HTML con timeout más corto
     await page.setContent(html, {
       waitUntil: 'domcontentloaded',
-      timeout: 10000
+      timeout: 30000
     });
 
     // Generar PDF

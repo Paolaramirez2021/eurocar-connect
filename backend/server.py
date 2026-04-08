@@ -103,7 +103,7 @@ async def generate_pdf(request: GeneratePDFRequest):
             input=input_data,
             capture_output=True,
             text=True,
-            timeout=60,
+            timeout=120,
             cwd=os.path.dirname(__file__)
         )
         
