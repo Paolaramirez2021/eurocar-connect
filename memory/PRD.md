@@ -92,11 +92,19 @@ Sistema completo de gestión de alquiler de vehículos para EUROCAR RENTAL, con 
 - Backend API: https://vehicle-lease-app-9.preview.emergentagent.com/api/
 
 ## Última Actualización
-Fecha: 16 de Marzo, 2025
-Sesión: Mejoras en sistema de contratos
-- Términos y Condiciones y Política de Datos actualizados con documentos oficiales de EUROCAR
-- Modales para visualizar documentos legales completos
-- Checkboxes separados para aceptación de términos y política de datos
-- Conversión de contrato preliminar a final ahora mantiene el mismo número de contrato
-- El contrato se actualiza (no se crea uno nuevo) al firmar
-- Badge "Firmado" en verde para contratos finales
+Fecha: Diciembre, 2025
+Sesión: Firma del representante legal en PDF final
+- La firma del representante legal de EUROCAR RENTAL SAS se incluye automáticamente en el PDF final cuando el cliente firma
+- La firma se embebe como base64 en `contractTemplate.ts` (constante `FIRMA_REPRESENTANTE_BASE64`)
+- Solo aparece en contratos finales (cuando `esFinal = true`), no en preliminares
+- Se muestra en la sección "EL ARRENDADOR" del PDF con la etiqueta "Representante Legal"
+- Las imágenes del contrato final (firma cliente, huella, fotos) se pasan como base64 para que Puppeteer pueda renderizarlas
+
+### Historial previo
+- 16 Marzo 2025: Mejoras en sistema de contratos
+  - Términos y Condiciones y Política de Datos actualizados con documentos oficiales de EUROCAR
+  - Modales para visualizar documentos legales completos
+  - Checkboxes separados para aceptación de términos y política de datos
+  - Conversión de contrato preliminar a final ahora mantiene el mismo número de contrato
+  - El contrato se actualiza (no se crea uno nuevo) al firmar
+  - Badge "Firmado" en verde para contratos finales
