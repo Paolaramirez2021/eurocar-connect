@@ -79,13 +79,14 @@ export const SignatureCanvas = ({ onSignatureChange }: SignatureCanvasProps) => 
     return () => window.removeEventListener("resize", handleResize);
   }, [setupCanvas]);
 
-  // Get coordinates relative to canvas, accounting for DPR
+  // Get coordinates relative to canvas, clamped to stay within bounds
   const getPoint = useCallback((e: PointerEvent): Point => {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
+    const pad = 2; // small padding so strokes don't touch the edge
     return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+      x: Math.max(pad, Math.min(e.clientX - rect.left, rect.width - pad)),
+      y: Math.max(pad, Math.min(e.clientY - rect.top, rect.height - pad)),
       pressure: e.pressure > 0 ? e.pressure : 0.5,
     };
   }, []);
