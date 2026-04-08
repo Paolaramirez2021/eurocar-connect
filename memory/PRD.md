@@ -93,12 +93,11 @@ Sistema completo de gestión de alquiler de vehículos para EUROCAR RENTAL, con 
 
 ## Última Actualización
 Fecha: Diciembre, 2025
-Sesión: Firma del representante legal en PDF final
-- La firma del representante legal de EUROCAR RENTAL SAS se incluye automáticamente en el PDF final cuando el cliente firma
-- La firma se embebe como base64 en `contractTemplate.ts` (constante `FIRMA_REPRESENTANTE_BASE64`)
-- Solo aparece en contratos finales (cuando `esFinal = true`), no en preliminares
-- Se muestra en la sección "EL ARRENDADOR" del PDF con la etiqueta "Representante Legal"
-- Las imágenes del contrato final (firma cliente, huella, fotos) se pasan como base64 para que Puppeteer pueda renderizarlas
+
+### Sesión actual
+- Firma del representante legal de EUROCAR se incluye automáticamente en el PDF final (base64 en `contractTemplate.ts`)
+- Componente SignatureCanvas mejorado: Pointer Events (stylus/tableta), devicePixelRatio scaling, trazos suaves con quadraticCurveTo, presión del stylus, coordenadas clampeadas al canvas
+- Integración huellero DigitalPersona 4500: botón "Usar Huellero Digital" llama servicio local en localhost:5000, servicio Python Flask en `/app/tools/fingerprint_service.py`
 
 ### Historial previo
 - 16 Marzo 2025: Mejoras en sistema de contratos

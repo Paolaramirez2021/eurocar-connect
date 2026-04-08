@@ -1,10 +1,12 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Camera, X, Fingerprint } from "lucide-react";
+import { Camera, X, Fingerprint, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Capacitor } from "@capacitor/core";
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from "@capacitor/camera";
+
+const SCANNER_URL = "http://localhost:5000";
 
 interface FingerprintCaptureProps {
   onFingerprintChange: (dataUrl: string | null) => void;
@@ -77,15 +79,54 @@ export const FingerprintCapture = ({ onFingerprintChange }: FingerprintCapturePr
     reader.readAsDataURL(file);
   };
 
-  const handleScannerCapture = () => {
-    // Placeholder for digital fingerprint scanner integration
-    // This will be connected to a USB/Bluetooth fingerprint scanner
-    toast.info("Conecte el huellero digital y presione el dedo del cliente");
-    
-    // TODO: Integrate with actual fingerprint scanner device
-    // This would typically use a Web Serial API or a Capacitor plugin
-    // For now, we'll show a message to guide the implementation
-    toast.info("Funcionalidad del huellero digital en desarrollo. Use la cámara por ahora.");
+  const [isScanning, setIsScanning] = useState(false);
+
+  const handleScannerCapture = async () => {
+    setIsScanning(true);
+    try {
+      // Llamar al servicio local del huellero DigitalPersona
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+
+      const response = await fetch(`${SCANNER_URL}/capturar-huella`, {
+        method: "POST",
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `Error del servicio (${response.status})`);
+      }
+
+      const data = await response.json();
+
+      if (!data.image) {
+        throw new Error("No se recibió imagen del huellero");
+      }
+
+      // data.image puede venir como base64 puro o con prefijo data:image/png;base64,
+      const dataUrl = data.image.startsWith("data:")
+        ? data.image
+        : `data:image/png;base64,${data.image}`;
+
+      setPreview(dataUrl);
+      onFingerprintChange(dataUrl);
+      setCaptureMethod("scanner");
+      toast.success("Huella capturada con huellero digital");
+    } catch (error: any) {
+      if (error.name === "AbortError") {
+        toast.error("Tiempo de espera agotado. Asegúrese de colocar el dedo en el huellero.");
+      } else if (error.message?.includes("Failed to fetch") || error.message?.includes("NetworkError")) {
+        toast.error(
+          "No se pudo conectar al huellero. Verifique que el servicio local esté ejecutándose en el puerto 5000."
+        );
+      } else {
+        toast.error(`Error: ${error.message}`);
+      }
+    } finally {
+      setIsScanning(false);
+    }
   };
 
   const handleRemove = () => {
@@ -135,10 +176,20 @@ export const FingerprintCapture = ({ onFingerprintChange }: FingerprintCapturePr
                 type="button"
                 variant="outline"
                 onClick={handleScannerCapture}
+                disabled={isScanning}
                 className="flex items-center justify-center gap-2 h-auto py-4"
               >
-                <Fingerprint className="h-6 w-6" />
-                <span>Usar Huellero Digital</span>
+                {isScanning ? (
+                  <>
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <span>Esperando huella... Coloque el dedo</span>
+                  </>
+                ) : (
+                  <>
+                    <Fingerprint className="h-6 w-6" />
+                    <span>Usar Huellero Digital</span>
+                  </>
+                )}
               </Button>
               
               <div className="relative">
@@ -181,7 +232,7 @@ export const FingerprintCapture = ({ onFingerprintChange }: FingerprintCapturePr
             <strong>Nota:</strong> La huella es opcional y se utiliza como respaldo visual adicional.
           </p>
           <p className="text-xs text-muted-foreground">
-            Para conectar un huellero digital USB/Bluetooth, consulte la documentación de integración.
+            El huellero digital requiere el servicio local ejecutándose (DigitalPersona 4500).
           </p>
         </div>
       </div>
