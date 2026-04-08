@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Eraser, Pen } from "lucide-react";
@@ -7,95 +7,210 @@ interface SignatureCanvasProps {
   onSignatureChange: (dataUrl: string | null) => void;
 }
 
+interface Point {
+  x: number;
+  y: number;
+  pressure: number;
+}
+
 export const SignatureCanvas = ({ onSignatureChange }: SignatureCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
+  const isDrawingRef = useRef(false);
+  const lastPointRef = useRef<Point | null>(null);
+  const strokeCountRef = useRef(0);
   const [hasSignature, setHasSignature] = useState(false);
+  const dprRef = useRef(window.devicePixelRatio || 1);
+
+  // Setup canvas with devicePixelRatio scaling
+  const setupCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const container = canvas.parentElement;
+    if (!container) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    dprRef.current = dpr;
+
+    const displayWidth = container.clientWidth;
+    const displayHeight = 200;
+
+    // Scale canvas buffer for high-DPI
+    canvas.width = displayWidth * dpr;
+    canvas.height = displayHeight * dpr;
+    canvas.style.width = `${displayWidth}px`;
+    canvas.style.height = `${displayHeight}px`;
+
+    ctx.scale(dpr, dpr);
+
+    // Drawing style
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+  }, []);
+
+  useEffect(() => {
+    setupCanvas();
+
+    const handleResize = () => {
+      // Save current signature data before resize
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const tempDataUrl = strokeCountRef.current > 0 ? canvas.toDataURL("image/png") : null;
+
+      setupCanvas();
+
+      // Restore signature after resize if there was one
+      if (tempDataUrl) {
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        const img = new Image();
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, canvas.width / dprRef.current, 200);
+        };
+        img.src = tempDataUrl;
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [setupCanvas]);
+
+  // Get coordinates relative to canvas, accounting for DPR
+  const getPoint = useCallback((e: PointerEvent): Point => {
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+      pressure: e.pressure > 0 ? e.pressure : 0.5,
+    };
+  }, []);
+
+  // Draw smooth quadratic bezier between points
+  const drawSegment = useCallback((ctx: CanvasRenderingContext2D, from: Point, to: Point) => {
+    const midX = (from.x + to.x) / 2;
+    const midY = (from.y + to.y) / 2;
+
+    // Vary line width slightly with pressure (1.5 - 3px range)
+    ctx.lineWidth = 1.5 + to.pressure * 1.5;
+
+    ctx.quadraticCurveTo(from.x, from.y, midX, midY);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(midX, midY);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    const onPointerDown = (e: PointerEvent) => {
+      e.preventDefault();
+      // Capture pointer for reliable tracking even outside canvas
+      canvas.setPointerCapture(e.pointerId);
 
-    // Set canvas size
-    const resizeCanvas = () => {
-      const container = canvas.parentElement;
-      if (!container) return;
+      isDrawingRef.current = true;
+      const pt = getPoint(e);
+      lastPointRef.current = pt;
 
-      canvas.width = container.clientWidth;
-      canvas.height = 200;
-
-      // Configure drawing style
-      ctx.strokeStyle = "#000000";
-      ctx.lineWidth = 2;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.beginPath();
+      ctx.moveTo(pt.x, pt.y);
+      // Draw a dot for single taps
+      ctx.lineWidth = 1.5 + pt.pressure * 1.5;
+      ctx.lineTo(pt.x + 0.1, pt.y + 0.1);
+      ctx.stroke();
     };
 
-    resizeCanvas();
-    window.addEventListener("resize", resizeCanvas);
+    const onPointerMove = (e: PointerEvent) => {
+      if (!isDrawingRef.current) return;
+      e.preventDefault();
 
-    return () => window.removeEventListener("resize", resizeCanvas);
-  }, []);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
 
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+      const pt = getPoint(e);
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+      // Use coalesced events for smoother stylus input
+      const coalescedEvents = (e as any).getCoalescedEvents?.() as PointerEvent[] | undefined;
+      if (coalescedEvents && coalescedEvents.length > 1) {
+        for (const ce of coalescedEvents) {
+          const cpt = getPoint(ce);
+          if (lastPointRef.current) {
+            drawSegment(ctx, lastPointRef.current, cpt);
+          }
+          lastPointRef.current = cpt;
+        }
+      } else {
+        if (lastPointRef.current) {
+          drawSegment(ctx, lastPointRef.current, pt);
+        }
+        lastPointRef.current = pt;
+      }
+    };
 
-    setIsDrawing(true);
+    const onPointerUp = (e: PointerEvent) => {
+      if (!isDrawingRef.current) return;
+      canvas.releasePointerCapture(e.pointerId);
+      isDrawingRef.current = false;
+      lastPointRef.current = null;
+      strokeCountRef.current += 1;
+      setHasSignature(true);
 
-    const rect = canvas.getBoundingClientRect();
-    const x = "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+      // Export signature
+      const dataUrl = canvas.toDataURL("image/png");
+      onSignatureChange(dataUrl);
+    };
 
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-  };
+    const onPointerLeave = (e: PointerEvent) => {
+      // Only stop if pointer is NOT captured (captured continues outside)
+      if (!isDrawingRef.current) return;
+      if (!canvas.hasPointerCapture(e.pointerId)) {
+        isDrawingRef.current = false;
+        lastPointRef.current = null;
+        if (strokeCountRef.current > 0) {
+          const dataUrl = canvas.toDataURL("image/png");
+          onSignatureChange(dataUrl);
+        }
+      }
+    };
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
+    // Pointer events cover mouse + touch + stylus
+    canvas.addEventListener("pointerdown", onPointerDown);
+    canvas.addEventListener("pointermove", onPointerMove);
+    canvas.addEventListener("pointerup", onPointerUp);
+    canvas.addEventListener("pointerleave", onPointerLeave);
 
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
-
-    ctx.lineTo(x, y);
-    ctx.stroke();
-  };
-
-  const stopDrawing = () => {
-    if (!isDrawing) return;
-
-    setIsDrawing(false);
-    setHasSignature(true);
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    // Convert to data URL and notify parent
-    const dataUrl = canvas.toDataURL("image/png");
-    onSignatureChange(dataUrl);
-  };
+    return () => {
+      canvas.removeEventListener("pointerdown", onPointerDown);
+      canvas.removeEventListener("pointermove", onPointerMove);
+      canvas.removeEventListener("pointerup", onPointerUp);
+      canvas.removeEventListener("pointerleave", onPointerLeave);
+    };
+  }, [getPoint, drawSegment, onSignatureChange]);
 
   const clearSignature = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    // Reset transform, clear, re-apply DPR scale
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.scale(dprRef.current, dprRef.current);
+    ctx.strokeStyle = "#000000";
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    strokeCountRef.current = 0;
+    lastPointRef.current = null;
+    isDrawingRef.current = false;
     setHasSignature(false);
     onSignatureChange(null);
   };
@@ -123,13 +238,6 @@ export const SignatureCanvas = ({ onSignatureChange }: SignatureCanvasProps) => 
         <div className="border-2 border-dashed border-muted rounded-lg bg-background relative overflow-hidden touch-none">
           <canvas
             ref={canvasRef}
-            onMouseDown={startDrawing}
-            onMouseMove={draw}
-            onMouseUp={stopDrawing}
-            onMouseLeave={stopDrawing}
-            onTouchStart={startDrawing}
-            onTouchMove={draw}
-            onTouchEnd={stopDrawing}
             className="w-full cursor-crosshair"
             style={{ touchAction: "none" }}
           />
