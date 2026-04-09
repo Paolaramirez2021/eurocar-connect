@@ -2,9 +2,9 @@
 # Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 # .\setup.ps1
 
-Write-Host "Generando archivos..." -ForegroundColor Green
+Write-Host "Generando archivos con DPUruNet..." -ForegroundColor Green
 
-# 1. CSPROJ - con DPFPDevNET + System.Drawing.Common
+# 1. CSPROJ
 @'
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
@@ -13,8 +13,8 @@ Write-Host "Generando archivos..." -ForegroundColor Green
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="DPFPDevNET">
-      <HintPath>C:\Program Files\DigitalPersona\U.are.U SDK\Windows\Lib\.NET\DPFPDevNET.dll</HintPath>
+    <Reference Include="DPUruNet">
+      <HintPath>C:\Program Files\DigitalPersona\U.are.U SDK\Windows\Lib\.NET\DPUruNet.dll</HintPath>
     </Reference>
     <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
   </ItemGroup>
@@ -25,6 +25,7 @@ Write-Host "Generando archivos..." -ForegroundColor Green
 @'
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using fingerprint_service_dotnet;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseUrls("http://0.0.0.0:5000");
@@ -45,7 +46,6 @@ app.Use(async (context, next) =>
 });
 
 app.MapGet("/", () => Results.Ok(new { service = "EUROCAR Huella Digital", version = "3.0" }));
-
 app.MapGet("/estado", () => Results.Ok(new { status = "running", version = "3.0" }));
 
 app.MapPost("/capturar-huella", () =>
@@ -54,7 +54,10 @@ app.MapPost("/capturar-huella", () =>
     {
         var service = new FingerprintCaptureService();
         string base64 = service.CaptureFingerprint();
-        Console.WriteLine("[OK] Huella capturada");
+        if (string.IsNullOrEmpty(base64))
+            return Results.Json(new { status = "error", error = "No se capturo la huella. Intente de nuevo." }, statusCode: 500);
+
+        Console.WriteLine("[OK] Huella enviada al navegador");
         return Results.Ok(new { status = "success", image = base64 });
     }
     catch (Exception ex)
@@ -65,7 +68,7 @@ app.MapPost("/capturar-huella", () =>
 });
 
 Console.WriteLine("=========================================");
-Console.WriteLine("  EUROCAR Huella Digital v3.0");
+Console.WriteLine("  EUROCAR Huella Digital v3.0 (DPUruNet)");
 Console.WriteLine("  http://localhost:5000");
 Console.WriteLine("=========================================");
 app.Run();
@@ -77,94 +80,191 @@ using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
-using DPFP;
-using DPFP.Capture;
+using DPUruNet;
 
-public class FingerprintCaptureService
+namespace fingerprint_service_dotnet
 {
-    public string CaptureFingerprint(int timeoutMs = 15000)
+    public class FingerprintCaptureService
     {
-        using var capturer = new Capture();
-        var handler = new CaptureEventHandler();
-        capturer.EventHandler = handler;
+        private Reader _reader;
+        private string _imageBase64;
+        private bool _isCaptureComplete;
+        private Exception _captureError;
 
-        Console.WriteLine("[HUELLA] Iniciando captura... Coloque el dedo.");
-        capturer.StartCapture();
+        public FingerprintCaptureService()
+        {
+            try
+            {
+                var readers = ReaderCollection.GetReaders();
+                if (readers.Count > 0)
+                {
+                    _reader = readers[0];
+                    Console.WriteLine("[INFO] Lector: " + _reader.Description.Name);
+                }
+                else
+                {
+                    Console.WriteLine("[ERROR] No se encontraron lectores de huella.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[ERROR] SDK: " + ex.Message);
+            }
+        }
 
-        bool captured = handler.WaitForCapture(timeoutMs);
-        capturer.StopCapture();
+        public string CaptureFingerprint()
+        {
+            _imageBase64 = null;
+            _isCaptureComplete = false;
+            _captureError = null;
 
-        if (!captured || handler.CapturedSample == null)
-            throw new Exception("Tiempo agotado. Coloque el dedo en el sensor e intente de nuevo.");
+            if (_reader == null)
+                throw new Exception("No hay lector de huella conectado.");
 
-        Console.WriteLine("[HUELLA] Dedo detectado, procesando imagen...");
+            try
+            {
+                var result = _reader.Open(Constants.CapturePriority.DP_PRIORITY_COOPERATIVE);
+                if (result != Constants.ResultCode.DP_SUCCESS)
+                    throw new Exception("No se pudo abrir el lector: " + result);
 
-        Bitmap? bitmap = null;
-        new SampleConversion().ConvertToPicture(handler.CapturedSample, ref bitmap);
+                _reader.On_Captured += OnCaptured;
 
-        if (bitmap == null)
-            throw new Exception("No se pudo convertir la huella a imagen.");
+                Console.WriteLine("[HUELLA] Lector activado. Coloque el dedo...");
 
-        using var ms = new MemoryStream();
-        bitmap.Save(ms, ImageFormat.Png);
-        bitmap.Dispose();
+                if (!_reader.CaptureAsync(
+                    Constants.Formats.Fid.ANSI,
+                    Constants.CaptureProcessing.DP_IMG_PROC_DEFAULT,
+                    _reader.Capabilities.Resolutions[0]))
+                {
+                    throw new Exception("No se pudo iniciar la captura asincrona.");
+                }
 
-        return Convert.ToBase64String(ms.ToArray());
-    }
-}
+                int timeoutMs = 15000;
+                int elapsedMs = 0;
+                int delayMs = 100;
 
-public class CaptureEventHandler : DPFP.Capture.EventHandler
-{
-    private readonly ManualResetEventSlim _captureEvent = new(false);
-    public Sample? CapturedSample { get; private set; }
+                while (!_isCaptureComplete && elapsedMs < timeoutMs && _captureError == null)
+                {
+                    Thread.Sleep(delayMs);
+                    elapsedMs += delayMs;
+                }
 
-    public bool WaitForCapture(int timeoutMs)
-    {
-        return _captureEvent.Wait(timeoutMs);
-    }
+                if (_captureError != null)
+                    throw _captureError;
 
-    public void OnComplete(object capture, string readerSerialNumber, Sample sample)
-    {
-        Console.WriteLine("[HUELLA] Captura completa!");
-        CapturedSample = sample;
-        _captureEvent.Set();
-    }
+                if (!_isCaptureComplete)
+                    throw new Exception("Tiempo agotado. Coloque el dedo e intente de nuevo.");
+            }
+            finally
+            {
+                if (_reader != null)
+                {
+                    _reader.On_Captured -= OnCaptured;
+                    _reader.CancelCapture();
+                    _reader.Close();
+                }
+            }
 
-    public void OnFingerGone(object capture, string readerSerialNumber)
-    {
-        Console.WriteLine("[HUELLA] Dedo retirado");
-    }
+            return _imageBase64;
+        }
 
-    public void OnFingerTouched(object capture, string readerSerialNumber)
-    {
-        Console.WriteLine("[HUELLA] Dedo detectado...");
-    }
+        private void OnCaptured(CaptureResult captureResult)
+        {
+            try
+            {
+                if (captureResult.ResultCode != Constants.ResultCode.DP_SUCCESS)
+                {
+                    _captureError = new Exception("Error SDK: " + captureResult.ResultCode);
+                    return;
+                }
 
-    public void OnReaderConnect(object capture, string readerSerialNumber)
-    {
-        Console.WriteLine("[HUELLA] Lector conectado");
-    }
+                if (captureResult.Quality != Constants.CaptureQuality.DP_QUALITY_GOOD)
+                {
+                    Console.WriteLine("[HUELLA] Calidad: " + captureResult.Quality + " - Intente de nuevo");
+                    if (!_reader.CaptureAsync(
+                        Constants.Formats.Fid.ANSI,
+                        Constants.CaptureProcessing.DP_IMG_PROC_DEFAULT,
+                        _reader.Capabilities.Resolutions[0]))
+                    {
+                        _captureError = new Exception("Error reiniciando captura");
+                    }
+                    return;
+                }
 
-    public void OnReaderDisconnect(object capture, string readerSerialNumber)
-    {
-        Console.WriteLine("[HUELLA] Lector desconectado");
-    }
+                Console.WriteLine("[HUELLA] Captura OK!");
 
-    public void OnSampleQuality(object capture, string readerSerialNumber, CaptureFeedback feedback)
-    {
-        if (feedback != CaptureFeedback.Good)
-            Console.WriteLine("[HUELLA] Calidad: " + feedback.ToString());
+                Fid imageFid = captureResult.Data;
+                if (imageFid != null)
+                {
+                    using (Bitmap bitmap = FidToBitmap(imageFid))
+                    {
+                        if (bitmap != null)
+                        {
+                            _imageBase64 = ConvertBitmapToBase64(bitmap);
+                        }
+                    }
+                }
+                _isCaptureComplete = true;
+            }
+            catch (Exception ex)
+            {
+                _captureError = ex;
+            }
+        }
+
+        private Bitmap FidToBitmap(Fid imageFid)
+        {
+            Fid.Fiv view = imageFid.Views[0];
+            byte[] rawImage = view.RawImage;
+            int width = view.Width;
+            int height = view.Height;
+
+            Bitmap bitmap = new Bitmap(width, height, PixelFormat.Format8bppIndexed);
+
+            ColorPalette pal = bitmap.Palette;
+            for (int i = 0; i <= 255; i++)
+            {
+                pal.Entries[i] = Color.FromArgb(i, i, i);
+            }
+            bitmap.Palette = pal;
+
+            BitmapData bitmapData = bitmap.LockBits(
+                new Rectangle(0, 0, width, height),
+                ImageLockMode.WriteOnly,
+                PixelFormat.Format8bppIndexed);
+            try
+            {
+                Marshal.Copy(rawImage, 0, bitmapData.Scan0, rawImage.Length);
+            }
+            finally
+            {
+                bitmap.UnlockBits(bitmapData);
+            }
+
+            return bitmap;
+        }
+
+        private string ConvertBitmapToBase64(Bitmap bitmap)
+        {
+            using (MemoryStream ms = new MemoryStream())
+            {
+                bitmap.Save(ms, ImageFormat.Png);
+                return Convert.ToBase64String(ms.ToArray());
+            }
+        }
     }
 }
 '@ | Set-Content -Path "FingerprintCaptureService.cs" -Encoding UTF8
 
-# Limpiar
+# Limpiar compilaciones viejas
 if (Test-Path "bin") { Remove-Item -Recurse -Force "bin" }
 if (Test-Path "obj") { Remove-Item -Recurse -Force "obj" }
 
 Write-Host ""
-Write-Host "Listo! Ahora ejecute:" -ForegroundColor Green
+Write-Host "Archivos generados!" -ForegroundColor Green
+Write-Host "Ejecute:" -ForegroundColor Yellow
 Write-Host "  dotnet restore" -ForegroundColor Cyan
 Write-Host "  dotnet build" -ForegroundColor Cyan
 Write-Host "  dotnet run" -ForegroundColor Cyan
