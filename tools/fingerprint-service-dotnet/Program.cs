@@ -1,17 +1,13 @@
-namespace EurocarFingerprint;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using fingerprint_service_dotnet;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Configurar puerto 5000
 builder.WebHost.UseUrls("http://0.0.0.0:5000");
-
-// Registrar servicio de captura como singleton
-builder.Services.AddSingleton<FingerprintCaptureService>();
 
 var app = builder.Build();
 
-// CORS manual - MAS confiable que el middleware estandar para servicios locales
-// Agrega headers a TODAS las respuestas incluyendo preflight OPTIONS
+// CORS manual - mas confiable que el middleware estandar
 app.Use(async (context, next) =>
 {
     context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
@@ -19,7 +15,6 @@ app.Use(async (context, next) =>
     context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type, Accept, Origin");
     context.Response.Headers.Append("Access-Control-Max-Age", "86400");
 
-    // Responder preflight OPTIONS inmediatamente
     if (context.Request.Method == "OPTIONS")
     {
         context.Response.StatusCode = 204;
@@ -29,66 +24,59 @@ app.Use(async (context, next) =>
     await next();
 });
 
-// Inicializar SDK al arrancar
-var captureService = app.Services.GetRequiredService<FingerprintCaptureService>();
+// Inicializar servicio de captura una sola vez
+var captureService = new FingerprintCaptureService();
 bool sdkReady = captureService.Initialize();
 
-// ── Endpoints ───────────────────────────────────────────────────────
+// ── ENDPOINTS ──────────────────────────────────────────────
 
-app.MapGet("/", () => Results.Json(new
+app.MapGet("/", () => Results.Ok(new
 {
-    service = "EUROCAR - Servicio de Huella Digital (.NET)",
+    service = "EUROCAR - Huella Digital DigitalPersona",
     sdk_loaded = sdkReady,
-    endpoints = new
-    {
-        capturar_huella = "POST /capturar-huella",
-        estado = "GET /estado"
-    }
+    version = "2.2.0"
 }));
 
-app.MapGet("/estado", () => Results.Json(new
+app.MapGet("/estado", () => Results.Ok(new
 {
     status = "running",
     sdk_loaded = sdkReady,
-    version = "2.1.0"
+    version = "2.2.0"
 }));
 
-app.MapPost("/capturar-huella", (FingerprintCaptureService svc, ILogger<Program> logger) =>
+app.MapPost("/capturar-huella", () =>
 {
     try
     {
         if (!sdkReady)
+        {
             return Results.Json(
-                new { status = "error", error = "SDK de DigitalPersona no disponible. Verifique la instalacion." },
+                new { status = "error", error = "SDK de DigitalPersona no disponible. Verifique que dpfpdd.dll este accesible." },
                 statusCode: 503);
+        }
 
-        byte[] pngBytes = svc.CaptureFingerprint(timeoutMs: 15000);
-        string base64 = Convert.ToBase64String(pngBytes);
+        // Captura REAL del dispositivo (espera 15 seg a que pongan el dedo)
+        string base64Png = captureService.CaptureFingerprint();
 
-        logger.LogInformation("Huella capturada exitosamente: {Size} bytes PNG", pngBytes.Length);
-
-        return Results.Json(new
+        return Results.Ok(new
         {
             status = "success",
-            image = base64
+            image = base64Png
         });
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "Error capturando huella");
         return Results.Json(
             new { status = "error", error = ex.Message },
             statusCode: 500);
     }
 });
 
-// ── Arrancar ────────────────────────────────────────────────────────
-
 Console.WriteLine("============================================================");
-Console.WriteLine("  EUROCAR - Servicio de Huella Digital DigitalPersona (.NET)");
+Console.WriteLine("  EUROCAR - Huella Digital DigitalPersona 4500");
 Console.WriteLine("============================================================");
 Console.WriteLine($"  SDK cargado: {(sdkReady ? "SI" : "NO")}");
-Console.WriteLine("  CORS: Habilitado para todos los origenes");
+Console.WriteLine("  CORS: Habilitado (todos los origenes)");
 Console.WriteLine("  Servicio en: http://localhost:5000");
 Console.WriteLine("  Ctrl+C para detener");
 Console.WriteLine("============================================================");

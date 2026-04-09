@@ -1,10 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <RootNamespace>EurocarFingerprint</RootNamespace>
-    <AssemblyName>EurocarFingerprint</AssemblyName>
+    <RootNamespace>fingerprint_service_dotnet</RootNamespace>
+    <AssemblyName>fingerprint-service-dotnet</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.4" />
-  </ItemGroup>
 </Project>

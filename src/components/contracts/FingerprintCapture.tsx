@@ -114,7 +114,7 @@ export const FingerprintCapture = ({ onFingerprintChange }: FingerprintCapturePr
 
           const dataUrl = data.image.startsWith("data:")
             ? data.image
-            : `data:image/png;base64,${data.image}`;
+            : `data:image/bmp;base64,${data.image}`;
 
           setPreview(dataUrl);
           onFingerprintChange(dataUrl);
