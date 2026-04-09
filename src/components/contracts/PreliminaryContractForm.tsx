@@ -105,6 +105,18 @@ interface ContractFormData {
   sendVia: string;
   includeWhatsApp: boolean;
   includeEmail: boolean;
+
+  // Conductores adicionales
+  conductor2Nombre: string;
+  conductor2TipoDoc: string;
+  conductor2Documento: string;
+  conductor2Licencia: string;
+  conductor2LicenciaVencimiento: string;
+  conductor3Nombre: string;
+  conductor3TipoDoc: string;
+  conductor3Documento: string;
+  conductor3Licencia: string;
+  conductor3LicenciaVencimiento: string;
 }
 
 export const PreliminaryContractForm = () => {
@@ -157,6 +169,16 @@ export const PreliminaryContractForm = () => {
       sendVia: "manual",
       includeWhatsApp: false,
       includeEmail: false,
+      conductor2Nombre: "",
+      conductor2TipoDoc: "C.C.",
+      conductor2Documento: "",
+      conductor2Licencia: "",
+      conductor2LicenciaVencimiento: "",
+      conductor3Nombre: "",
+      conductor3TipoDoc: "C.C.",
+      conductor3Documento: "",
+      conductor3Licencia: "",
+      conductor3LicenciaVencimiento: "",
     }
   });
 
@@ -417,7 +439,17 @@ export const PreliminaryContractForm = () => {
       numero_contrato: contractNumber,
       fecha_contrato: format(new Date(), "dd/MM/yyyy HH:mm", { locale: es }),
       deducible: data.deducible || "No especificado",
-      es_preliminar: true
+      es_preliminar: true,
+      conductor2_nombre: data.conductor2Nombre || '',
+      conductor2_tipo_doc: data.conductor2TipoDoc || '',
+      conductor2_documento: data.conductor2Documento || '',
+      conductor2_licencia: data.conductor2Licencia || '',
+      conductor2_licencia_vencimiento: data.conductor2LicenciaVencimiento || '',
+      conductor3_nombre: data.conductor3Nombre || '',
+      conductor3_tipo_doc: data.conductor3TipoDoc || '',
+      conductor3_documento: data.conductor3Documento || '',
+      conductor3_licencia: data.conductor3Licencia || '',
+      conductor3_licencia_vencimiento: data.conductor3LicenciaVencimiento || '',
     };
 
     const html = generateContractHTML(templateData);
@@ -519,6 +551,16 @@ export const PreliminaryContractForm = () => {
         servicio_viajar: data.servicioViajar || null,
         termino_contrato: data.terminoContrato || null,
         km_adicional: data.kmAdicional || null,
+        conductor2_nombre: data.conductor2Nombre || null,
+        conductor2_tipo_doc: data.conductor2TipoDoc || null,
+        conductor2_documento: data.conductor2Documento || null,
+        conductor2_licencia: data.conductor2Licencia || null,
+        conductor2_licencia_vencimiento: data.conductor2LicenciaVencimiento || null,
+        conductor3_nombre: data.conductor3Nombre || null,
+        conductor3_tipo_doc: data.conductor3TipoDoc || null,
+        conductor3_documento: data.conductor3Documento || null,
+        conductor3_licencia: data.conductor3Licencia || null,
+        conductor3_licencia_vencimiento: data.conductor3LicenciaVencimiento || null,
         terms_text: "Acepto los términos y condiciones del contrato de arrendamiento de vehículo automotor de EUROCAR RENTAL SAS según las cláusulas establecidas en www.eurocarental.com",
         terms_accepted: false,
         signed_by: user?.id,
@@ -743,6 +785,110 @@ export const PreliminaryContractForm = () => {
               <p>BOGOTÁ - COLOMBIA</p>
               <p>Tel: 320 834 1163 - 313 209 4156</p>
               <p>jennygomez@eurocarental.com</p>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* CONDUCTORES AUTORIZADOS */}
+      <Card className="p-6">
+        <h3 className="text-lg font-semibold mb-4 text-blue-600">CONDUCTORES AUTORIZADOS</h3>
+        
+        {/* Conductor 1 - Auto del cliente */}
+        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+          <p className="text-sm font-medium text-gray-500 mb-2">Conductor 1 (Arrendatario - automático)</p>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div>
+              <Label className="text-xs">Nombre</Label>
+              <Input value={watch("customerName")} disabled className="bg-gray-100 text-sm" />
+            </div>
+            <div>
+              <Label className="text-xs">No. Documento</Label>
+              <Input value={`${watch("customerDocumentType")?.toUpperCase() || ''} ${watch("customerDocument")}`} disabled className="bg-gray-100 text-sm" />
+            </div>
+            <div>
+              <Label className="text-xs">N. Licencia</Label>
+              <Input value={watch("customerLicense")} disabled className="bg-gray-100 text-sm" />
+            </div>
+            <div>
+              <Label className="text-xs">Vencimiento</Label>
+              <Input value={watch("customerLicenseExpiry")} disabled className="bg-gray-100 text-sm" />
+            </div>
+          </div>
+        </div>
+
+        {/* Conductor 2 */}
+        <div className="mb-4 p-3 border rounded-lg">
+          <p className="text-sm font-medium text-gray-500 mb-2">Conductor 2 (Opcional)</p>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+            <div>
+              <Label className="text-xs">Nombre</Label>
+              <Input {...register("conductor2Nombre")} placeholder="Nombre completo" className="text-sm" />
+            </div>
+            <div>
+              <Label className="text-xs">Tipo Doc</Label>
+              <Select onValueChange={(val) => setValue("conductor2TipoDoc", val)} defaultValue="C.C.">
+                <SelectTrigger className="text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="C.C.">C.C.</SelectItem>
+                  <SelectItem value="C.E.">C.E.</SelectItem>
+                  <SelectItem value="PAS">Pasaporte</SelectItem>
+                  <SelectItem value="PEP">PEP</SelectItem>
+                  <SelectItem value="PPT">PPT</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">No. Documento</Label>
+              <Input {...register("conductor2Documento")} placeholder="Número" className="text-sm" />
+            </div>
+            <div>
+              <Label className="text-xs">N. Licencia</Label>
+              <Input {...register("conductor2Licencia")} placeholder="Licencia" className="text-sm" />
+            </div>
+            <div>
+              <Label className="text-xs">Vencimiento</Label>
+              <Input type="date" {...register("conductor2LicenciaVencimiento")} className="text-sm" />
+            </div>
+          </div>
+        </div>
+
+        {/* Conductor 3 */}
+        <div className="p-3 border rounded-lg">
+          <p className="text-sm font-medium text-gray-500 mb-2">Conductor 3 (Opcional)</p>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+            <div>
+              <Label className="text-xs">Nombre</Label>
+              <Input {...register("conductor3Nombre")} placeholder="Nombre completo" className="text-sm" />
+            </div>
+            <div>
+              <Label className="text-xs">Tipo Doc</Label>
+              <Select onValueChange={(val) => setValue("conductor3TipoDoc", val)} defaultValue="C.C.">
+                <SelectTrigger className="text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="C.C.">C.C.</SelectItem>
+                  <SelectItem value="C.E.">C.E.</SelectItem>
+                  <SelectItem value="PAS">Pasaporte</SelectItem>
+                  <SelectItem value="PEP">PEP</SelectItem>
+                  <SelectItem value="PPT">PPT</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">No. Documento</Label>
+              <Input {...register("conductor3Documento")} placeholder="Número" className="text-sm" />
+            </div>
+            <div>
+              <Label className="text-xs">N. Licencia</Label>
+              <Input {...register("conductor3Licencia")} placeholder="Licencia" className="text-sm" />
+            </div>
+            <div>
+              <Label className="text-xs">Vencimiento</Label>
+              <Input type="date" {...register("conductor3LicenciaVencimiento")} className="text-sm" />
             </div>
           </div>
         </div>

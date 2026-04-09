@@ -52,6 +52,17 @@ export interface ContractData {
   documento_frente_base64?: string;
   documento_reverso_base64?: string;
   es_preliminar?: boolean;
+  // Conductores adicionales
+  conductor2_nombre?: string;
+  conductor2_tipo_doc?: string;
+  conductor2_documento?: string;
+  conductor2_licencia?: string;
+  conductor2_licencia_vencimiento?: string;
+  conductor3_nombre?: string;
+  conductor3_tipo_doc?: string;
+  conductor3_documento?: string;
+  conductor3_licencia?: string;
+  conductor3_licencia_vencimiento?: string;
 }
 
 // Firma del representante legal (Jenny Gomez - EUROCAR RENTAL SAS) en base64
@@ -93,7 +104,15 @@ export const generateContractHTML = (data: ContractData): string => {
   const docFrenteImg = data.documento_frente_base64 || data.documento_frente_url;
   const docReversoImg = data.documento_reverso_base64 || data.documento_reverso_url;
 
-  // Build signature images as string concatenation to avoid nested template literals
+  // Build conductores table
+  const tipoDocAbrev = tipoDoc || 'C.C.';
+  const conductor1Doc = tipoDocAbrev + ' ' + data.cliente_documento;
+  const conductor2Doc = (data.conductor2_tipo_doc && data.conductor2_documento) ? data.conductor2_tipo_doc + ' ' + data.conductor2_documento : '';
+  const conductor3Doc = (data.conductor3_tipo_doc && data.conductor3_documento) ? data.conductor3_tipo_doc + ' ' + data.conductor3_documento : '';
+  const conductoresTableRows =
+    '<tr><td>1</td><td>' + data.cliente_nombre + '</td><td>' + conductor1Doc + '</td><td>' + (data.cliente_licencia || '') + '</td><td>' + (data.cliente_licencia_vencimiento || '') + '</td></tr>' +
+    '<tr><td>2</td><td>' + (data.conductor2_nombre || '') + '</td><td>' + conductor2Doc + '</td><td>' + (data.conductor2_licencia || '') + '</td><td>' + (data.conductor2_licencia_vencimiento || '') + '</td></tr>' +
+    '<tr><td>3</td><td>' + (data.conductor3_nombre || '') + '</td><td>' + conductor3Doc + '</td><td>' + (data.conductor3_licencia || '') + '</td><td>' + (data.conductor3_licencia_vencimiento || '') + '</td></tr>';
   const firmaImgHtml = firmaImg ? '<img src="' + firmaImg + '" class="signature-img" alt="Firma">' : '';
   const huellaImgHtml = (esFinal && huellaImg) ? '<img src="' + huellaImg + '" style="max-height:40px; max-width:60px; margin-left:10px;" alt="Huella">' : '';
 
@@ -225,10 +244,8 @@ ${finalBadgeHtml}
 <div class="section">
   <div class="section-title">2. CONDUCTORES AUTORIZADOS</div>
   <table>
-    <tr><th>#</th><th>TIPO DOC</th><th>No. DOCUMENTO</th><th>N. LICENCIA</th><th>VENCIMIENTO</th></tr>
-    <tr><td>1</td><td>${tipoDoc}</td><td>${data.cliente_documento}</td><td>${data.cliente_licencia || 'N/A'}</td><td>${data.cliente_licencia_vencimiento || 'N/A'}</td></tr>
-    <tr><td>2</td><td></td><td></td><td></td><td></td></tr>
-    <tr><td>3</td><td></td><td></td><td></td><td></td></tr>
+    <tr><th>#</th><th>NOMBRE</th><th>No. DOCUMENTO</th><th>N. LICENCIA</th><th>VENCIMIENTO</th></tr>
+    ${conductoresTableRows}
   </table>
 </div>
 
