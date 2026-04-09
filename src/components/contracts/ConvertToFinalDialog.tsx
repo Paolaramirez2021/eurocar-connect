@@ -32,6 +32,20 @@ interface PreliminaryContract {
   terms_text: string;
   reservation_id: string | null;
   pdf_url: string;
+  servicio_viajar?: string;
+  termino_contrato?: string;
+  km_adicional?: string;
+  vehiculo_km_salida?: string;
+  conductor2_nombre?: string;
+  conductor2_tipo_doc?: string;
+  conductor2_documento?: string;
+  conductor2_licencia?: string;
+  conductor2_licencia_vencimiento?: string;
+  conductor3_nombre?: string;
+  conductor3_tipo_doc?: string;
+  conductor3_documento?: string;
+  conductor3_licencia?: string;
+  conductor3_licencia_vencimiento?: string;
 }
 
 interface ConvertToFinalDialogProps {
@@ -257,6 +271,21 @@ export const ConvertToFinalDialog = ({
         numero_contrato: contractNumber,
         fecha_contrato: format(new Date(), "dd/MM/yyyy HH:mm", { locale: es }),
         deducible: 'Según póliza',
+        // Nuevas casillas del contrato
+        servicio_viajar: preliminaryContract.servicio_viajar || '',
+        termino_contrato: preliminaryContract.termino_contrato || '',
+        km_adicional: preliminaryContract.km_adicional || '',
+        vehiculo_km_salida: preliminaryContract.vehiculo_km_salida || 'N/A',
+        conductor2_nombre: preliminaryContract.conductor2_nombre || '',
+        conductor2_tipo_doc: preliminaryContract.conductor2_tipo_doc || '',
+        conductor2_documento: preliminaryContract.conductor2_documento || '',
+        conductor2_licencia: preliminaryContract.conductor2_licencia || '',
+        conductor2_licencia_vencimiento: preliminaryContract.conductor2_licencia_vencimiento || '',
+        conductor3_nombre: preliminaryContract.conductor3_nombre || '',
+        conductor3_tipo_doc: preliminaryContract.conductor3_tipo_doc || '',
+        conductor3_documento: preliminaryContract.conductor3_documento || '',
+        conductor3_licencia: preliminaryContract.conductor3_licencia || '',
+        conductor3_licencia_vencimiento: preliminaryContract.conductor3_licencia_vencimiento || '',
         // Campos del contrato firmado - usar base64 para el PDF
         es_preliminar: false,
         firma_base64: signatureDataUrl || undefined,
