@@ -71,16 +71,13 @@ Sistema completo de gestión de alquiler de vehículos para EUROCAR RENTAL, con 
 
 ## Tareas Pendientes
 
-### 🔴 P0 - Inmediato
-1. **Verificación del usuario**: Probar el flujo completo de contrato (preliminar → firmar → descargar)
-
 ### 🟡 P1 - Próximo
-1. Push de cambios a GitHub (rama emergent-dev) - Usar "Save to GitHub"
+1. Refactorizar componentes grandes: `PreliminaryContractForm.tsx` (~980 líneas) y `ConvertToFinalDialog.tsx` (~600 líneas)
+2. Configurar `VITE_API_URL` en Netlify Dashboard → Site configuration → Environment variables (pendiente del usuario)
 
 ### 🟢 P2 - Futuro
-1. Mejorar políticas RLS de Supabase (actualmente muy permisivas)
-2. Refactorizar `PreliminaryContractForm.tsx` (900+ líneas) en sub-componentes
-3. Integración con huellero digital USB/Bluetooth
+1. Mejorar políticas RLS de Supabase (actualmente muy permisivas con `USING (true)`)
+2. Integración con huellero digital USB/Bluetooth
 
 ## Notas Técnicas
 - El backend FastAPI corre en puerto 8001, accesible vía /api desde el frontend
@@ -94,10 +91,12 @@ Sistema completo de gestión de alquiler de vehículos para EUROCAR RENTAL, con 
 ## Última Actualización
 Fecha: Diciembre, 2025
 
-### Sesión actual
-- Firma del representante legal de EUROCAR se incluye automáticamente en el PDF final (base64 en `contractTemplate.ts`)
-- Componente SignatureCanvas mejorado: Pointer Events (stylus/tableta), devicePixelRatio scaling, trazos suaves con quadraticCurveTo, presión del stylus, coordenadas clampeadas al canvas
-- Integración huellero DigitalPersona 4500: botón "Usar Huellero Digital" llama servicio local en localhost:5000, servicio Python Flask en `/app/tools/fingerprint_service.py`
+### Sesión actual (Abril 2026)
+- Fondo blanco sólido (#FFFFFF) en firma del representante legal en PDF final (`contractTemplate.ts` línea 286)
+- Fondo blanco sólido (#FFFFFF) en firma del cliente vía clase `.signature-img` (`contractTemplate.ts` línea 131)
+- Refactorización de fetch calls a `apiUrl.ts` con `VITE_API_URL` para soporte Netlify
+- Fix race condition cámara en `ContractPhotoCapture.tsx` y `ContratoFinal.tsx`
+- Toggle de visibilidad CVV en `CustomerForm.tsx` y `ReservationForm.tsx`
 
 ### Historial previo
 - 16 Marzo 2025: Mejoras en sistema de contratos

@@ -128,7 +128,7 @@ export const generateContractHTML = (data: ContractData): string => {
     .verification-item img { max-width: 140px; max-height: 100px; border: 1px solid #ccc; border-radius: 4px; }
     .verification-item p { font-size: 8px; color: #666; margin-top: 4px; }
     .final-badge { background: #28a745; color: white; padding: 8px; text-align: center; font-weight: bold; margin-bottom: 15px; }
-    .signature-img { max-height: 50px; max-width: 150px; }
+    .signature-img { max-height: 50px; max-width: 150px; background-color: #FFFFFF; }
   </style>
 </head>
 <body>
@@ -283,7 +283,7 @@ ${esFinal ? '<div class="final-badge">✓ CONTRATO FIRMADO DIGITALMENTE</div>' :
   </div>
   <div class="sig-box">
     <div class="sig-line">
-      ${esFinal ? `<img src="data:image/png;base64,${FIRMA_REPRESENTANTE_BASE64}" style="height:70px; width:auto; object-fit:contain; display:block; margin:0 auto;" alt="Firma Representante Legal">` : ''}
+      ${esFinal ? `<img src="data:image/png;base64,${FIRMA_REPRESENTANTE_BASE64}" style="height:70px; width:auto; object-fit:contain; display:block; margin:0 auto; background-color:#FFFFFF;" alt="Firma Representante Legal">` : ''}
     </div>
     <strong>EL ARRENDADOR</strong><br>
     <span style="font-size:9px">EUROCAR RENTAL SAS<br>
