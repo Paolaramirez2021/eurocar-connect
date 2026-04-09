@@ -198,9 +198,6 @@ ${esFinal ? '<div class="final-badge">✓ CONTRATO FIRMADO DIGITALMENTE</div>' :
     <div class="row"><span class="label">PLACA:</span> <span class="value">${data.vehiculo_placa}</span></div>
     <div class="row"><span class="label">COLOR:</span> <span class="value">${data.vehiculo_color || 'N/A'}</span></div>
     <div class="row"><span class="label">KM SALIDA:</span> <span class="value">${data.vehiculo_km_salida || 'N/A'}</span></div>
-    <div class="row"><span class="label">SERVICIO A VIAJAR:</span> <span class="value">${data.servicio_viajar || 'N/A'}</span></div>
-    <div class="row"><span class="label">TÉRMINO CONTRATO:</span> <span class="value">${data.termino_contrato || 'N/A'}</span></div>
-    <div class="row"><span class="label">KM ADICIONAL:</span> <span class="value">${data.km_adicional ? '$' + data.km_adicional : 'N/A'}</span></div>
   </div>
 </td>
 <td>
@@ -216,7 +213,7 @@ ${esFinal ? '<div class="final-badge">✓ CONTRATO FIRMADO DIGITALMENTE</div>' :
 </table>
 
 <div class="info-text">
-  Servicio a Viajar: Bogotá | Término contrato: 2 días - 400 kms / km adicional $3.000
+  Servicio a Viajar: ${data.servicio_viajar || 'N/A'} | Término contrato: ${data.termino_contrato || 'N/A'} / km adicional ${data.km_adicional ? '$' + data.km_adicional : 'N/A'}
 </div>
 
 <table class="two-col">
@@ -325,6 +322,23 @@ ${esFinal ? `
       <img src="${huellaImg}" alt="Huella Digital">
       <p>Huella Digital</p>
     </div>
+    ` : ''}
+  </div>
+</div>
+` : ''}
+
+<div class="footer">
+  ${data.es_preliminar ? 'Este es un documento preliminar enviado para revisión. Para formalizar el contrato debe completar el proceso de firma digital.' : 'Documento firmado digitalmente. Este contrato tiene plena validez legal.'}
+  <br>
+  <strong>EUROCAR RENTAL SAS</strong> | AV CALLE 26 69C-03 LOCAL 105 | BOGOTÁ - COLOMBIA | www.eurocarental.com | Tel: 320 834 1163
+</div>
+
+</body>
+</html>`;
+};
+
+export default generateContractHTML;
+ </div>
     ` : ''}
   </div>
 </div>
