@@ -81,6 +81,9 @@ interface ContractFormData {
   vehiclePlate: string;
   vehicleColor: string;
   vehicleKmOut: string;
+  servicioViajar: string;
+  terminoContrato: string;
+  kmAdicional: string;
   
   // Duración
   startDate: string;
@@ -136,6 +139,9 @@ export const PreliminaryContractForm = () => {
       vehiclePlate: "",
       vehicleColor: "",
       vehicleKmOut: "",
+      servicioViajar: "",
+      terminoContrato: "",
+      kmAdicional: "",
       startDate: "",
       startTime: "08:00",
       endDate: "",
@@ -389,6 +395,9 @@ export const PreliminaryContractForm = () => {
       vehiculo_placa: data.vehiclePlate,
       vehiculo_color: data.vehicleColor,
       vehiculo_km_salida: data.vehicleKmOut,
+      servicio_viajar: data.servicioViajar,
+      termino_contrato: data.terminoContrato,
+      km_adicional: data.kmAdicional,
       fecha_inicio: format(startDate, "dd/MM/yyyy", { locale: es }),
       hora_inicio: data.startTime,
       fecha_fin: format(endDate, "dd/MM/yyyy", { locale: es }),
@@ -507,6 +516,9 @@ export const PreliminaryContractForm = () => {
         start_date: `${data.startDate}T${data.startTime}`,
         end_date: `${data.endDate}T${data.endTime}`,
         total_amount: data.totalAmount,
+        servicio_viajar: data.servicioViajar || null,
+        termino_contrato: data.terminoContrato || null,
+        km_adicional: data.kmAdicional || null,
         terms_text: "Acepto los términos y condiciones del contrato de arrendamiento de vehículo automotor de EUROCAR RENTAL SAS según las cláusulas establecidas en www.eurocarental.com",
         terms_accepted: false,
         signed_by: user?.id,
@@ -756,6 +768,55 @@ export const PreliminaryContractForm = () => {
           <div>
             <Label>KM Salida</Label>
             <Input {...register("vehicleKmOut")} placeholder="Kilometraje actual" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          <div>
+            <Label>Servicio a Viajar</Label>
+            <div className="flex gap-2">
+              <Select onValueChange={(val) => {
+                const current = watch("servicioViajar");
+                const parts = current ? current.split("/") : ["", ""];
+                setValue("servicioViajar", `${val}/${parts[1] || ""}`);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Ciudad origen" />
+                </SelectTrigger>
+                <SelectContent>
+                  {["Bogotá", "Medellín", "Cali", "Barranquilla", "Cartagena", "Bucaramanga", "Pereira", "Manizales", "Ibagué", "Villavicencio", "Santa Marta", "Neiva", "Armenia", "Pasto", "Cúcuta", "Tunja", "Popayán", "Montería", "Valledupar", "Sincelejo", "Florencia", "Yopal", "Leticia", "Riohacha", "Quibdó", "Mocoa", "Arauca", "San Andrés", "Mitú", "Puerto Carreño", "Inírida", "Sogamoso", "Duitama", "Zipaquirá", "Girardot", "Fusagasugá", "Facatativá", "Chía", "Soacha", "Melgar"].map(city => (
+                    <SelectItem key={city} value={city}>{city}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select onValueChange={(val) => {
+                const current = watch("servicioViajar");
+                const parts = current ? current.split("/") : ["", ""];
+                setValue("servicioViajar", `${parts[0] || ""}/${val}`);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Ciudad destino" />
+                </SelectTrigger>
+                <SelectContent>
+                  {["Bogotá", "Medellín", "Cali", "Barranquilla", "Cartagena", "Bucaramanga", "Pereira", "Manizales", "Ibagué", "Villavicencio", "Santa Marta", "Neiva", "Armenia", "Pasto", "Cúcuta", "Tunja", "Popayán", "Montería", "Valledupar", "Sincelejo", "Florencia", "Yopal", "Leticia", "Riohacha", "Quibdó", "Mocoa", "Arauca", "San Andrés", "Mitú", "Puerto Carreño", "Inírida", "Sogamoso", "Duitama", "Zipaquirá", "Girardot", "Fusagasugá", "Facatativá", "Chía", "Soacha", "Melgar"].map(city => (
+                    <SelectItem key={city} value={city}>{city}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {watch("servicioViajar") && watch("servicioViajar") !== "/" && (
+              <p className="text-xs text-muted-foreground mt-1">{watch("servicioViajar")}</p>
+            )}
+          </div>
+          <div>
+            <Label>Término Contrato</Label>
+            <Input {...register("terminoContrato")} placeholder="Ej: 2 días/400km" />
+            <p className="text-xs text-muted-foreground mt-1">Días / Kilómetros permitidos</p>
+          </div>
+          <div>
+            <Label>Kilómetro Adicional ($)</Label>
+            <Input {...register("kmAdicional")} placeholder="Ej: 500" />
+            <p className="text-xs text-muted-foreground mt-1">Valor por KM adicional</p>
           </div>
         </div>
         

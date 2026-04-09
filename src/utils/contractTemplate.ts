@@ -17,6 +17,9 @@ export interface ContractData {
   vehiculo_placa: string;
   vehiculo_color: string;
   vehiculo_km_salida: string;
+  servicio_viajar: string;
+  termino_contrato: string;
+  km_adicional: string;
   fecha_inicio: string;
   hora_inicio: string;
   fecha_fin: string;
@@ -195,6 +198,9 @@ ${esFinal ? '<div class="final-badge">✓ CONTRATO FIRMADO DIGITALMENTE</div>' :
     <div class="row"><span class="label">PLACA:</span> <span class="value">${data.vehiculo_placa}</span></div>
     <div class="row"><span class="label">COLOR:</span> <span class="value">${data.vehiculo_color || 'N/A'}</span></div>
     <div class="row"><span class="label">KM SALIDA:</span> <span class="value">${data.vehiculo_km_salida || 'N/A'}</span></div>
+    <div class="row"><span class="label">SERVICIO A VIAJAR:</span> <span class="value">${data.servicio_viajar || 'N/A'}</span></div>
+    <div class="row"><span class="label">TÉRMINO CONTRATO:</span> <span class="value">${data.termino_contrato || 'N/A'}</span></div>
+    <div class="row"><span class="label">KM ADICIONAL:</span> <span class="value">${data.km_adicional ? '$' + data.km_adicional : 'N/A'}</span></div>
   </div>
 </td>
 <td>
