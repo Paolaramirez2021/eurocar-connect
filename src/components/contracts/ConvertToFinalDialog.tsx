@@ -160,6 +160,26 @@ export const ConvertToFinalDialog = ({
     setIsSubmitting(true);
 
     try {
+      // Helper: convert URL to base64 data URL (needed for Puppeteer rendering)
+      const urlToBase64 = async (url: string): Promise<string> => {
+        if (url.startsWith('data:')) return url;
+        try {
+          const response = await fetch(url);
+          const blob = await response.blob();
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+        } catch {
+          return url;
+        }
+      };
+
+      // Convert document photos to base64 if they are URLs
+      const docFrenteBase64 = documentPhotos.front ? await urlToBase64(documentPhotos.front) : null;
+      const docReversoBase64 = documentPhotos.back ? await urlToBase64(documentPhotos.back) : null;
+
       // Usar el mismo ID del contrato preliminar
       const contractId = preliminaryContract.id;
       // Mantener el mismo número de contrato
@@ -332,8 +352,8 @@ export const ConvertToFinalDialog = ({
         firma_base64: signatureDataUrl || undefined,
         huella_base64: fingerprintDataUrl || undefined,
         foto_cliente_base64: contractPhotoDataUrl || undefined,
-        documento_frente_base64: documentPhotos.front || undefined,
-        documento_reverso_base64: documentPhotos.back || undefined,
+        documento_frente_base64: docFrenteBase64 || undefined,
+        documento_reverso_base64: docReversoBase64 || undefined,
         // También guardar URLs para referencia
         firma_url: signatureUrl.publicUrl,
         huella_url: fingerprintUrl,
