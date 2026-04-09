@@ -93,6 +93,49 @@ export const generateContractHTML = (data: ContractData): string => {
   const docFrenteImg = data.documento_frente_base64 || data.documento_frente_url;
   const docReversoImg = data.documento_reverso_base64 || data.documento_reverso_url;
 
+  // Build signature images as string concatenation to avoid nested template literals
+  const firmaImgHtml = firmaImg ? '<img src="' + firmaImg + '" class="signature-img" alt="Firma">' : '';
+  const huellaImgHtml = (esFinal && huellaImg) ? '<img src="' + huellaImg + '" style="max-height:40px; max-width:60px; margin-left:10px;" alt="Huella">' : '';
+
+  let clientePhotosHtml = '';
+  if (esFinal) {
+    const fotoHtml = fotoClienteImg ? '<img src="' + fotoClienteImg + '" style="width:50px; height:50px; object-fit:cover; border:1px solid #ccc; border-radius:4px;" alt="Foto">' : '';
+    const docFrenteHtml = docFrenteImg ? '<img src="' + docFrenteImg + '" style="width:60px; height:40px; object-fit:cover; border:1px solid #ccc; border-radius:4px;" alt="Doc">' : '';
+    const docReversoHtml = docReversoImg ? '<img src="' + docReversoImg + '" style="width:60px; height:40px; object-fit:cover; border:1px solid #ccc; border-radius:4px;" alt="Doc Rev">' : '';
+    clientePhotosHtml = '<div style="margin-top:8px; display:flex; gap:8px; justify-content:center;">' + fotoHtml + docFrenteHtml + docReversoHtml + '</div>';
+  }
+
+  const firmaRepresentanteHtml = esFinal
+    ? '<img src="data:image/png;base64,' + FIRMA_REPRESENTANTE_BASE64 + '" style="height:38px; width:auto; object-fit:contain; display:block; margin:0 auto; position:absolute; bottom:2px; left:50%; transform:translateX(-50%); background-color:#FFFFFF;" alt="Firma Representante Legal">'
+    : '';
+  const representanteLegalText = esFinal ? 'Representante Legal' : '';
+  const prelimBadgeCss = data.es_preliminar ? '.prelim-badge { background: #ff9800; color: white; padding: 8px; text-align: center; font-weight: bold; margin-bottom: 15px; }' : '';
+  const prelimBadgeHtml = data.es_preliminar ? '<div class="prelim-badge">DOCUMENTO PRELIMINAR - SIN VALIDEZ LEGAL HASTA FIRMA DEFINITIVA</div>' : '';
+  const finalBadgeHtml = esFinal ? '<div class="final-badge">CONTRATO FIRMADO DIGITALMENTE</div>' : '';
+  const servicioViajarText = 'Servicio a Viajar: ' + (data.servicio_viajar || 'N/A') + ' | Término contrato: ' + (data.termino_contrato || 'N/A') + ' / km adicional ' + (data.km_adicional ? '$' + data.km_adicional : 'N/A');
+  let verificationSection = '';
+  if (esFinal) {
+    let verificationItems = '';
+    if (fotoClienteImg) {
+      verificationItems += '<div class="verification-item"><img src="' + fotoClienteImg + '" alt="Foto Cliente"><p>Foto del Cliente</p></div>';
+    }
+    if (docFrenteImg) {
+      verificationItems += '<div class="verification-item"><img src="' + docFrenteImg + '" alt="Documento Frente"><p>Documento (Frente)</p></div>';
+    }
+    if (docReversoImg) {
+      verificationItems += '<div class="verification-item"><img src="' + docReversoImg + '" alt="Documento Reverso"><p>Documento (Reverso)</p></div>';
+    }
+    if (huellaImg) {
+      verificationItems += '<div class="verification-item"><img src="' + huellaImg + '" alt="Huella Digital"><p>Huella Digital</p></div>';
+    }
+    verificationSection = '<div class="verification-section"><div class="section-title">8. VERIFICACIÓN DE IDENTIDAD</div><div class="verification-grid">' + verificationItems + '</div></div>';
+  }
+
+  const footerText = data.es_preliminar
+    ? 'Este es un documento preliminar enviado para revisión. Para formalizar el contrato debe completar el proceso de firma digital.'
+    : 'Documento firmado digitalmente. Este contrato tiene plena validez legal.';
+  const footerSection = '<div class="footer">' + footerText + '<br><strong>EUROCAR RENTAL SAS</strong> | AV CALLE 26 69C-03 LOCAL 105 | BOGOTÁ - COLOMBIA | www.eurocarental.com | Tel: 320 834 1163</div>';
+
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -104,7 +147,7 @@ export const generateContractHTML = (data: ContractData): string => {
     .logo-img { height: 100px; }
     .title { font-size: 14px; font-weight: bold; color: #0066cc; text-align: center; margin: 15px 0 5px 0; }
     .contract-num { text-align: center; font-size: 11px; color: #666; margin-bottom: 15px; }
-    ${data.es_preliminar ? '.prelim-badge { background: #ff9800; color: white; padding: 8px; text-align: center; font-weight: bold; margin-bottom: 15px; }' : ''}
+    ${prelimBadgeCss}
     .section { margin-bottom: 12px; }
     .section-title { background: #0066cc; color: white; padding: 4px 8px; font-weight: bold; font-size: 10px; margin-bottom: 6px; }
     .row { margin-bottom: 3px; }
@@ -143,8 +186,8 @@ export const generateContractHTML = (data: ContractData): string => {
 <div class="title">CONTRATO DE ARRENDAMIENTO DE VEHÍCULO AUTOMOTOR</div>
 <div class="contract-num">No. ${data.numero_contrato} | Fecha: ${data.fecha_contrato}</div>
 
-${data.es_preliminar ? '<div class="prelim-badge">⚠ DOCUMENTO PRELIMINAR - SIN VALIDEZ LEGAL HASTA FIRMA DEFINITIVA</div>' : ''}
-${esFinal ? '<div class="final-badge">✓ CONTRATO FIRMADO DIGITALMENTE</div>' : ''}
+${prelimBadgeHtml}
+${finalBadgeHtml}
 
 <div class="section-title">1. IDENTIFICACIÓN DE LAS PARTES</div>
 
@@ -213,7 +256,7 @@ ${esFinal ? '<div class="final-badge">✓ CONTRATO FIRMADO DIGITALMENTE</div>' :
 </table>
 
 <div class="info-text">
-  Servicio a Viajar: ${data.servicio_viajar || 'N/A'} | Término contrato: ${data.termino_contrato || 'N/A'} / km adicional ${data.km_adicional ? '$' + data.km_adicional : 'N/A'}
+  ${servicioViajarText}
 </div>
 
 <table class="two-col">
@@ -270,85 +313,28 @@ ${esFinal ? '<div class="final-badge">✓ CONTRATO FIRMADO DIGITALMENTE</div>' :
 <div class="signatures">
   <div class="sig-box">
     <div class="sig-line">
-      ${firmaImg ? `<img src="${firmaImg}" class="signature-img" alt="Firma">` : ''}
-      ${esFinal && huellaImg ? `<img src="${huellaImg}" style="max-height:40px; max-width:60px; margin-left:10px;" alt="Huella">` : ''}
+      ${firmaImgHtml}
+      ${huellaImgHtml}
     </div>
     <strong>EL ARRENDATARIO</strong><br>
     <span style="font-size:9px">DOC: ${data.cliente_documento}<br>
     NOMBRE: ${data.cliente_nombre}</span>
-    ${esFinal ? `
-    <div style="margin-top:8px; display:flex; gap:8px; justify-content:center;">
-      ${fotoClienteImg ? `<img src="${fotoClienteImg}" style="width:50px; height:50px; object-fit:cover; border:1px solid #ccc; border-radius:4px;" alt="Foto">` : ''}
-      ${docFrenteImg ? `<img src="${docFrenteImg}" style="width:60px; height:40px; object-fit:cover; border:1px solid #ccc; border-radius:4px;" alt="Doc">` : ''}
-      ${docReversoImg ? `<img src="${docReversoImg}" style="width:60px; height:40px; object-fit:cover; border:1px solid #ccc; border-radius:4px;" alt="Doc Rev">` : ''}
-    </div>
-    ` : ''}
+    ${clientePhotosHtml}
   </div>
   <div class="sig-box">
     <div class="sig-line">
-      ${esFinal ? `<img src="data:image/png;base64,${FIRMA_REPRESENTANTE_BASE64}" style="height:38px; width:auto; object-fit:contain; display:block; margin:0 auto; position:absolute; bottom:2px; left:50%; transform:translateX(-50%); background-color:#FFFFFF;" alt="Firma Representante Legal">` : ''}
+      ${firmaRepresentanteHtml}
     </div>
     <strong>EL ARRENDADOR</strong><br>
     <span style="font-size:9px">EUROCAR RENTAL SAS<br>
     NIT: 900269555<br>
-    ${esFinal ? 'Representante Legal' : ''}</span>
+    ${representanteLegalText}</span>
   </div>
 </div>
 
-${esFinal ? `
-<div class="verification-section">
-  <div class="section-title">8. VERIFICACIÓN DE IDENTIDAD</div>
-  <div class="verification-grid">
-    ${fotoClienteImg ? `
-    <div class="verification-item">
-      <img src="${fotoClienteImg}" alt="Foto Cliente">
-      <p>Foto del Cliente</p>
-    </div>
-    ` : ''}
-    ${docFrenteImg ? `
-    <div class="verification-item">
-      <img src="${docFrenteImg}" alt="Documento Frente">
-      <p>Documento (Frente)</p>
-    </div>
-    ` : ''}
-    ${docReversoImg ? `
-    <div class="verification-item">
-      <img src="${docReversoImg}" alt="Documento Reverso">
-      <p>Documento (Reverso)</p>
-    </div>
-    ` : ''}
-    ${huellaImg ? `
-    <div class="verification-item">
-      <img src="${huellaImg}" alt="Huella Digital">
-      <p>Huella Digital</p>
-    </div>
-    ` : ''}
-  </div>
-</div>
-` : ''}
+${verificationSection}
 
-<div class="footer">
-  ${data.es_preliminar ? 'Este es un documento preliminar enviado para revisión. Para formalizar el contrato debe completar el proceso de firma digital.' : 'Documento firmado digitalmente. Este contrato tiene plena validez legal.'}
-  <br>
-  <strong>EUROCAR RENTAL SAS</strong> | AV CALLE 26 69C-03 LOCAL 105 | BOGOTÁ - COLOMBIA | www.eurocarental.com | Tel: 320 834 1163
-</div>
-
-</body>
-</html>`;
-};
-
-export default generateContractHTML;
- </div>
-    ` : ''}
-  </div>
-</div>
-` : ''}
-
-<div class="footer">
-  ${data.es_preliminar ? 'Este es un documento preliminar enviado para revisión. Para formalizar el contrato debe completar el proceso de firma digital.' : 'Documento firmado digitalmente. Este contrato tiene plena validez legal.'}
-  <br>
-  <strong>EUROCAR RENTAL SAS</strong> | AV CALLE 26 69C-03 LOCAL 105 | BOGOTÁ - COLOMBIA | www.eurocarental.com | Tel: 320 834 1163
-</div>
+${footerSection}
 
 </body>
 </html>`;
