@@ -61,7 +61,8 @@ interface CustomerFormProps {
 
 export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [docFrenteFile, setDocFrenteFile] = useState<File | null>(null);
+  const [docReversoFile, setDocReversoFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [showCvv, setShowCvv] = useState(false);
   
@@ -161,41 +162,69 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
     }
   }, [customer, reset]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFrenteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       if (file.size > 5 * 1024 * 1024) {
         toast.error("El archivo no debe superar 5MB");
         return;
       }
-      setDocumentFile(file);
+      setDocFrenteFile(file);
     }
   };
 
-  const uploadDocument = async (customerId: string): Promise<string | null> => {
-    if (!documentFile) return null;
+  const handleReversoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("El archivo no debe superar 5MB");
+        return;
+      }
+      setDocReversoFile(file);
+    }
+  };
 
-    setUploading(true);
+  const uploadSingleFile = async (file: File, customerId: string, suffix: string): Promise<string | null> => {
     try {
-      const fileExt = documentFile.name.split(".").pop();
-      const fileName = `${customerId}_${Date.now()}.${fileExt}`;
-      const filePath = `documents/${fileName}`;
+      const fileExt = file.name.split(".").pop();
+      const fileName = `customer_${customerId}_${suffix}_${Date.now()}.${fileExt}`;
+      const filePath = `customer-docs/${fileName}`;
 
-      const { error: uploadError, data } = await supabase.storage
-        .from("customer-documents")
-        .upload(filePath, documentFile);
+      const { error: uploadError } = await supabase.storage
+        .from("contracts")
+        .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage
-        .from("customer-documents")
+        .from("contracts")
         .getPublicUrl(filePath);
 
       return urlData.publicUrl;
     } catch (error) {
-      console.error("Error uploading document:", error);
-      toast.error("Error al subir documento");
+      console.error(`Error uploading ${suffix}:`, error);
       return null;
+    }
+  };
+
+  const uploadDocuments = async (customerId: string): Promise<{ frente: string | null; reverso: string | null }> => {
+    setUploading(true);
+    try {
+      let frenteUrl: string | null = null;
+      let reversoUrl: string | null = null;
+
+      if (docFrenteFile) {
+        frenteUrl = await uploadSingleFile(docFrenteFile, customerId, "frente");
+      }
+      if (docReversoFile) {
+        reversoUrl = await uploadSingleFile(docReversoFile, customerId, "reverso");
+      }
+
+      return { frente: frenteUrl, reverso: reversoUrl };
+    } catch (error) {
+      console.error("Error uploading documents:", error);
+      toast.error("Error al subir documentos");
+      return { frente: null, reverso: null };
     } finally {
       setUploading(false);
     }
@@ -221,14 +250,17 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
         throw new Error("Usuario no autenticado");
       }
       
-      let fotoDocumentoUrl = customer?.foto_documento_url;
+      let docFrenteUrl = customer?.documento_frente_url || null;
+      let docReversoUrl = customer?.documento_reverso_url || null;
 
       if (customer && customer.id) {
         // Update existing customer
         console.log('[CustomerForm] Actualizando cliente existente:', customer.id);
         
-        if (documentFile) {
-          fotoDocumentoUrl = await uploadDocument(customer.id);
+        if (docFrenteFile || docReversoFile) {
+          const uploaded = await uploadDocuments(customer.id);
+          if (uploaded.frente) docFrenteUrl = uploaded.frente;
+          if (uploaded.reverso) docReversoUrl = uploaded.reverso;
         }
 
         // Preparar datos para actualización
@@ -266,7 +298,8 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
           referencia_comercial_telefono: data.referencia_comercial_telefono || null,
           observaciones: data.observaciones || null,
           estado: data.estado,
-          foto_documento_url: fotoDocumentoUrl,
+          documento_frente_url: docFrenteUrl,
+          documento_reverso_url: docReversoUrl,
         };
 
         console.log('[CustomerForm] Ejecutando UPDATE con ID:', customer.id);
@@ -312,12 +345,16 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
 
         console.log('[CustomerForm] Cliente creado:', newCustomer.id);
 
-        if (documentFile) {
-          fotoDocumentoUrl = await uploadDocument(newCustomer.id);
-          if (fotoDocumentoUrl) {
+        if (docFrenteFile || docReversoFile) {
+          const uploaded = await uploadDocuments(newCustomer.id);
+          const updateFields: any = {};
+          if (uploaded.frente) updateFields.documento_frente_url = uploaded.frente;
+          if (uploaded.reverso) updateFields.documento_reverso_url = uploaded.reverso;
+          
+          if (Object.keys(updateFields).length > 0) {
             await supabase
               .from("customers")
-              .update({ foto_documento_url: fotoDocumentoUrl })
+              .update(updateFields)
               .eq("id", newCustomer.id);
           }
         }
@@ -429,25 +466,77 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="foto_documento">Foto Documento</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="foto_documento"
-                    type="file"
-                    accept="image/*,.pdf"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => document.getElementById("foto_documento")?.click()}
-                  >
-                    <Upload className="mr-2 h-4 w-4" />
-                    {documentFile ? documentFile.name : "Subir archivo"}
-                  </Button>
-                </div>
+              <div className="space-y-2 col-span-2">
+                <Label>Foto Documento</Label>
+                {(watch("tipo_documento") === "pasaporte") ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="doc_frente"
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={handleFrenteChange}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => document.getElementById("doc_frente")?.click()}
+                      data-testid="upload-doc-frente"
+                    >
+                      <Upload className="mr-2 h-4 w-4" />
+                      {docFrenteFile ? docFrenteFile.name : "Subir Pasaporte"}
+                    </Button>
+                    {customer?.documento_frente_url && !docFrenteFile && (
+                      <span className="text-xs text-green-600">Documento cargado</span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="doc_frente"
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={handleFrenteChange}
+                        className="hidden"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => document.getElementById("doc_frente")?.click()}
+                        data-testid="upload-doc-frente"
+                      >
+                        <Upload className="mr-2 h-4 w-4" />
+                        {docFrenteFile ? docFrenteFile.name : "Frente"}
+                      </Button>
+                      {customer?.documento_frente_url && !docFrenteFile && (
+                        <span className="text-xs text-green-600">Cargado</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="doc_reverso"
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={handleReversoChange}
+                        className="hidden"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => document.getElementById("doc_reverso")?.click()}
+                        data-testid="upload-doc-reverso"
+                      >
+                        <Upload className="mr-2 h-4 w-4" />
+                        {docReversoFile ? docReversoFile.name : "Reverso"}
+                      </Button>
+                      {customer?.documento_reverso_url && !docReversoFile && (
+                        <span className="text-xs text-green-600">Cargado</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {uploading && <p className="text-xs text-muted-foreground">Subiendo documentos...</p>}
               </div>
             </div>
           </TabsContent>

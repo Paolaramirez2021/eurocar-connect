@@ -442,47 +442,84 @@ export const CustomerDetail = ({ customerId, onBack, onEdit }: CustomerDetailPro
                   </Dialog>
                 </div>
 
-                {customer.foto_documento_url ? (
+                {(customer.documento_frente_url || customer.documento_reverso_url) ? (
+                  <div className="space-y-3">
+                    {customer.documento_frente_url && (
+                      <Card className="p-4 bg-muted/50">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <FileText className="h-6 w-6 text-primary" />
+                            <div>
+                              <p className="font-medium text-sm">
+                                {customer.tipo_documento === 'pasaporte' ? 'Pasaporte' : 'Documento (Frente)'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm" onClick={() => window.open(customer.documento_frente_url, '_blank')}>
+                              <Eye className="h-4 w-4 mr-1" /> Ver
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => {
+                              const a = document.createElement('a');
+                              a.href = customer.documento_frente_url;
+                              a.download = `doc_frente_${customer.cedula_pasaporte}`;
+                              a.target = '_blank';
+                              a.click();
+                            }}>
+                              <Download className="h-4 w-4 mr-1" /> Descargar
+                            </Button>
+                          </div>
+                        </div>
+                        <img src={customer.documento_frente_url} alt="Documento frente" className="mt-3 max-h-48 rounded border object-contain" />
+                      </Card>
+                    )}
+                    {customer.documento_reverso_url && (
+                      <Card className="p-4 bg-muted/50">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <FileText className="h-6 w-6 text-primary" />
+                            <p className="font-medium text-sm">Documento (Reverso)</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm" onClick={() => window.open(customer.documento_reverso_url, '_blank')}>
+                              <Eye className="h-4 w-4 mr-1" /> Ver
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => {
+                              const a = document.createElement('a');
+                              a.href = customer.documento_reverso_url;
+                              a.download = `doc_reverso_${customer.cedula_pasaporte}`;
+                              a.target = '_blank';
+                              a.click();
+                            }}>
+                              <Download className="h-4 w-4 mr-1" /> Descargar
+                            </Button>
+                          </div>
+                        </div>
+                        <img src={customer.documento_reverso_url} alt="Documento reverso" className="mt-3 max-h-48 rounded border object-contain" />
+                      </Card>
+                    )}
+                  </div>
+                ) : (customer.foto_documento_url ? (
                   <Card className="p-4 bg-muted/50">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <FileText className="h-8 w-8 text-primary" />
                         <div>
                           <p className="font-medium">Documento de Identidad</p>
-                          <p className="text-xs text-muted-foreground">
-                            Cédula, Pasaporte o Licencia
-                          </p>
+                          <p className="text-xs text-muted-foreground">Documento anterior</p>
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleViewDocument}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          Ver
+                        <Button variant="outline" size="sm" onClick={handleViewDocument}>
+                          <Eye className="h-4 w-4 mr-2" /> Ver
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const a = document.createElement('a');
-                            a.href = customer.foto_documento_url;
-                            a.download = `documento_${customer.cedula_pasaporte}`;
-                            a.click();
-                          }}
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Descargar
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={handleDeleteDocument}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Eliminar
+                        <Button variant="outline" size="sm" onClick={() => {
+                          const a = document.createElement('a');
+                          a.href = customer.foto_documento_url;
+                          a.download = `documento_${customer.cedula_pasaporte}`;
+                          a.click();
+                        }}>
+                          <Download className="h-4 w-4 mr-2" /> Descargar
                         </Button>
                       </div>
                     </div>
@@ -497,7 +534,7 @@ export const CustomerDetail = ({ customerId, onBack, onEdit }: CustomerDetailPro
                       Sube la cédula, pasaporte o licencia del cliente
                     </p>
                   </Card>
-                )}
+                ))}
               </div>
 
               <div className="border-t pt-6">

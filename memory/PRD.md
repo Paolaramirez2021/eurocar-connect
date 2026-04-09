@@ -92,11 +92,17 @@ Sistema completo de gestión de alquiler de vehículos para EUROCAR RENTAL, con 
 Fecha: Diciembre, 2025
 
 ### Sesión actual (Abril 2026)
-- Fondo blanco sólido (#FFFFFF) en firma del representante legal en PDF final (`contractTemplate.ts` línea 286)
-- Fondo blanco sólido (#FFFFFF) en firma del cliente vía clase `.signature-img` (`contractTemplate.ts` línea 131)
-- Refactorización de fetch calls a `apiUrl.ts` con `VITE_API_URL` para soporte Netlify
-- Fix race condition cámara en `ContractPhotoCapture.tsx` y `ContratoFinal.tsx`
-- Toggle de visibilidad CVV en `CustomerForm.tsx` y `ReservationForm.tsx`
+- Fondo blanco sólido (#FFFFFF) en firma del representante legal en PDF final (`contractTemplate.ts`)
+- Fondo blanco sólido (#FFFFFF) en firma del cliente vía clase `.signature-img`
+- Imagen de firma del representante legal actualizada con nueva imagen del usuario
+- Tamaño de firma reducido (38px) y posicionada encima de la línea sin pisar texto
+- 3 nuevos campos editables: Servicio a Viajar, Término Contrato, KM Adicional
+- Campos dinámicos reemplazan texto fijo en el PDF
+- Sección de Conductores Autorizados editable (conductor 1 auto del cliente, 2 y 3 opcionales)
+- Tabla de conductores en PDF con columnas: NOMBRE, No. DOCUMENTO (tipo+num), LICENCIA, VENCIMIENTO
+- Datos de nuevos campos pasan correctamente al PDF final (firmado)
+- Refactorización de template literals para evitar error SWC
+- **Documentos de cliente**: Subida de cédula (frente/reverso) o pasaporte (una imagen) al bucket `contracts`, con visualización y descarga en detalle del cliente
 
 ### Historial previo
 - 16 Marzo 2025: Mejoras en sistema de contratos
