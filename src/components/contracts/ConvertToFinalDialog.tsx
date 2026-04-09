@@ -72,6 +72,48 @@ export const ConvertToFinalDialog = ({
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [customerDocFront, setCustomerDocFront] = useState<string | null>(null);
+  const [customerDocBack, setCustomerDocBack] = useState<string | null>(null);
+
+  if (!preliminaryContract) return null;
+
+  // Load customer document URLs
+  const loadCustomerDocs = async () => {
+    if (!preliminaryContract?.customer_id) return;
+    try {
+      const { data } = await supabase
+        .from("customers")
+        .select("documento_frente_url, documento_reverso_url, tipo_documento")
+        .eq("id", preliminaryContract.customer_id)
+        .single();
+      if (data) {
+        // Generate signed URLs for access
+        const getSignedUrl = async (publicUrl: string): Promise<string | null> => {
+          if (!publicUrl) return null;
+          const parts = publicUrl.split('/contracts/');
+          if (parts.length < 2) return publicUrl;
+          const filePath = decodeURIComponent(parts[parts.length - 1]);
+          const { data: signed, error } = await supabase.storage.from("contracts").createSignedUrl(filePath, 3600);
+          return error ? publicUrl : signed.signedUrl;
+        };
+        if (data.documento_frente_url) {
+          const url = await getSignedUrl(data.documento_frente_url);
+          setCustomerDocFront(url);
+        }
+        if (data.documento_reverso_url) {
+          const url = await getSignedUrl(data.documento_reverso_url);
+          setCustomerDocBack(url);
+        }
+      }
+    } catch (e) {
+      console.error("Error loading customer docs:", e);
+    }
+  };
+
+  // Trigger load when dialog opens
+  if (open && !customerDocFront && !customerDocBack) {
+    loadCustomerDocs();
+  }
 
   if (!preliminaryContract) return null;
 
@@ -176,44 +218,46 @@ export const ConvertToFinalDialog = ({
         fingerprintUrl = fingerprintUrlData.publicUrl;
       }
 
-      // Upload document front photo
+      // Upload document front photo (skip if already a Supabase URL)
       let documentFrontUrl: string | undefined;
       if (documentPhotos.front) {
-        const docFrontResponse = await fetch(documentPhotos.front);
-        const docFrontBlob = await docFrontResponse.blob();
-        const docFrontFilename = `documents/${contractId}_doc_front_${Date.now()}.png`;
-        
-        const { data: docFrontUpload, error: docFrontError } = await supabase.storage
-          .from("contracts")
-          .upload(docFrontFilename, docFrontBlob);
-
-        if (docFrontError) throw docFrontError;
-
-        const { data: docFrontUrlData } = supabase.storage
-          .from("contracts")
-          .getPublicUrl(docFrontUpload.path);
-
-        documentFrontUrl = docFrontUrlData.publicUrl;
+        if (documentPhotos.front.startsWith('data:')) {
+          // New capture - upload to storage
+          const docFrontResponse = await fetch(documentPhotos.front);
+          const docFrontBlob = await docFrontResponse.blob();
+          const docFrontFilename = `documents/${contractId}_doc_front_${Date.now()}.png`;
+          const { data: docFrontUpload, error: docFrontError } = await supabase.storage
+            .from("contracts")
+            .upload(docFrontFilename, docFrontBlob);
+          if (docFrontError) throw docFrontError;
+          const { data: docFrontUrlData } = supabase.storage
+            .from("contracts")
+            .getPublicUrl(docFrontUpload.path);
+          documentFrontUrl = docFrontUrlData.publicUrl;
+        } else {
+          // Already a URL from customer record - reuse it
+          documentFrontUrl = documentPhotos.front;
+        }
       }
 
-      // Upload document back photo (only for cedula)
+      // Upload document back photo (skip if already a Supabase URL)
       let documentBackUrl: string | undefined;
       if (documentPhotos.back && needsBackPhoto) {
-        const docBackResponse = await fetch(documentPhotos.back);
-        const docBackBlob = await docBackResponse.blob();
-        const docBackFilename = `documents/${contractId}_doc_back_${Date.now()}.png`;
-        
-        const { data: docBackUpload, error: docBackError } = await supabase.storage
-          .from("contracts")
-          .upload(docBackFilename, docBackBlob);
-
-        if (docBackError) throw docBackError;
-
-        const { data: docBackUrlData } = supabase.storage
-          .from("contracts")
-          .getPublicUrl(docBackUpload.path);
-
-        documentBackUrl = docBackUrlData.publicUrl;
+        if (documentPhotos.back.startsWith('data:')) {
+          const docBackResponse = await fetch(documentPhotos.back);
+          const docBackBlob = await docBackResponse.blob();
+          const docBackFilename = `documents/${contractId}_doc_back_${Date.now()}.png`;
+          const { data: docBackUpload, error: docBackError } = await supabase.storage
+            .from("contracts")
+            .upload(docBackFilename, docBackBlob);
+          if (docBackError) throw docBackError;
+          const { data: docBackUrlData } = supabase.storage
+            .from("contracts")
+            .getPublicUrl(docBackUpload.path);
+          documentBackUrl = docBackUrlData.publicUrl;
+        } else {
+          documentBackUrl = documentPhotos.back;
+        }
       }
 
       // Get current user
@@ -541,6 +585,8 @@ export const ConvertToFinalDialog = ({
           <DocumentPhotoCapture 
             documentType={documentType}
             onPhotosChange={setDocumentPhotos}
+            initialFrontUrl={customerDocFront}
+            initialBackUrl={customerDocBack}
           />
 
           {/* Terms */}

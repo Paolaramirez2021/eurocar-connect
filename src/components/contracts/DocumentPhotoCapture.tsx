@@ -7,17 +7,28 @@ import { toast } from "sonner";
 interface DocumentPhotoCaptureProps {
   documentType: "cedula" | "pasaporte" | "";
   onPhotosChange: (photos: { front: string | null; back: string | null }) => void;
+  initialFrontUrl?: string | null;
+  initialBackUrl?: string | null;
 }
 
-export const DocumentPhotoCapture = ({ documentType, onPhotosChange }: DocumentPhotoCaptureProps) => {
-  const [frontPhoto, setFrontPhoto] = useState<string | null>(null);
-  const [backPhoto, setBackPhoto] = useState<string | null>(null);
+export const DocumentPhotoCapture = ({ documentType, onPhotosChange, initialFrontUrl, initialBackUrl }: DocumentPhotoCaptureProps) => {
+  const [frontPhoto, setFrontPhoto] = useState<string | null>(initialFrontUrl || null);
+  const [backPhoto, setBackPhoto] = useState<string | null>(initialBackUrl || null);
   const [currentSide, setCurrentSide] = useState<"front" | "back">("front");
   const frontInputRef = useRef<HTMLInputElement>(null);
   const backInputRef = useRef<HTMLInputElement>(null);
+  const initializedRef = useRef(false);
 
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   const needsBackPhoto = documentType === "cedula";
+
+  // Sync initial URLs when they arrive (async load)
+  if (!initializedRef.current && (initialFrontUrl || initialBackUrl)) {
+    initializedRef.current = true;
+    if (initialFrontUrl && !frontPhoto) setFrontPhoto(initialFrontUrl);
+    if (initialBackUrl && !backPhoto) setBackPhoto(initialBackUrl);
+    onPhotosChange({ front: initialFrontUrl || null, back: initialBackUrl || null });
+  }
 
   const handleCapture = (side: "front" | "back") => {
     setCurrentSide(side);
