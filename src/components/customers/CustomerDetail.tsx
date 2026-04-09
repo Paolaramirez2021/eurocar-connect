@@ -97,23 +97,23 @@ export const CustomerDetail = ({ customerId, onBack, onEdit }: CustomerDetailPro
     setUploading(true);
     try {
       const fileExt = documentFile.name.split(".").pop();
-      const fileName = `${customerId}_${Date.now()}.${fileExt}`;
-      const filePath = `documents/${fileName}`;
+      const fileName = `customer_${customerId}_doc_${Date.now()}.${fileExt}`;
+      const filePath = `customer-docs/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("customer-documents")
+        .from("contracts")
         .upload(filePath, documentFile);
 
       if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage
-        .from("customer-documents")
+        .from("contracts")
         .getPublicUrl(filePath);
 
       // Update customer with new document URL
       const { error: updateError } = await supabase
         .from("customers")
-        .update({ foto_documento_url: urlData.publicUrl })
+        .update({ documento_frente_url: urlData.publicUrl })
         .eq("id", customerId);
 
       if (updateError) throw updateError;
@@ -121,12 +121,50 @@ export const CustomerDetail = ({ customerId, onBack, onEdit }: CustomerDetailPro
       toast.success("Documento actualizado exitosamente");
       setShowUploadDialog(false);
       setDocumentFile(null);
-      loadCustomerData(); // Reload data
+      loadCustomerData();
     } catch (error) {
       console.error("Error uploading document:", error);
       toast.error("Error al subir documento");
     } finally {
       setUploading(false);
+    }
+  };
+
+  const getSignedUrl = async (publicUrl: string): Promise<string | null> => {
+    try {
+      // Extract the file path from the public URL
+      const parts = publicUrl.split('/contracts/');
+      if (parts.length < 2) return publicUrl;
+      const filePath = decodeURIComponent(parts[parts.length - 1]);
+      
+      const { data, error } = await supabase.storage
+        .from("contracts")
+        .createSignedUrl(filePath, 3600); // 1 hour
+
+      if (error) {
+        console.error("Error creating signed URL:", error);
+        return publicUrl; // Fallback to public URL
+      }
+      return data.signedUrl;
+    } catch (e) {
+      console.error("Error in getSignedUrl:", e);
+      return publicUrl;
+    }
+  };
+
+  const handleViewDoc = async (url: string) => {
+    const signedUrl = await getSignedUrl(url);
+    if (signedUrl) window.open(signedUrl, '_blank');
+  };
+
+  const handleDownloadDoc = async (url: string, name: string) => {
+    const signedUrl = await getSignedUrl(url);
+    if (signedUrl) {
+      const a = document.createElement('a');
+      a.href = signedUrl;
+      a.download = name;
+      a.target = '_blank';
+      a.click();
     }
   };
 
@@ -389,7 +427,7 @@ export const CustomerDetail = ({ customerId, onBack, onEdit }: CustomerDetailPro
                     <DialogTrigger asChild>
                       <Button variant="outline" size="sm">
                         <Upload className="h-4 w-4 mr-2" />
-                        {customer.foto_documento_url ? "Actualizar" : "Subir"} Documento
+                        {(customer.documento_frente_url || customer.documento_reverso_url) ? "Actualizar" : "Subir"} Documento
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
@@ -449,28 +487,19 @@ export const CustomerDetail = ({ customerId, onBack, onEdit }: CustomerDetailPro
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <FileText className="h-6 w-6 text-primary" />
-                            <div>
-                              <p className="font-medium text-sm">
-                                {customer.tipo_documento === 'pasaporte' ? 'Pasaporte' : 'Documento (Frente)'}
-                              </p>
-                            </div>
+                            <p className="font-medium text-sm">
+                              {customer.tipo_documento === 'pasaporte' ? 'Pasaporte' : 'Documento (Frente)'}
+                            </p>
                           </div>
                           <div className="flex gap-2">
-                            <Button variant="outline" size="sm" onClick={() => window.open(customer.documento_frente_url, '_blank')}>
+                            <Button variant="outline" size="sm" onClick={() => handleViewDoc(customer.documento_frente_url)}>
                               <Eye className="h-4 w-4 mr-1" /> Ver
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => {
-                              const a = document.createElement('a');
-                              a.href = customer.documento_frente_url;
-                              a.download = `doc_frente_${customer.cedula_pasaporte}`;
-                              a.target = '_blank';
-                              a.click();
-                            }}>
+                            <Button variant="outline" size="sm" onClick={() => handleDownloadDoc(customer.documento_frente_url, `doc_frente_${customer.cedula_pasaporte}`)}>
                               <Download className="h-4 w-4 mr-1" /> Descargar
                             </Button>
                           </div>
                         </div>
-                        <img src={customer.documento_frente_url} alt="Documento frente" className="mt-3 max-h-48 rounded border object-contain" />
                       </Card>
                     )}
                     {customer.documento_reverso_url && (
@@ -481,21 +510,14 @@ export const CustomerDetail = ({ customerId, onBack, onEdit }: CustomerDetailPro
                             <p className="font-medium text-sm">Documento (Reverso)</p>
                           </div>
                           <div className="flex gap-2">
-                            <Button variant="outline" size="sm" onClick={() => window.open(customer.documento_reverso_url, '_blank')}>
+                            <Button variant="outline" size="sm" onClick={() => handleViewDoc(customer.documento_reverso_url)}>
                               <Eye className="h-4 w-4 mr-1" /> Ver
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => {
-                              const a = document.createElement('a');
-                              a.href = customer.documento_reverso_url;
-                              a.download = `doc_reverso_${customer.cedula_pasaporte}`;
-                              a.target = '_blank';
-                              a.click();
-                            }}>
+                            <Button variant="outline" size="sm" onClick={() => handleDownloadDoc(customer.documento_reverso_url, `doc_reverso_${customer.cedula_pasaporte}`)}>
                               <Download className="h-4 w-4 mr-1" /> Descargar
                             </Button>
                           </div>
                         </div>
-                        <img src={customer.documento_reverso_url} alt="Documento reverso" className="mt-3 max-h-48 rounded border object-contain" />
                       </Card>
                     )}
                   </div>
