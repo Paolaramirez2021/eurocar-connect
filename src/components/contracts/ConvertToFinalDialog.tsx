@@ -87,7 +87,6 @@ export const ConvertToFinalDialog = ({
         .eq("id", preliminaryContract.customer_id)
         .single();
       if (data) {
-        // Generate signed URLs for access
         const getSignedUrl = async (publicUrl: string): Promise<string | null> => {
           if (!publicUrl) return null;
           const parts = publicUrl.split('/contracts/');
@@ -96,14 +95,12 @@ export const ConvertToFinalDialog = ({
           const { data: signed, error } = await supabase.storage.from("contracts").createSignedUrl(filePath, 3600);
           return error ? publicUrl : signed.signedUrl;
         };
-        if (data.documento_frente_url) {
-          const url = await getSignedUrl(data.documento_frente_url);
-          setCustomerDocFront(url);
-        }
-        if (data.documento_reverso_url) {
-          const url = await getSignedUrl(data.documento_reverso_url);
-          setCustomerDocBack(url);
-        }
+        // Load BOTH URLs before setting state
+        const frontUrl = data.documento_frente_url ? await getSignedUrl(data.documento_frente_url) : null;
+        const backUrl = data.documento_reverso_url ? await getSignedUrl(data.documento_reverso_url) : null;
+        // Set both at once to avoid partial render
+        setCustomerDocFront(frontUrl);
+        setCustomerDocBack(backUrl);
       }
     } catch (e) {
       console.error("Error loading customer docs:", e);

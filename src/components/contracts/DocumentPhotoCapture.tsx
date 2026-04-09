@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Camera, X, CreditCard, RotateCcw } from "lucide-react";
@@ -12,23 +12,25 @@ interface DocumentPhotoCaptureProps {
 }
 
 export const DocumentPhotoCapture = ({ documentType, onPhotosChange, initialFrontUrl, initialBackUrl }: DocumentPhotoCaptureProps) => {
-  const [frontPhoto, setFrontPhoto] = useState<string | null>(initialFrontUrl || null);
-  const [backPhoto, setBackPhoto] = useState<string | null>(initialBackUrl || null);
+  const [frontPhoto, setFrontPhoto] = useState<string | null>(null);
+  const [backPhoto, setBackPhoto] = useState<string | null>(null);
   const [currentSide, setCurrentSide] = useState<"front" | "back">("front");
   const frontInputRef = useRef<HTMLInputElement>(null);
   const backInputRef = useRef<HTMLInputElement>(null);
-  const initializedRef = useRef(false);
 
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   const needsBackPhoto = documentType === "cedula";
 
-  // Sync initial URLs when they arrive (async load)
-  if (!initializedRef.current && (initialFrontUrl || initialBackUrl)) {
-    initializedRef.current = true;
-    if (initialFrontUrl && !frontPhoto) setFrontPhoto(initialFrontUrl);
-    if (initialBackUrl && !backPhoto) setBackPhoto(initialBackUrl);
-    onPhotosChange({ front: initialFrontUrl || null, back: initialBackUrl || null });
-  }
+  // Sync when initial URLs arrive from parent
+  useEffect(() => {
+    if (initialFrontUrl || initialBackUrl) {
+      const newFront = initialFrontUrl || frontPhoto;
+      const newBack = initialBackUrl || backPhoto;
+      setFrontPhoto(newFront);
+      setBackPhoto(newBack);
+      onPhotosChange({ front: newFront, back: newBack });
+    }
+  }, [initialFrontUrl, initialBackUrl]);
 
   const handleCapture = (side: "front" | "back") => {
     setCurrentSide(side);
