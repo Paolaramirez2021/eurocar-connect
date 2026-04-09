@@ -8,19 +8,26 @@ builder.WebHost.UseUrls("http://0.0.0.0:5000");
 // Registrar servicio de captura como singleton
 builder.Services.AddSingleton<FingerprintCaptureService>();
 
-// CORS: permitir llamadas desde cualquier origen (app web)
-builder.Services.AddCors(options =>
-{
-    options.AddDefaultPolicy(policy =>
-    {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
-});
-
 var app = builder.Build();
-app.UseCors();
+
+// CORS manual - MAS confiable que el middleware estandar para servicios locales
+// Agrega headers a TODAS las respuestas incluyendo preflight OPTIONS
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+    context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type, Accept, Origin");
+    context.Response.Headers.Append("Access-Control-Max-Age", "86400");
+
+    // Responder preflight OPTIONS inmediatamente
+    if (context.Request.Method == "OPTIONS")
+    {
+        context.Response.StatusCode = 204;
+        return;
+    }
+
+    await next();
+});
 
 // Inicializar SDK al arrancar
 var captureService = app.Services.GetRequiredService<FingerprintCaptureService>();
@@ -43,7 +50,7 @@ app.MapGet("/estado", () => Results.Json(new
 {
     status = "running",
     sdk_loaded = sdkReady,
-    version = "2.0.0"
+    version = "2.1.0"
 }));
 
 app.MapPost("/capturar-huella", (FingerprintCaptureService svc, ILogger<Program> logger) =>
@@ -81,6 +88,7 @@ Console.WriteLine("============================================================"
 Console.WriteLine("  EUROCAR - Servicio de Huella Digital DigitalPersona (.NET)");
 Console.WriteLine("============================================================");
 Console.WriteLine($"  SDK cargado: {(sdkReady ? "SI" : "NO")}");
+Console.WriteLine("  CORS: Habilitado para todos los origenes");
 Console.WriteLine("  Servicio en: http://localhost:5000");
 Console.WriteLine("  Ctrl+C para detener");
 Console.WriteLine("============================================================");
