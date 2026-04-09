@@ -12,6 +12,7 @@ import { SignatureCanvas } from "./SignatureCanvas";
 import { FingerprintCapture } from "./FingerprintCapture";
 import { ContractPhotoCapture } from "./ContractPhotoCapture";
 import { supabase } from "@/integrations/supabase/client";
+import { getApiUrl } from "@/utils/apiUrl";
 import { toast } from "sonner";
 import { FileText, Loader2, Search, Shield } from "lucide-react";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
@@ -417,7 +418,7 @@ export const ContractForm = () => {
         try {
           toast.info("Enviando contrato por email...");
           
-          const emailResponse = await fetch('/api/send-contract-email', {
+          const emailResponse = await fetch(getApiUrl('/api/send-contract-email'), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

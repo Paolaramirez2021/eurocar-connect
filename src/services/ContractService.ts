@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { getApiUrl } from '@/utils/apiUrl';
 
 export interface ContractGenerationData {
   reservation_id: string;
@@ -191,7 +192,7 @@ export class ContractService {
       console.log('[ContractService] Enviando email a:', clientEmail);
       
       // Llamar al backend API (usa /api que es redirigido por Kubernetes ingress)
-      const response = await fetch('/api/send-contract-email', {
+      const response = await fetch(getApiUrl('/api/send-contract-email'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

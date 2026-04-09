@@ -10,6 +10,7 @@ import { ContractPhotoCapture } from "./ContractPhotoCapture";
 import { DocumentPhotoCapture } from "./DocumentPhotoCapture";
 import { LegalDocumentsModal, TERMINOS_CONDICIONES } from "./LegalDocumentsModal";
 import { generateContractHTML, ContractData } from "@/utils/contractTemplate";
+import { getApiUrl } from "@/utils/apiUrl";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, FileSignature, ArrowRight, FileText, Shield } from "lucide-react";
@@ -277,7 +278,7 @@ export const ConvertToFinalDialog = ({
       const html = generateContractHTML(templateData);
 
       // Llamar al backend para generar el PDF
-      const pdfResponse = await fetch('/api/generate-pdf', {
+      const pdfResponse = await fetch(getApiUrl('/api/generate-pdf'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -368,7 +369,7 @@ export const ConvertToFinalDialog = ({
       // Send email with final contract using FastAPI backend
       if (preliminaryContract.customer_email) {
         try {
-          const response = await fetch('/api/send-contract-email', {
+          const response = await fetch(getApiUrl('/api/send-contract-email'), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

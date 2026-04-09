@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getApiUrl } from "@/utils/apiUrl";
 import {
   Table,
   TableBody,
@@ -144,7 +145,7 @@ export const ContractsList = ({ highlightedContractId }: ContractsListProps) => 
       const diasTotales = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 
       // Llamar al backend FastAPI para reenviar email
-      const response = await fetch('/api/send-contract-email', {
+      const response = await fetch(getApiUrl('/api/send-contract-email'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

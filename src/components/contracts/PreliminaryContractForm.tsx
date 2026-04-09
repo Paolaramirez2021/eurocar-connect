@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { FileText, Loader2, Search, Send } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { generateContractHTML, ContractData } from "@/utils/contractTemplate";
+import { getApiUrl } from "@/utils/apiUrl";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -414,7 +415,7 @@ export const PreliminaryContractForm = () => {
     console.log('[generatePreliminaryPDF] HTML generado, longitud:', html.length);
 
     try {
-      const response = await fetch('/api/generate-pdf', {
+      const response = await fetch(getApiUrl('/api/generate-pdf'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -521,7 +522,7 @@ export const PreliminaryContractForm = () => {
       // Enviar email si corresponde
       if (data.includeEmail && data.customerEmail) {
         try {
-          await fetch('/api/send-contract-email', {
+          await fetch(getApiUrl('/api/send-contract-email'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
