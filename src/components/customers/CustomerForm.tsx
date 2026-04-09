@@ -65,6 +65,16 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
   const [docReversoFile, setDocReversoFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [showCvv, setShowCvv] = useState(false);
+
+  const viewSignedDoc = async (publicUrl: string) => {
+    try {
+      const parts = publicUrl.split('/contracts/');
+      if (parts.length < 2) { window.open(publicUrl, '_blank'); return; }
+      const filePath = decodeURIComponent(parts[parts.length - 1]);
+      const { data, error } = await supabase.storage.from("contracts").createSignedUrl(filePath, 3600);
+      window.open(error ? publicUrl : data.signedUrl, '_blank');
+    } catch { window.open(publicUrl, '_blank'); }
+  };
   
   // Preparar defaultValues con datos del cliente si existe
   const getDefaultValues = (): CustomerFormData => {
@@ -487,7 +497,9 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
                       {docFrenteFile ? docFrenteFile.name : "Subir Pasaporte"}
                     </Button>
                     {customer?.documento_frente_url && !docFrenteFile && (
-                      <span className="text-xs text-green-600">Documento cargado</span>
+                      <Button type="button" variant="ghost" size="sm" className="text-green-600 text-xs h-auto py-1 px-2" onClick={() => viewSignedDoc(customer.documento_frente_url)}>
+                        <Eye className="h-3 w-3 mr-1" /> Ver documento
+                      </Button>
                     )}
                   </div>
                 ) : (
@@ -510,7 +522,9 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
                         {docFrenteFile ? docFrenteFile.name : "Frente"}
                       </Button>
                       {customer?.documento_frente_url && !docFrenteFile && (
-                        <span className="text-xs text-green-600">Cargado</span>
+                        <Button type="button" variant="ghost" size="sm" className="text-green-600 text-xs h-auto py-1 px-2" onClick={() => viewSignedDoc(customer.documento_frente_url)}>
+                          <Eye className="h-3 w-3 mr-1" /> Ver frente
+                        </Button>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
@@ -531,7 +545,9 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
                         {docReversoFile ? docReversoFile.name : "Reverso"}
                       </Button>
                       {customer?.documento_reverso_url && !docReversoFile && (
-                        <span className="text-xs text-green-600">Cargado</span>
+                        <Button type="button" variant="ghost" size="sm" className="text-green-600 text-xs h-auto py-1 px-2" onClick={() => viewSignedDoc(customer.documento_reverso_url)}>
+                          <Eye className="h-3 w-3 mr-1" /> Ver reverso
+                        </Button>
                       )}
                     </div>
                   </div>
