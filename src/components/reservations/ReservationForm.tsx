@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, Calendar as CalendarIcon, AlertCircle, User, CreditCard, Briefcase, Users, FileText, Search, ShieldAlert } from "lucide-react";
+import { Loader2, Calendar as CalendarIcon, AlertCircle, User, CreditCard, Briefcase, Users, FileText, Search, ShieldAlert, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -93,6 +93,7 @@ export const ReservationForm = () => {
   const [precioBase, setPrecioBase] = useState<number>(0);
   const [precioFinal, setPrecioFinal] = useState<number>(0);
   const [showBlockedCustomerDialog, setShowBlockedCustomerDialog] = useState(false);
+  const [showCvv, setShowCvv] = useState(false);
   const [blockedCustomerName, setBlockedCustomerName] = useState("");
   const [allCustomers, setAllCustomers] = useState<any[]>([]);
   const [filteredCustomers, setFilteredCustomers] = useState<any[]>([]);
@@ -1083,14 +1084,25 @@ export const ReservationForm = () => {
 
               <div>
                 <Label htmlFor="cvv_tarjeta">CVV</Label>
-                <Input
-                  id="cvv_tarjeta"
-                  type="password"
-                  value={customer.cvv_tarjeta}
-                  onChange={(e) => updateCustomer("cvv_tarjeta", e.target.value)}
-                  placeholder="***"
-                  maxLength={4}
-                />
+                <div className="relative">
+                  <Input
+                    id="cvv_tarjeta"
+                    type={showCvv ? "text" : "password"}
+                    value={customer.cvv_tarjeta}
+                    onChange={(e) => updateCustomer("cvv_tarjeta", e.target.value)}
+                    placeholder="***"
+                    maxLength={4}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCvv(!showCvv)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    data-testid="toggle-cvv-visibility-reservation"
+                  >
+                    {showCvv ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
             </div>
           </TabsContent>
