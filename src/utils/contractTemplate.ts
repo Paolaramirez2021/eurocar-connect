@@ -120,7 +120,7 @@ export const generateContractHTML = (data: ContractData): string => {
     .clausulas strong { color: #0066cc; }
     .signatures { margin-top: 25px; }
     .sig-box { display: inline-block; width: 45%; text-align: center; vertical-align: top; }
-    .sig-line { border-bottom: 1px solid #333; height: 40px; margin-bottom: 5px; }
+    .sig-line { border-bottom: 1px solid #333; height: 40px; margin-bottom: 5px; position: relative; }
     .footer { text-align: center; font-size: 7px; color: #666; margin-top: 15px; border-top: 1px solid #ccc; padding-top: 8px; }
     .verification-section { margin-top: 20px; page-break-inside: avoid; }
     .verification-grid { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; }
@@ -283,7 +283,7 @@ ${esFinal ? '<div class="final-badge">✓ CONTRATO FIRMADO DIGITALMENTE</div>' :
   </div>
   <div class="sig-box">
     <div class="sig-line">
-      ${esFinal ? `<img src="data:image/png;base64,${FIRMA_REPRESENTANTE_BASE64}" style="height:70px; width:auto; object-fit:contain; display:block; margin:0 auto; background-color:#FFFFFF;" alt="Firma Representante Legal">` : ''}
+      ${esFinal ? `<img src="data:image/png;base64,${FIRMA_REPRESENTANTE_BASE64}" style="height:38px; width:auto; object-fit:contain; display:block; margin:0 auto; position:absolute; bottom:2px; left:50%; transform:translateX(-50%); background-color:#FFFFFF;" alt="Firma Representante Legal">` : ''}
     </div>
     <strong>EL ARRENDADOR</strong><br>
     <span style="font-size:9px">EUROCAR RENTAL SAS<br>
