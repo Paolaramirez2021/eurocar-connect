@@ -63,6 +63,10 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [docFrenteFile, setDocFrenteFile] = useState<File | null>(null);
   const [docReversoFile, setDocReversoFile] = useState<File | null>(null);
+  const [licFrenteFile, setLicFrenteFile] = useState<File | null>(null);
+  const [licReversoFile, setLicReversoFile] = useState<File | null>(null);
+  const [tarjetaFrenteFile, setTarjetaFrenteFile] = useState<File | null>(null);
+  const [tarjetaReversoFile, setTarjetaReversoFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [showCvv, setShowCvv] = useState(false);
 
@@ -175,10 +179,7 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
   const handleFrenteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("El archivo no debe superar 5MB");
-        return;
-      }
+      if (file.size > 5 * 1024 * 1024) { toast.error("El archivo no debe superar 5MB"); return; }
       setDocFrenteFile(file);
     }
   };
@@ -186,11 +187,16 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
   const handleReversoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("El archivo no debe superar 5MB");
-        return;
-      }
+      if (file.size > 5 * 1024 * 1024) { toast.error("El archivo no debe superar 5MB"); return; }
       setDocReversoFile(file);
+    }
+  };
+
+  const handleFileSelect = (setter: (f: File | null) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) { toast.error("El archivo no debe superar 5MB"); return; }
+      setter(file);
     }
   };
 
@@ -217,24 +223,29 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
     }
   };
 
-  const uploadDocuments = async (customerId: string): Promise<{ frente: string | null; reverso: string | null }> => {
+  const uploadDocuments = async (customerId: string): Promise<Record<string, string | null>> => {
     setUploading(true);
     try {
-      let frenteUrl: string | null = null;
-      let reversoUrl: string | null = null;
+      const results: Record<string, string | null> = {};
+      const uploads: [File | null, string, string][] = [
+        [docFrenteFile, "doc_frente", "documento_frente_url"],
+        [docReversoFile, "doc_reverso", "documento_reverso_url"],
+        [licFrenteFile, "lic_frente", "licencia_frente_url"],
+        [licReversoFile, "lic_reverso", "licencia_reverso_url"],
+        [tarjetaFrenteFile, "tarjeta_frente", "tarjeta_frente_url"],
+        [tarjetaReversoFile, "tarjeta_reverso", "tarjeta_reverso_url"],
+      ];
 
-      if (docFrenteFile) {
-        frenteUrl = await uploadSingleFile(docFrenteFile, customerId, "frente");
+      for (const [file, suffix, field] of uploads) {
+        if (file) {
+          results[field] = await uploadSingleFile(file, customerId, suffix);
+        }
       }
-      if (docReversoFile) {
-        reversoUrl = await uploadSingleFile(docReversoFile, customerId, "reverso");
-      }
-
-      return { frente: frenteUrl, reverso: reversoUrl };
+      return results;
     } catch (error) {
       console.error("Error uploading documents:", error);
       toast.error("Error al subir documentos");
-      return { frente: null, reverso: null };
+      return {};
     } finally {
       setUploading(false);
     }
@@ -262,15 +273,24 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
       
       let docFrenteUrl = customer?.documento_frente_url || null;
       let docReversoUrl = customer?.documento_reverso_url || null;
+      let licFrenteUrl = customer?.licencia_frente_url || null;
+      let licReversoUrl = customer?.licencia_reverso_url || null;
+      let tarjetaFrenteUrl = customer?.tarjeta_frente_url || null;
+      let tarjetaReversoUrl = customer?.tarjeta_reverso_url || null;
 
       if (customer && customer.id) {
         // Update existing customer
         console.log('[CustomerForm] Actualizando cliente existente:', customer.id);
         
-        if (docFrenteFile || docReversoFile) {
+        const hasFiles = docFrenteFile || docReversoFile || licFrenteFile || licReversoFile || tarjetaFrenteFile || tarjetaReversoFile;
+        if (hasFiles) {
           const uploaded = await uploadDocuments(customer.id);
-          if (uploaded.frente) docFrenteUrl = uploaded.frente;
-          if (uploaded.reverso) docReversoUrl = uploaded.reverso;
+          if (uploaded.documento_frente_url) docFrenteUrl = uploaded.documento_frente_url;
+          if (uploaded.documento_reverso_url) docReversoUrl = uploaded.documento_reverso_url;
+          if (uploaded.licencia_frente_url) licFrenteUrl = uploaded.licencia_frente_url;
+          if (uploaded.licencia_reverso_url) licReversoUrl = uploaded.licencia_reverso_url;
+          if (uploaded.tarjeta_frente_url) tarjetaFrenteUrl = uploaded.tarjeta_frente_url;
+          if (uploaded.tarjeta_reverso_url) tarjetaReversoUrl = uploaded.tarjeta_reverso_url;
         }
 
         // Preparar datos para actualización
@@ -310,6 +330,10 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
           estado: data.estado,
           documento_frente_url: docFrenteUrl,
           documento_reverso_url: docReversoUrl,
+          licencia_frente_url: licFrenteUrl,
+          licencia_reverso_url: licReversoUrl,
+          tarjeta_frente_url: tarjetaFrenteUrl,
+          tarjeta_reverso_url: tarjetaReversoUrl,
         };
 
         console.log('[CustomerForm] Ejecutando UPDATE con ID:', customer.id);
@@ -355,17 +379,17 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
 
         console.log('[CustomerForm] Cliente creado:', newCustomer.id);
 
-        if (docFrenteFile || docReversoFile) {
+        const hasFiles = docFrenteFile || docReversoFile || licFrenteFile || licReversoFile || tarjetaFrenteFile || tarjetaReversoFile;
+        if (hasFiles) {
           const uploaded = await uploadDocuments(newCustomer.id);
-          const updateFields: any = {};
-          if (uploaded.frente) updateFields.documento_frente_url = uploaded.frente;
-          if (uploaded.reverso) updateFields.documento_reverso_url = uploaded.reverso;
-          
-          if (Object.keys(updateFields).length > 0) {
-            await supabase
-              .from("customers")
-              .update(updateFields)
-              .eq("id", newCustomer.id);
+          if (Object.keys(uploaded).length > 0) {
+            const updateFields: Record<string, string> = {};
+            for (const [key, val] of Object.entries(uploaded)) {
+              if (val) updateFields[key] = val;
+            }
+            if (Object.keys(updateFields).length > 0) {
+              await supabase.from("customers").update(updateFields).eq("id", newCustomer.id);
+            }
           }
         }
 
@@ -614,6 +638,36 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
                 <Input id="licencia_fecha_vencimiento" type="date" {...register("licencia_fecha_vencimiento")} />
               </div>
             </div>
+            <div className="space-y-2 pt-2">
+              <Label>Foto Licencia de Conducción</Label>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <Input id="lic_frente" type="file" accept="image/*,.pdf" onChange={handleFileSelect(setLicFrenteFile)} className="hidden" />
+                  <Button type="button" variant="outline" onClick={() => document.getElementById("lic_frente")?.click()} data-testid="upload-lic-frente">
+                    <Upload className="mr-2 h-4 w-4" />
+                    {licFrenteFile ? licFrenteFile.name : "Frente"}
+                  </Button>
+                  {customer?.licencia_frente_url && !licFrenteFile && (
+                    <Button type="button" variant="ghost" size="sm" className="text-green-600 text-xs h-auto py-1 px-2" onClick={() => viewSignedDoc(customer.licencia_frente_url)}>
+                      <Eye className="h-3 w-3 mr-1" /> Ver frente
+                    </Button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input id="lic_reverso" type="file" accept="image/*,.pdf" onChange={handleFileSelect(setLicReversoFile)} className="hidden" />
+                  <Button type="button" variant="outline" onClick={() => document.getElementById("lic_reverso")?.click()} data-testid="upload-lic-reverso">
+                    <Upload className="mr-2 h-4 w-4" />
+                    {licReversoFile ? licReversoFile.name : "Reverso"}
+                  </Button>
+                  {customer?.licencia_reverso_url && !licReversoFile && (
+                    <Button type="button" variant="ghost" size="sm" className="text-green-600 text-xs h-auto py-1 px-2" onClick={() => viewSignedDoc(customer.licencia_reverso_url)}>
+                      <Eye className="h-3 w-3 mr-1" /> Ver reverso
+                    </Button>
+                  )}
+                </div>
+              </div>
+              {uploading && <p className="text-xs text-muted-foreground">Subiendo documentos...</p>}
+            </div>
           </TabsContent>
 
           <TabsContent value="laboral" className="space-y-4">
@@ -644,6 +698,36 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
                   </button>
                 </div>
               </div>
+            </div>
+            <div className="space-y-2 pt-2">
+              <Label>Foto Tarjeta de Crédito</Label>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <Input id="tarjeta_frente" type="file" accept="image/*,.pdf" onChange={handleFileSelect(setTarjetaFrenteFile)} className="hidden" />
+                  <Button type="button" variant="outline" onClick={() => document.getElementById("tarjeta_frente")?.click()} data-testid="upload-tarjeta-frente">
+                    <Upload className="mr-2 h-4 w-4" />
+                    {tarjetaFrenteFile ? tarjetaFrenteFile.name : "Frente"}
+                  </Button>
+                  {customer?.tarjeta_frente_url && !tarjetaFrenteFile && (
+                    <Button type="button" variant="ghost" size="sm" className="text-green-600 text-xs h-auto py-1 px-2" onClick={() => viewSignedDoc(customer.tarjeta_frente_url)}>
+                      <Eye className="h-3 w-3 mr-1" /> Ver frente
+                    </Button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input id="tarjeta_reverso" type="file" accept="image/*,.pdf" onChange={handleFileSelect(setTarjetaReversoFile)} className="hidden" />
+                  <Button type="button" variant="outline" onClick={() => document.getElementById("tarjeta_reverso")?.click()} data-testid="upload-tarjeta-reverso">
+                    <Upload className="mr-2 h-4 w-4" />
+                    {tarjetaReversoFile ? tarjetaReversoFile.name : "Reverso"}
+                  </Button>
+                  {customer?.tarjeta_reverso_url && !tarjetaReversoFile && (
+                    <Button type="button" variant="ghost" size="sm" className="text-green-600 text-xs h-auto py-1 px-2" onClick={() => viewSignedDoc(customer.tarjeta_reverso_url)}>
+                      <Eye className="h-3 w-3 mr-1" /> Ver reverso
+                    </Button>
+                  )}
+                </div>
+              </div>
+              {uploading && <p className="text-xs text-muted-foreground">Subiendo documentos...</p>}
             </div>
           </TabsContent>
 
