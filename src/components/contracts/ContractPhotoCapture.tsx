@@ -19,8 +19,15 @@ export const ContractPhotoCapture = ({ onPhotoChange }: ContractPhotoCaptureProp
   // Detectar si es un dispositivo móvil
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-  // Limpiar stream cuando se desmonta el componente
+  // Conectar el stream al video cuando ambos estén disponibles
   useEffect(() => {
+    if (stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play().catch((err) => {
+        console.warn("Error auto-playing video:", err);
+      });
+    }
+    // Limpiar stream cuando se desmonta el componente
     return () => {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
@@ -76,11 +83,6 @@ export const ContractPhotoCapture = ({ onPhotoChange }: ContractPhotoCaptureProp
       });
       
       setStream(mediaStream);
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-        videoRef.current.play();
-      }
       
     } catch (error: any) {
       console.error("Error al acceder a la cámara:", error);

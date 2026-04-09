@@ -33,13 +33,22 @@ const ContratoFinal = () => {
 
   useEffect(() => {
     cargarReservas();
+  }, []);
+
+  // Conectar stream al video cuando ambos estén disponibles
+  useEffect(() => {
+    if (stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play().catch((err) => {
+        console.warn("Error auto-playing video:", err);
+      });
+    }
     return () => {
-      // Limpiar stream de cámara al desmontar
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
     };
-  }, []);
+  }, [stream]);
 
   const cargarReservas = async () => {
     const { data, error } = await supabase
@@ -80,9 +89,6 @@ const ContratoFinal = () => {
         video: { width: 640, height: 480 } 
       });
       setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
       toast.success("Cámara iniciada");
     } catch (error) {
       toast.error("Error al acceder a la cámara");
@@ -362,6 +368,8 @@ const ContratoFinal = () => {
                     <video 
                       ref={videoRef}
                       autoPlay
+                      playsInline
+                      muted
                       className="w-full max-w-md mx-auto rounded-lg border"
                     />
                     <Button onClick={capturarFoto} className="w-full max-w-md mx-auto block">
