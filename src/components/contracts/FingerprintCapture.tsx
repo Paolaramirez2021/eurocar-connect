@@ -6,7 +6,11 @@ import { toast } from "sonner";
 import { Capacitor } from "@capacitor/core";
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 
-const SCANNER_URL = "http://localhost:5000";
+// URLs del servicio local de huella - intenta ambas por compatibilidad de navegadores
+const SCANNER_URLS = [
+  "http://localhost:5000",
+  "http://127.0.0.1:5000",
+];
 
 interface FingerprintCaptureProps {
   onFingerprintChange: (dataUrl: string | null) => void;
@@ -84,42 +88,56 @@ export const FingerprintCapture = ({ onFingerprintChange }: FingerprintCapturePr
   const handleScannerCapture = async () => {
     setIsScanning(true);
     try {
-      // Llamar al servicio local del huellero DigitalPersona
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 30000);
+      // Intentar cada URL del servicio local (localhost y 127.0.0.1)
+      let lastError: any = null;
+      for (const baseUrl of SCANNER_URLS) {
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 30000);
 
-      const response = await fetch(`${SCANNER_URL}/capturar-huella`, {
-        method: "POST",
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
+          const response = await fetch(`${baseUrl}/capturar-huella`, {
+            method: "POST",
+            signal: controller.signal,
+          });
+          clearTimeout(timeout);
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `Error del servicio (${response.status})`);
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || `Error del servicio (${response.status})`);
+          }
+
+          const data = await response.json();
+
+          if (!data.image) {
+            throw new Error("No se recibió imagen del huellero");
+          }
+
+          const dataUrl = data.image.startsWith("data:")
+            ? data.image
+            : `data:image/png;base64,${data.image}`;
+
+          setPreview(dataUrl);
+          onFingerprintChange(dataUrl);
+          setCaptureMethod("scanner");
+          toast.success("Huella capturada con huellero digital");
+          return; // Exito, salir
+        } catch (err: any) {
+          lastError = err;
+          // Si no es error de red, no intentar la siguiente URL
+          if (!err.message?.includes("Failed to fetch") && !err.message?.includes("NetworkError") && err.name !== "AbortError") {
+            throw err;
+          }
+        }
       }
 
-      const data = await response.json();
-
-      if (!data.image) {
-        throw new Error("No se recibió imagen del huellero");
-      }
-
-      // data.image puede venir como base64 puro o con prefijo data:image/png;base64,
-      const dataUrl = data.image.startsWith("data:")
-        ? data.image
-        : `data:image/png;base64,${data.image}`;
-
-      setPreview(dataUrl);
-      onFingerprintChange(dataUrl);
-      setCaptureMethod("scanner");
-      toast.success("Huella capturada con huellero digital");
+      // Si ninguna URL funciono, lanzar el ultimo error
+      throw lastError || new Error("No se pudo conectar");
     } catch (error: any) {
       if (error.name === "AbortError") {
         toast.error("Tiempo de espera agotado. Asegúrese de colocar el dedo en el huellero.");
       } else if (error.message?.includes("Failed to fetch") || error.message?.includes("NetworkError")) {
         toast.error(
-          "No se pudo conectar al huellero. Verifique que el servicio local esté ejecutándose en el puerto 5000."
+          "No se pudo conectar al huellero. Verifique que el servicio esté ejecutándose y que el navegador permita conexiones a localhost:5000."
         );
       } else {
         toast.error(`Error: ${error.message}`);
