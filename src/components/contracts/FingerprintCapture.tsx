@@ -6,11 +6,13 @@ import { toast } from "sonner";
 import { Capacitor } from "@capacitor/core";
 import { Camera as CapacitorCamera, CameraResultType, CameraSource } from "@capacitor/camera";
 
-// URLs del servicio local de huella - intenta ambas por compatibilidad de navegadores
-const SCANNER_URLS = [
-  "http://localhost:5000",
-  "http://127.0.0.1:5000",
-];
+// Declarar el tipo global del SDK DigitalPersona
+declare global {
+  interface Window {
+    Fingerprint: any;
+  }
+}
+const FP = () => (window as any).Fingerprint;
 
 interface FingerprintCaptureProps {
   onFingerprintChange: (dataUrl: string | null) => void;
@@ -86,62 +88,80 @@ export const FingerprintCapture = ({ onFingerprintChange }: FingerprintCapturePr
   const [isScanning, setIsScanning] = useState(false);
 
   const handleScannerCapture = async () => {
+    const sdk = FP();
+    if (!sdk || !sdk.WebApi) {
+      toast.error("SDK de huella digital no disponible. Verifique que el software DigitalPersona esté instalado.");
+      return;
+    }
+
     setIsScanning(true);
+    let webApi: any = null;
+
     try {
-      // Intentar cada URL del servicio local (localhost y 127.0.0.1)
-      let lastError: any = null;
-      for (const baseUrl of SCANNER_URLS) {
-        try {
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 30000);
+      webApi = new sdk.WebApi();
 
-          const response = await fetch(`${baseUrl}/capturar-huella`, {
-            method: "POST",
-            signal: controller.signal,
-          });
+      // Esperar a que el SDK se conecte al servicio local
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Enumerar dispositivos
+      const devices: any[] = await new Promise((resolve, reject) => {
+        webApi.enumerateDevices().then(resolve, reject);
+      });
+
+      if (!devices || devices.length === 0) {
+        throw new Error("No se encontró ningún lector de huella conectado.");
+      }
+
+      const readerId = devices[0];
+
+      // Capturar huella como PNG
+      const capturePromise = new Promise<string>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          try { webApi.stopAcquisition(); } catch (_) {}
+          reject(new Error("Tiempo agotado. Coloque el dedo en el sensor e intente de nuevo."));
+        }, 20000);
+
+        webApi.onSamplesAcquired = (s: any) => {
           clearTimeout(timeout);
-
-          if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.error || `Error del servicio (${response.status})`);
+          try {
+            const samples = JSON.parse(s.samples);
+            const b64 = sdk.b64UrlTo64(samples[0]);
+            resolve("data:image/png;base64," + b64);
+          } catch (e) {
+            reject(new Error("Error procesando imagen de huella."));
           }
+        };
 
-          const data = await response.json();
+        webApi.onErrorOccurred = (e: any) => {
+          clearTimeout(timeout);
+          reject(new Error("Error del lector: " + (e?.message || "desconocido")));
+        };
 
-          if (!data.image) {
-            throw new Error("No se recibió imagen del huellero");
+        // Iniciar captura en formato PNG
+        webApi.startAcquisition(sdk.SampleFormat.PngImage, readerId).then(
+          () => {
+            console.log("[HUELLA] Lector activado, esperando dedo...");
+          },
+          (err: any) => {
+            clearTimeout(timeout);
+            reject(new Error("No se pudo activar el lector: " + (err?.message || err)));
           }
-
-          const dataUrl = data.image.startsWith("data:")
-            ? data.image
-            : `data:image/png;base64,${data.image}`;
-
-          setPreview(dataUrl);
-          onFingerprintChange(dataUrl);
-          setCaptureMethod("scanner");
-          toast.success("Huella capturada con huellero digital");
-          return; // Exito, salir
-        } catch (err: any) {
-          lastError = err;
-          // Si no es error de red, no intentar la siguiente URL
-          if (!err.message?.includes("Failed to fetch") && !err.message?.includes("NetworkError") && err.name !== "AbortError") {
-            throw err;
-          }
-        }
-      }
-
-      // Si ninguna URL funciono, lanzar el ultimo error
-      throw lastError || new Error("No se pudo conectar");
-    } catch (error: any) {
-      if (error.name === "AbortError") {
-        toast.error("Tiempo de espera agotado. Asegúrese de colocar el dedo en el huellero.");
-      } else if (error.message?.includes("Failed to fetch") || error.message?.includes("NetworkError")) {
-        toast.error(
-          "No se pudo conectar al huellero. Verifique que el servicio esté ejecutándose y que el navegador permita conexiones a localhost:5000."
         );
-      } else {
-        toast.error(`Error: ${error.message}`);
-      }
+      });
+
+      const dataUrl = await capturePromise;
+
+      // Detener captura
+      try { await webApi.stopAcquisition(); } catch (_) {}
+
+      setPreview(dataUrl);
+      onFingerprintChange(dataUrl);
+      setCaptureMethod("scanner");
+      toast.success("Huella capturada con huellero digital");
+
+    } catch (error: any) {
+      try { if (webApi) webApi.stopAcquisition(); } catch (_) {}
+      toast.error(error.message || "Error capturando huella");
     } finally {
       setIsScanning(false);
     }
@@ -250,7 +270,7 @@ export const FingerprintCapture = ({ onFingerprintChange }: FingerprintCapturePr
             <strong>Nota:</strong> La huella es opcional y se utiliza como respaldo visual adicional.
           </p>
           <p className="text-xs text-muted-foreground">
-            El huellero digital requiere el servicio local ejecutándose (DigitalPersona 4500).
+            El huellero requiere el software DigitalPersona U.are.U instalado en este equipo.
           </p>
         </div>
       </div>
