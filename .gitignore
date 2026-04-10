@@ -189,3 +189,20 @@ node_modules/html-pdf-node/node_modules/puppeteer/.local-chromium/linux-901912/c
 # Environment files
 *.env
 *.env.*
+-e 
+# Environment files
+*.env
+*.env.*
+-e 
+# Environment files
+*.env
+*.env.*
+-e 
+# Environment and credential files
+.env
+.env.*
+*.env
+credentials.json
+*.pem
+*.key
+.credentials
