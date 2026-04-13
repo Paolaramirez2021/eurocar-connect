@@ -279,24 +279,34 @@ export const PreliminaryContractForm = () => {
 
   const searchCustomerByDocument = async () => {
     if (!searchDocument.trim()) {
-      toast.error("Ingrese un documento para buscar");
+      toast.error("Ingrese un documento o nombre para buscar");
       return;
     }
 
     setIsSearching(true);
     try {
-      // Buscar cliente
-      const { data: customer, error: customerError } = await supabase
+      const query = searchDocument.trim();
+      
+      // Buscar por documento o por nombre
+      const { data: customers, error: customerError } = await supabase
         .from("customers")
         .select("*")
-        .ilike("cedula_pasaporte", searchDocument.trim())
-        .single();
+        .or(`cedula_pasaporte.ilike.%${query}%,nombres.ilike.%${query}%,primer_apellido.ilike.%${query}%`)
+        .limit(10);
 
-      if (customerError || !customer) {
+      if (customerError || !customers || customers.length === 0) {
         toast.error("Cliente no encontrado");
         setReservations([]);
         setSelectedCustomer(null);
         return;
+      }
+
+      // Si hay un solo resultado, usarlo directamente
+      // Si hay varios, usar el primero (el más relevante)
+      const customer = customers.length === 1 ? customers[0] : customers[0];
+      
+      if (customers.length > 1) {
+        toast.info(`Se encontraron ${customers.length} clientes. Mostrando: ${customers[0].nombres} ${customers[0].primer_apellido} - ${customers[0].cedula_pasaporte}`);
       }
 
       setSelectedCustomer(customer);
@@ -681,7 +691,7 @@ export const PreliminaryContractForm = () => {
         </h3>
         <div className="flex gap-2">
           <Input
-            placeholder="Ingrese cédula o documento del cliente"
+            placeholder="Buscar por nombre, apellido o cédula"
             value={searchDocument}
             onChange={(e) => setSearchDocument(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), searchCustomerByDocument())}
