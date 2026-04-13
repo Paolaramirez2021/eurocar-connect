@@ -161,11 +161,45 @@ export const ConvertToFinalDialog = ({
 
     try {
       // Helper: convert URL to base64 data URL (needed for Puppeteer rendering)
+      // Also compresses images to reduce payload size
       const urlToBase64 = async (url: string): Promise<string> => {
         if (url.startsWith('data:')) return url;
         try {
           const response = await fetch(url);
           const blob = await response.blob();
+          // Compress via canvas if it's an image
+          if (blob.type.startsWith('image/')) {
+            const img = new Image();
+            const loadPromise = new Promise<string>((resolve) => {
+              img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const maxDim = 800;
+                let w = img.width, h = img.height;
+                if (w > maxDim || h > maxDim) {
+                  if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                  else { w = Math.round(w * maxDim / h); h = maxDim; }
+                }
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                  ctx.drawImage(img, 0, 0, w, h);
+                  resolve(canvas.toDataURL('image/jpeg', 0.7));
+                } else {
+                  const reader = new FileReader();
+                  reader.onloadend = () => resolve(reader.result as string);
+                  reader.readAsDataURL(blob);
+                }
+              };
+              img.onerror = () => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.readAsDataURL(blob);
+              };
+            });
+            img.src = URL.createObjectURL(blob);
+            return loadPromise;
+          }
           return new Promise((resolve) => {
             const reader = new FileReader();
             reader.onloadend = () => resolve(reader.result as string);
@@ -382,7 +416,9 @@ export const ConvertToFinalDialog = ({
       });
 
       if (!pdfResponse.ok) {
-        throw new Error('Error al generar PDF final');
+        const errorText = await pdfResponse.text().catch(() => 'Sin detalle');
+        console.error(`PDF generation failed: ${pdfResponse.status} - ${errorText}`);
+        throw new Error(`Error al generar PDF final (${pdfResponse.status})`);
       }
 
       const pdfResult = await pdfResponse.json();
@@ -497,6 +533,7 @@ export const ConvertToFinalDialog = ({
       console.error("Error converting to final contract:", error);
       console.error("Error details:", JSON.stringify(error, null, 2));
       toast.error(`Error al firmar: ${error?.message || 'Error desconocido'}`);
+      console.error("Error completo al firmar:", error);
     } finally {
       setIsSubmitting(false);
     }
