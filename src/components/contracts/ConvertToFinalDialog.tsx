@@ -592,7 +592,14 @@ export const ConvertToFinalDialog = ({
           const mensaje = `Hola ${preliminaryContract.customer_name} 👋\n\nTu contrato FIRMADO de EUROCAR RENTAL está listo:\n\n📄 ${finalPdfUrl.publicUrl}\n\nContrato: ${contractNumber}\n\nGracias por confiar en nosotros. 🚗`;
           
           const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(mensaje)}`;
-          setWhatsappSuccessData({ whatsappUrl, contractNumber });
+          // Cerrar el Dialog PRIMERO, luego mostrar el diálogo de WhatsApp
+          onOpenChange(false);
+          resetForm();
+          onSuccess();
+          // Pequeño delay para que el Dialog se cierre completamente
+          setTimeout(() => {
+            setWhatsappSuccessData({ whatsappUrl, contractNumber });
+          }, 300);
         } catch (e) {
           console.error("[WhatsApp Final] Error:", e);
           onSuccess();
@@ -827,7 +834,7 @@ export const ConvertToFinalDialog = ({
               <h3 className="text-lg font-bold text-gray-900">Contrato Firmado</h3>
             </div>
             <button 
-              onClick={() => { setWhatsappSuccessData(null); resetForm(); onSuccess(); onOpenChange(false); }}
+              onClick={() => setWhatsappSuccessData(null)}
               className="text-gray-400 hover:text-gray-600"
             >
               <X className="h-5 w-5" />
@@ -842,7 +849,8 @@ export const ConvertToFinalDialog = ({
             href={whatsappSuccessData.whatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-3 w-full py-4 px-6 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg transition-colors text-lg"
+            onClick={() => setTimeout(() => setWhatsappSuccessData(null), 500)}
+            className="flex items-center justify-center gap-3 w-full py-4 px-6 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg transition-colors text-lg cursor-pointer"
             data-testid="whatsapp-final-send-btn"
           >
             <MessageCircle className="h-6 w-6" />
@@ -850,7 +858,7 @@ export const ConvertToFinalDialog = ({
           </a>
 
           <button
-            onClick={() => { setWhatsappSuccessData(null); resetForm(); onSuccess(); onOpenChange(false); }}
+            onClick={() => setWhatsappSuccessData(null)}
             className="w-full py-3 text-gray-600 hover:text-gray-800 font-medium border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Cerrar y continuar
