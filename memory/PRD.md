@@ -1,114 +1,59 @@
-# EUROCAR RENTAL - Sistema de Gestión de Alquiler de Vehículos
+# EuroCar Connect - PRD
 
-## Descripción General
-Sistema completo de gestión de alquiler de vehículos para EUROCAR RENTAL, con funcionalidades de reservas, contratos digitales, finanzas y mantenimiento de flota.
-
-## Stack Tecnológico
-- **Frontend**: React + Vite + TypeScript + Tailwind CSS + shadcn/ui
-- **Backend Principal**: Supabase (PostgreSQL, Auth, Storage)
-- **Backend Adicional**: FastAPI (Python) para generación de PDFs y envío de emails
-- **Email**: Resend (dominio: contact.eurocarental.com)
-- **PDF**: Puppeteer (Node.js)
+## Problema Original
+Sistema de gestión de alquiler de vehículos (rental management) con React/Vite frontend, FastAPI backend, y Supabase (DB/Storage/Auth).
 
 ## Arquitectura
-
-```
-/app/
-├── backend/                    # FastAPI backend para contratos
-│   ├── server.py              # API endpoints
-│   ├── generate_pdf.cjs       # Script Puppeteer para PDFs
-│   └── .env                   # Credenciales (Resend)
-├── src/
-│   ├── components/
-│   │   ├── contracts/         # Componentes de contratos
-│   │   │   ├── ContractsList.tsx  # Historial con reenvío de email
-│   │   │   ├── ContractForm.tsx   # Formulario de firma
-│   │   │   └── ...
-│   │   ├── finance/           # Componentes de finanzas
-│   │   └── ...
-│   ├── pages/                 # Páginas de la aplicación
-│   ├── services/              # Servicios (ContractService, etc.)
-│   └── integrations/          # Integraciones (Supabase)
-└── supabase/                  # Migraciones y configuración
-```
+- Frontend: React + Vite + TypeScript + Tailwind CSS + Shadcn UI
+- Backend: FastAPI (Python) + Puppeteer (PDF generation)
+- Database: Supabase (PostgreSQL, Auth, Storage)
+- Comunicación: Signed URLs para documentos
 
 ## Funcionalidades Implementadas
 
-### ✅ Sistema de Contratos Digitales
-- Formulario de contrato con búsqueda de cliente por documento
-- Captura de firma digital (canvas)
-- Captura de huella digital (cámara/archivo)
-- **Captura de foto del cliente** - Fuerza apertura de cámara (frontal) directamente
-  - Móviles: Usa input nativo con `capture="user"` para abrir cámara directamente
-  - Desktop: Usa MediaDevices API con facingMode "user"
-  - Fallback automático si MediaDevices falla
-- Términos y condiciones con aceptación
-- Generación de PDF con Puppeteer
-- Envío automático de contrato por email (Resend)
-- **Reenvío de contrato** desde el historial (botón de email)
-- Almacenamiento de assets en Supabase Storage
+### Contratos
+- Generación de contrato preliminar con PDF vía Puppeteer
+- Conversión a contrato final con firma digital, huella, foto cliente, documentos
+- Campos: servicio_viajar, termino_contrato, km_adicional, conductores autorizados
+- Compresión de imágenes base64 para evitar 413 payload too large
+- IVA: solo aplica a valor_dias (valor_adicional es exento)
+- Validaciones obligatorias en formulario preliminar (identificación, vehículo, valor contrato)
 
-### ✅ Módulo de Finanzas
-- Dashboard con ingresos mensuales (no acumulativos)
-- Calendarios de disponibilidad con rangos de fechas completos
-- Reportes detallados de mantenimientos
-- Ordenamiento de vehículos por precio (tarifa_dia_iva)
+### Reservas
+- CRUD completo de reservaciones
+- Validación de solapamiento de fechas (reservaciones y mantenimiento)
+- Búsqueda de clientes por nombre/apellido/cédula con dropdown
+- Cálculo automático de precios con IVA
+- Alerta de seguridad para clientes bloqueados
 
-### ✅ Gestión de Mantenimientos
-- Edición de costos y detalles
-- Visualización de rangos de fechas completos
-- Historial ordenado por precio
+### Clientes
+- Upload de documentos (Cédula, Licencia, Tarjeta) frente/reverso con Supabase Signed URLs
+- Auto-populado de documentos en firma de contrato
 
-### ✅ Backend FastAPI
-- **GET /health**: Estado del servicio
-- **POST /generate-pdf**: Genera PDF desde HTML
-- **POST /send-contract-email**: Envía/reenvía contrato por email
+### Vehículos
+- Gestión de flota completa
+- Tarifa diaria configurable
 
-## Credenciales Configuradas
-- **Resend API Key**: Configurada en /app/backend/.env
-- **Sender Email**: reservas@contact.eurocarental.com
-- **Supabase**: Configurado en /app/.env
+## Completado (Abril 2026)
+- [x] Fix reservas solapadas (P0) - eliminado RPC, validación directa con format() date-fns
+- [x] Fix valores contrato final - reconstrucción correcta desde tarifa vehículo + total_amount
+- [x] Fix horas y fechas en contrato final (timezone-safe string extraction)
+- [x] Fix formato fecha vencimiento licencia en contrato final (dd/MM/yyyy)
+- [x] Validaciones obligatorias en contrato preliminar (cliente, vehículo, pago, deducible)
+- [x] Campos contrato: servicio_viajar, termino_contrato, km_adicional, conductores
+- [x] Upload documentos cliente (frente/reverso) con Signed URLs
+- [x] Auto-populado documentos en ConvertToFinalDialog
+- [x] Compresión imágenes base64 para PDF
+- [x] IVA correcto (valor_adicional exento)
+- [x] Búsqueda cliente mejorada (nombre/apellido/cédula)
 
-## Tareas Pendientes
-
-### 🟡 P1 - Próximo
-1. Refactorizar componentes grandes: `PreliminaryContractForm.tsx` (~980 líneas) y `ConvertToFinalDialog.tsx` (~600 líneas)
-2. Configurar `VITE_API_URL` en Netlify Dashboard → Site configuration → Environment variables (pendiente del usuario)
-
-### 🟢 P2 - Futuro
-1. Mejorar políticas RLS de Supabase (actualmente muy permisivas con `USING (true)`)
-2. Integración con huellero digital USB/Bluetooth
+## Pendiente
+- [ ] Políticas RLS de Supabase (P2 - seguridad)
+- [ ] Refactorizar componentes grandes (PreliminaryContractForm 1200+ líneas, ConvertToFinalDialog 790 líneas, ReservationForm 1570 líneas)
+- [ ] Verificación dominio Resend para emails
+- [ ] Limpieza archivos no usados
 
 ## Notas Técnicas
-- El backend FastAPI corre en puerto 8001, accesible vía /api desde el frontend
-- Puppeteer requiere Chrome instalado (npx puppeteer browsers install chrome)
-- El proyecto usa ES modules, scripts CommonJS deben tener extensión .cjs
-
-## URLs
-- Preview: https://vehicle-lease-app-9.preview.emergentagent.com
-- Backend API: https://vehicle-lease-app-9.preview.emergentagent.com/api/
-
-## Última Actualización
-Fecha: Diciembre, 2025
-
-### Sesión actual (Abril 2026)
-- Fondo blanco sólido (#FFFFFF) en firma del representante legal en PDF final (`contractTemplate.ts`)
-- Fondo blanco sólido (#FFFFFF) en firma del cliente vía clase `.signature-img`
-- Imagen de firma del representante legal actualizada con nueva imagen del usuario
-- Tamaño de firma reducido (38px) y posicionada encima de la línea sin pisar texto
-- 3 nuevos campos editables: Servicio a Viajar, Término Contrato, KM Adicional
-- Campos dinámicos reemplazan texto fijo en el PDF
-- Sección de Conductores Autorizados editable (conductor 1 auto del cliente, 2 y 3 opcionales)
-- Tabla de conductores en PDF con columnas: NOMBRE, No. DOCUMENTO (tipo+num), LICENCIA, VENCIMIENTO
-- Datos de nuevos campos pasan correctamente al PDF final (firmado)
-- Refactorización de template literals para evitar error SWC
-- **Documentos de cliente**: Subida de cédula (frente/reverso) o pasaporte (una imagen) al bucket `contracts`, con visualización y descarga en detalle del cliente
-
-### Historial previo
-- 16 Marzo 2025: Mejoras en sistema de contratos
-  - Términos y Condiciones y Política de Datos actualizados con documentos oficiales de EUROCAR
-  - Modales para visualizar documentos legales completos
-  - Checkboxes separados para aceptación de términos y política de datos
-  - Conversión de contrato preliminar a final ahora mantiene el mismo número de contrato
-  - El contrato se actualiza (no se crea uno nuevo) al firmar
-  - Badge "Firmado" en verde para contratos finales
+- La tabla `contracts` en Supabase NO tiene columnas financieras individuales (valor_dia, valor_adicional, etc.), solo `total_amount`. Los valores se reconstruyen desde la tarifa del vehículo y la reserva vinculada.
+- Las fechas de reservas se guardan como `YYYY-MM-DD` (formato limpio, sin timezone).
+- Las fechas de contratos se guardan como `YYYY-MM-DDThh:mm` (incluyen hora del formulario).

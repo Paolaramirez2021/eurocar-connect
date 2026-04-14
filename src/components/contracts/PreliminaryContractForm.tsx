@@ -516,13 +516,42 @@ export const PreliminaryContractForm = () => {
   };
 
   const onSubmit = async (data: ContractFormData) => {
-    if (!data.customerName || !data.vehiclePlate) {
-      toast.error("Complete los datos del cliente y vehículo");
-      return;
-    }
+    // === VALIDACIONES OBLIGATORIAS ===
+    const camposFaltantes: string[] = [];
 
-    if (!data.contractNumber) {
-      toast.error("El número de contrato es requerido");
+    // 1. IDENTIFICACIÓN DEL CLIENTE - todos obligatorios
+    if (!data.customerName?.trim()) camposFaltantes.push("Nombre del cliente");
+    if (!data.customerDocument?.trim()) camposFaltantes.push("Número de documento");
+    if (!data.customerLicense?.trim()) camposFaltantes.push("Número de licencia");
+    if (!data.customerLicenseExpiry?.trim()) camposFaltantes.push("Vencimiento de licencia");
+    if (!data.customerAddress?.trim()) camposFaltantes.push("Dirección");
+    if (!data.customerPhone?.trim()) camposFaltantes.push("Teléfono");
+    if (!data.customerCity?.trim()) camposFaltantes.push("Ciudad");
+    if (!data.customerEmail?.trim()) camposFaltantes.push("Correo electrónico");
+
+    // 2. VEHÍCULO - campos obligatorios
+    if (!data.vehiclePlate?.trim()) camposFaltantes.push("Placa del vehículo");
+    if (!data.vehicleKmOut?.trim()) camposFaltantes.push("KM Salida");
+    if (!data.servicioViajar?.trim()) camposFaltantes.push("Servicio a Viajar");
+    if (!data.terminoContrato?.trim()) camposFaltantes.push("Término del Contrato");
+    if (!data.kmAdicional?.trim()) camposFaltantes.push("Kilómetro Adicional");
+
+    // 3. FECHAS
+    if (!data.startDate) camposFaltantes.push("Fecha de inicio");
+    if (!data.endDate) camposFaltantes.push("Fecha de fin");
+
+    // 4. VALOR DEL CONTRATO - obligatorios
+    if (!data.paymentMethod?.trim()) camposFaltantes.push("Forma de Pago");
+    if (!data.deducible?.trim()) camposFaltantes.push("Valor Deducible del Seguro");
+
+    // 5. NÚMERO DE CONTRATO
+    if (!data.contractNumber?.trim()) camposFaltantes.push("Número de contrato");
+
+    if (camposFaltantes.length > 0) {
+      toast.error("Faltan datos obligatorios para generar el contrato", {
+        description: camposFaltantes.join(", "),
+        duration: 8000,
+      });
       return;
     }
 
