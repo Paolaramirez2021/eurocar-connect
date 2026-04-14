@@ -314,10 +314,10 @@ export const ConvertToFinalDialog = ({
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Obtener datos del vehículo y cliente para regenerar el PDF
+      // Obtener datos del vehículo (incluyendo tarifa) y cliente para regenerar el PDF
       const { data: vehicleData } = await supabase
         .from("vehicles")
-        .select("marca, modelo, placa, color")
+        .select("marca, modelo, placa, color, tarifa_dia_iva")
         .eq("id", preliminaryContract.vehicle_id)
         .single();
 
@@ -327,18 +327,67 @@ export const ConvertToFinalDialog = ({
         .eq("id", preliminaryContract.customer_id)
         .single();
 
-      // Calcular días
-      const startDate = new Date(preliminaryContract.start_date);
-      const endDate = new Date(preliminaryContract.end_date);
+      // Obtener datos financieros de la reserva vinculada (si existe)
+      let reservationFinancials: any = null;
+      if (preliminaryContract.reservation_id) {
+        const { data: resData } = await supabase
+          .from("reservations")
+          .select("tarifa_diaria, dias_totales, subtotal, iva, valor_total, descuento, price_total, tarifa_dia_iva, source, notas")
+          .eq("id", preliminaryContract.reservation_id)
+          .single();
+        reservationFinancials = resData;
+      }
+
+      // Calcular días - extraer hora directamente del string para evitar problemas de timezone
+      const startDateRaw = preliminaryContract.start_date; // e.g. "2026-05-14T05:00"
+      const endDateRaw = preliminaryContract.end_date;
+      
+      // Extraer fecha y hora del string original (sin parsear con Date para evitar timezone shift)
+      const startDatePart = startDateRaw.split('T')[0]; // "2026-05-14"
+      const startTimePart = startDateRaw.includes('T') ? startDateRaw.split('T')[1].substring(0, 5) : '00:00';
+      const endDatePart = endDateRaw.split('T')[0];
+      const endTimePart = endDateRaw.includes('T') ? endDateRaw.split('T')[1].substring(0, 5) : '00:00';
+      
+      // Formatear fechas manualmente para evitar timezone: "2026-05-14" -> "14/05/2026"
+      const formatDateStr = (dateStr: string) => {
+        const [y, m, d] = dateStr.split('-');
+        return `${d}/${m}/${y}`;
+      };
+      
+      // Para cálculo de días, parsear las fechas (solo parte fecha, sin hora)
+      const startDate = new Date(startDatePart + 'T12:00:00'); // usar mediodía para evitar timezone shift
+      const endDate = new Date(endDatePart + 'T12:00:00');
       const dias = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 
-      // Generar PDF final con firma y fotos
+      // === RECONSTRUIR VALORES FINANCIEROS EXACTOS DEL PRELIMINAR ===
+      // Usar tarifa del vehículo (misma fuente que usa PreliminaryContractForm)
+      const valorDia = reservationFinancials?.tarifa_diaria || vehicleData?.tarifa_dia_iva || 0;
+      const valorDias = valorDia * dias;
+      const descuentoContrato = reservationFinancials?.descuento || 0;
+      // valor_adicional = total_amount - valorDias + descuento (despejar de la fórmula original)
+      const valorAdicional = Math.max(0, preliminaryContract.total_amount - valorDias + descuentoContrato);
+      const subtotalCalc = valorDias + valorAdicional;
+      const totalConDescuento = subtotalCalc - descuentoContrato;
+      // IVA solo aplica a valor de días menos descuento (valor adicional es EXENTO de IVA)
+      const baseIva = Math.max(0, valorDias - descuentoContrato);
+      const ivaCalc = Math.round(baseIva * 0.19);
+      const totalCalc = totalConDescuento + ivaCalc;
+
+      console.log("[ConvertToFinal] Financieros reconstruidos:", {
+        valorDia, dias, valorDias, valorAdicional, subtotalCalc,
+        descuentoContrato, totalConDescuento, baseIva, ivaCalc, totalCalc,
+        total_amount_db: preliminaryContract.total_amount,
+      });
+
+      // Generar PDF final con firma y fotos - valores EXACTOS del preliminar
       const templateData: ContractData = {
         cliente_nombre: preliminaryContract.customer_name,
         cliente_tipo_documento: customerData?.tipo_documento || 'cedula',
         cliente_documento: preliminaryContract.customer_document,
         cliente_licencia: customerData?.licencia_numero || 'N/A',
-        cliente_licencia_vencimiento: customerData?.licencia_fecha_vencimiento || 'N/A',
+        cliente_licencia_vencimiento: customerData?.licencia_fecha_vencimiento
+          ? format(new Date(customerData.licencia_fecha_vencimiento + 'T12:00:00'), "dd/MM/yyyy")
+          : 'N/A',
         cliente_direccion: customerData?.direccion_residencia || 'N/A',
         cliente_telefono: preliminaryContract.customer_phone || 'N/A',
         cliente_ciudad: customerData?.ciudad || 'Colombia',
@@ -347,20 +396,20 @@ export const ConvertToFinalDialog = ({
         vehiculo_placa: vehicleData?.placa || '',
         vehiculo_color: vehicleData?.color || 'N/A',
         vehiculo_km_salida: preliminaryContract.vehiculo_km_salida || 'N/A',
-        fecha_inicio: format(startDate, "dd/MM/yyyy", { locale: es }),
-        hora_inicio: format(startDate, "HH:mm", { locale: es }),
-        fecha_fin: format(endDate, "dd/MM/yyyy", { locale: es }),
-        hora_fin: format(endDate, "HH:mm", { locale: es }),
+        fecha_inicio: formatDateStr(startDatePart),
+        hora_inicio: startTimePart,
+        fecha_fin: formatDateStr(endDatePart),
+        hora_fin: endTimePart,
         dias: dias,
         servicio: 'Turismo',
-        valor_dia: Math.round(preliminaryContract.total_amount / dias),
-        valor_dias: preliminaryContract.total_amount,
-        valor_adicional: 0,
-        subtotal: preliminaryContract.total_amount,
-        descuento: 0,
-        total_contrato: preliminaryContract.total_amount,
-        iva: Math.round(preliminaryContract.total_amount * 0.19),
-        total: Math.round(preliminaryContract.total_amount * 1.19),
+        valor_dia: valorDia,
+        valor_dias: valorDias,
+        valor_adicional: valorAdicional,
+        subtotal: subtotalCalc,
+        descuento: descuentoContrato,
+        total_contrato: totalConDescuento,
+        iva: ivaCalc,
+        total: totalCalc,
         valor_reserva: 0,
         forma_pago: 'N/A',
         numero_contrato: contractNumber,
@@ -370,7 +419,6 @@ export const ConvertToFinalDialog = ({
         servicio_viajar: preliminaryContract.servicio_viajar || '',
         termino_contrato: preliminaryContract.termino_contrato || '',
         km_adicional: preliminaryContract.km_adicional || '',
-        vehiculo_km_salida: preliminaryContract.vehiculo_km_salida || 'N/A',
         conductor2_nombre: preliminaryContract.conductor2_nombre || '',
         conductor2_tipo_doc: preliminaryContract.conductor2_tipo_doc || '',
         conductor2_documento: preliminaryContract.conductor2_documento || '',
