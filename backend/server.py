@@ -297,8 +297,20 @@ async def send_contract_email(request: ContractEmailRequest):
             "reply_to": "jennygomez@eurocarental.com"
         }
         
-        # Enviar email de forma asíncrona
-        response = await asyncio.to_thread(resend.Emails.send, params)
+        # Intentar enviar email
+        try:
+            response = await asyncio.to_thread(resend.Emails.send, params)
+            logger.info(f"Email enviado exitosamente. ID: {response.get('id')}")
+        except Exception as primary_error:
+            logger.warning(f"Error con sender principal ({SENDER_EMAIL}): {primary_error}")
+            # Fallback: usar onboarding@resend.dev si el dominio no está verificado
+            if SENDER_EMAIL != 'onboarding@resend.dev':
+                logger.info("Intentando con sender de fallback: onboarding@resend.dev")
+                params["from"] = "EUROCAR RENTAL <onboarding@resend.dev>"
+                response = await asyncio.to_thread(resend.Emails.send, params)
+                logger.info(f"Email enviado con fallback. ID: {response.get('id')}")
+            else:
+                raise primary_error
         
         logger.info(f"Email enviado exitosamente. ID: {response.get('id')}")
         

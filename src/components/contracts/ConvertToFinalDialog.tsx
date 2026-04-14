@@ -550,13 +550,13 @@ export const ConvertToFinalDialog = ({
             },
             body: JSON.stringify({
               to: [preliminaryContract.customer_email],
-              contract_pdf_url: finalPdfUrl.publicUrl, // Usar el nuevo PDF final
+              contract_pdf_url: finalPdfUrl.publicUrl,
               contract_data: {
                 cliente_nombre: preliminaryContract.customer_name,
                 vehiculo_marca: vehicleInfo,
-                vehiculo_placa: vehicleData?.plate || '',
-                fecha_inicio: format(startDate, "dd/MM/yyyy", { locale: es }),
-                fecha_fin: format(endDate, "dd/MM/yyyy", { locale: es }),
+                vehiculo_placa: vehicleData?.placa || '',
+                fecha_inicio: formatDateStr(startDatePart),
+                fecha_fin: formatDateStr(endDatePart),
                 dias_totales: dias,
                 valor_total: preliminaryContract.total_amount,
                 fecha_firma: format(new Date(), "dd/MM/yyyy HH:mm", { locale: es })
@@ -566,10 +566,32 @@ export const ConvertToFinalDialog = ({
           
           if (response.ok) {
             toast.success("Contrato enviado por email al cliente");
+          } else {
+            console.error("Email failed:", await response.text().catch(() => ''));
+            toast.warning("Contrato firmado. Email no enviado (dominio pendiente verificación DKIM)");
           }
         } catch (emailError) {
           console.error("Error sending email:", emailError);
-          // No fallar si el email falla
+        }
+      }
+
+      // Enviar por WhatsApp automáticamente con el contrato final
+      if (preliminaryContract.customer_phone) {
+        try {
+          let phone = preliminaryContract.customer_phone.replace(/[\s\-\(\)\.]/g, '');
+          if (phone.startsWith('0')) phone = phone.substring(1);
+          if (!phone.startsWith('+') && !phone.startsWith('57') && phone.length <= 10) {
+            phone = '57' + phone;
+          }
+          phone = phone.replace('+', '');
+
+          const mensaje = `Hola ${preliminaryContract.customer_name} 👋\n\nTu contrato FIRMADO de EUROCAR RENTAL está listo:\n\n📄 ${finalPdfUrl.publicUrl}\n\nContrato: ${contractNumber}\n\nGracias por confiar en nosotros. 🚗`;
+          
+          const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(mensaje)}`;
+          window.open(whatsappUrl, '_blank');
+          toast.success("WhatsApp abierto para enviar contrato firmado");
+        } catch (e) {
+          console.error("[WhatsApp Final] Error:", e);
         }
       }
 

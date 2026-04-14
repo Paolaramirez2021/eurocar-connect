@@ -620,7 +620,7 @@ export const PreliminaryContractForm = () => {
       // Enviar email si corresponde
       if (data.includeEmail && data.customerEmail) {
         try {
-          await fetch(getApiUrl('/api/send-contract-email'), {
+          const emailResponse = await fetch(getApiUrl('/api/send-contract-email'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -636,9 +636,42 @@ export const PreliminaryContractForm = () => {
               }
             })
           });
-          toast.success("Email enviado al cliente");
+          if (emailResponse.ok) {
+            toast.success("Email enviado al cliente");
+          } else {
+            const errData = await emailResponse.json().catch(() => ({}));
+            console.error("[Email] Error:", errData);
+            toast.warning("Contrato guardado. El email no se pudo enviar (dominio pendiente de verificación DKIM)");
+          }
         } catch (e) {
+          console.error("[Email] Error:", e);
           toast.warning("Contrato guardado pero no se pudo enviar el email");
+        }
+      }
+
+      // Enviar por WhatsApp si corresponde
+      if (data.includeWhatsApp && data.customerPhone) {
+        try {
+          // Normalizar teléfono: quitar espacios, guiones, y agregar código país 57 si no tiene
+          let phone = data.customerPhone.replace(/[\s\-\(\)\.]/g, '');
+          // Si empieza con 0, quitarlo
+          if (phone.startsWith('0')) phone = phone.substring(1);
+          // Si no tiene código país (menos de 12 dígitos y no empieza con +), agregar 57
+          if (!phone.startsWith('+') && !phone.startsWith('57') && phone.length <= 10) {
+            phone = '57' + phone;
+          }
+          // Quitar el + si existe (wa.me no lo necesita)
+          phone = phone.replace('+', '');
+
+          const tipoContrato = 'preliminar';
+          const mensaje = `Hola ${data.customerName} 👋\n\nAquí tienes tu contrato ${tipoContrato} de EUROCAR RENTAL listo:\n\n📄 ${pdfUrl.publicUrl}\n\nVehículo: ${data.vehicleBrand} - ${data.vehiclePlate}\nFechas: ${data.startDate} al ${data.endDate}\n\nGracias por confiar en nosotros. 🚗`;
+          
+          const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(mensaje)}`;
+          window.open(whatsappUrl, '_blank');
+          toast.success("WhatsApp abierto para enviar contrato");
+        } catch (e) {
+          console.error("[WhatsApp] Error:", e);
+          toast.warning("Contrato guardado pero no se pudo abrir WhatsApp");
         }
       }
 
