@@ -15,6 +15,12 @@ export default defineConfig(({ mode }) => ({
       "localhost",
       "127.0.0.1"
     ],
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8001',
+        changeOrigin: true,
+      }
+    },
   },
   plugins: [
     react(),
