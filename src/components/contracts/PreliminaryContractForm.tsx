@@ -122,6 +122,7 @@ interface ContractFormData {
 export const PreliminaryContractForm = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [customerResults, setCustomerResults] = useState<any[]>([]);
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [searchDocument, setSearchDocument] = useState("");
@@ -284,6 +285,8 @@ export const PreliminaryContractForm = () => {
     }
 
     setIsSearching(true);
+    setCustomerResults([]);
+    setReservations([]);
     try {
       const query = searchDocument.trim();
       
@@ -296,87 +299,85 @@ export const PreliminaryContractForm = () => {
 
       if (customerError || !customers || customers.length === 0) {
         toast.error("Cliente no encontrado");
-        setReservations([]);
         setSelectedCustomer(null);
         return;
       }
 
-      // Si hay un solo resultado, usarlo directamente
-      // Si hay varios, usar el primero (el más relevante)
-      const customer = customers.length === 1 ? customers[0] : customers[0];
-      
-      if (customers.length > 1) {
-        toast.info(`Se encontraron ${customers.length} clientes. Mostrando: ${customer.nombres} ${customer.primer_apellido} - ${customer.cedula_pasaporte}`);
+      // Si solo hay 1, seleccionarlo directamente
+      if (customers.length === 1) {
+        selectCustomer(customers[0]);
       } else {
-        toast.success(`Cliente encontrado: ${customer.nombres} ${customer.primer_apellido}`);
-      }
-
-      setSelectedCustomer(customer);
-      
-      // Llenar datos del cliente
-      setValue("customerId", customer.id);
-      setValue("customerName", `${customer.nombres} ${customer.primer_apellido} ${customer.segundo_apellido || ''}`.trim());
-      setValue("customerDocumentType", customer.tipo_documento || 'cedula');
-      setValue("customerDocument", customer.cedula_pasaporte);
-      setValue("customerPhone", customer.celular || '');
-      setValue("customerEmail", customer.email || '');
-      setValue("customerAddress", customer.direccion_residencia || customer.direccion || '');
-      setValue("customerCity", customer.ciudad || '');
-      setValue("customerLicense", customer.licencia_numero || customer.licencia_conduccion || '');
-      // Formatear fecha de vencimiento de licencia
-      if (customer.licencia_fecha_vencimiento) {
-        const fechaVenc = new Date(customer.licencia_fecha_vencimiento);
-        setValue("customerLicenseExpiry", fechaVenc.toLocaleDateString('es-CO'));
-      } else {
-        setValue("customerLicenseExpiry", '');
-      }
-      
-      toast.success(`Cliente encontrado: ${customer.nombres} ${customer.primer_apellido}`);
-
-      // Buscar reservas activas
-      const { data: reservationsData, error: reservationsError } = await supabase
-        .from("reservations")
-        .select(`
-          id,
-          vehicle_id,
-          fecha_inicio,
-          fecha_fin,
-          price_total,
-          valor_total,
-          estado,
-          vehicles (
-            marca,
-            modelo,
-            placa,
-            color,
-            tarifa_dia_iva
-          )
-        `)
-        .eq("customer_id", customer.id)
-        .in("estado", ["confirmed", "pending", "pending_with_payment", "pending_no_payment"])
-        .order("fecha_inicio", { ascending: false });
-
-      if (reservationsError) {
-        toast.error("Error al cargar reservas");
-        return;
-      }
-
-      setReservations(reservationsData || []);
-      
-      if (reservationsData && reservationsData.length > 0) {
-        toast.success(`Se encontraron ${reservationsData.length} reserva(s) activa(s)`);
-        
-        // Cargar automáticamente la primera reserva
-        const res = reservationsData[0];
-        loadReservationData(res);
-      } else {
-        toast.warning(`${customer.nombres} ${customer.primer_apellido} no tiene reservas activas. Complete los datos del vehículo y fechas manualmente.`);
+        // Mostrar lista para elegir
+        setCustomerResults(customers);
+        toast.info(`Se encontraron ${customers.length} clientes. Seleccione uno.`);
       }
     } catch (error) {
       console.error("Error searching customer:", error);
       toast.error("Error al buscar cliente");
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  const selectCustomer = async (customer: any) => {
+    setCustomerResults([]); // Ocultar lista
+    setSelectedCustomer(customer);
+    
+    // Llenar datos del cliente
+    setValue("customerId", customer.id);
+    setValue("customerName", `${customer.nombres} ${customer.primer_apellido} ${customer.segundo_apellido || ''}`.trim());
+    setValue("customerDocumentType", customer.tipo_documento || 'cedula');
+    setValue("customerDocument", customer.cedula_pasaporte);
+    setValue("customerPhone", customer.celular || '');
+    setValue("customerEmail", customer.email || '');
+    setValue("customerAddress", customer.direccion_residencia || customer.direccion || '');
+    setValue("customerCity", customer.ciudad || '');
+    setValue("customerLicense", customer.licencia_numero || customer.licencia_conduccion || '');
+    if (customer.licencia_fecha_vencimiento) {
+      const fechaVenc = new Date(customer.licencia_fecha_vencimiento);
+      setValue("customerLicenseExpiry", fechaVenc.toLocaleDateString('es-CO'));
+    } else {
+      setValue("customerLicenseExpiry", '');
+    }
+    
+    toast.success(`Cliente seleccionado: ${customer.nombres} ${customer.primer_apellido}`);
+
+    // Buscar reservas activas
+    const { data: reservationsData, error: reservationsError } = await supabase
+      .from("reservations")
+      .select(`
+        id,
+        vehicle_id,
+        fecha_inicio,
+        fecha_fin,
+        price_total,
+        valor_total,
+        estado,
+        vehicles (
+          marca,
+          modelo,
+          placa,
+          color,
+          tarifa_dia_iva
+        )
+      `)
+      .eq("customer_id", customer.id)
+      .in("estado", ["confirmed", "pending", "pending_with_payment", "pending_no_payment"])
+      .order("fecha_inicio", { ascending: false });
+
+    if (reservationsError) {
+      toast.error("Error al cargar reservas");
+      return;
+    }
+
+    setReservations(reservationsData || []);
+    
+    if (reservationsData && reservationsData.length > 0) {
+      toast.success(`Se encontraron ${reservationsData.length} reserva(s) activa(s)`);
+      const res = reservationsData[0];
+      loadReservationData(res);
+    } else {
+      toast.warning(`${customer.nombres} ${customer.primer_apellido} no tiene reservas activas. Complete los datos del vehículo y fechas manualmente.`);
     }
   };
 
@@ -703,6 +704,29 @@ export const PreliminaryContractForm = () => {
             {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
           </Button>
         </div>
+
+        {/* Lista de clientes encontrados */}
+        {customerResults.length > 0 && (
+          <div className="mt-3 border rounded-lg divide-y max-h-48 overflow-y-auto">
+            {customerResults.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className="w-full text-left px-4 py-2 hover:bg-blue-50 flex justify-between items-center transition-colors"
+                onClick={() => selectCustomer(c)}
+                data-testid={`customer-result-${c.id}`}
+              >
+                <div>
+                  <span className="font-medium text-sm">{c.nombres} {c.primer_apellido} {c.segundo_apellido || ''}</span>
+                  <span className="text-xs text-muted-foreground ml-2">
+                    {c.tipo_documento?.toUpperCase() || 'C.C.'} {c.cedula_pasaporte}
+                  </span>
+                </div>
+                <span className="text-xs text-muted-foreground">{c.celular || c.email || ''}</span>
+              </button>
+            ))}
+          </div>
+        )}
         
         {reservations.length > 1 && (
           <div className="mt-4">
