@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { FileText, Loader2, Search, Send } from "lucide-react";
+import { FileText, Loader2, Search, Send, MessageCircle, CheckCircle, X } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { generateContractHTML, ContractData } from "@/utils/contractTemplate";
 import { getApiUrl } from "@/utils/apiUrl";
@@ -131,6 +131,7 @@ export const PreliminaryContractForm = () => {
   const [nextFacturacionNumber, setNextFacturacionNumber] = useState(100);
   const [nextEfectivoNumber, setNextEfectivoNumber] = useState(1);
   const [loadingNumbers, setLoadingNumbers] = useState(true);
+  const [successData, setSuccessData] = useState<{ whatsappUrl?: string; contractNumber?: string } | null>(null);
 
   const { register, handleSubmit, watch, setValue, getValues, formState: { errors } } = useForm<ContractFormData>({
     defaultValues: {
@@ -649,39 +650,33 @@ export const PreliminaryContractForm = () => {
         }
       }
 
-      // Enviar por WhatsApp si corresponde
+      // Construir link WhatsApp si corresponde
+      let whatsappUrl: string | undefined;
       if (data.includeWhatsApp && data.customerPhone) {
         try {
-          // Normalizar teléfono: quitar espacios, guiones, y agregar código país 57 si no tiene
           let phone = data.customerPhone.replace(/[\s\-\(\)\.]/g, '');
-          // Si empieza con 0, quitarlo
           if (phone.startsWith('0')) phone = phone.substring(1);
-          // Si no tiene código país (menos de 12 dígitos y no empieza con +), agregar 57
           if (!phone.startsWith('+') && !phone.startsWith('57') && phone.length <= 10) {
             phone = '57' + phone;
           }
-          // Quitar el + si existe (wa.me no lo necesita)
           phone = phone.replace('+', '');
 
           const tipoContrato = 'preliminar';
           const mensaje = `Hola ${data.customerName} 👋\n\nAquí tienes tu contrato ${tipoContrato} de EUROCAR RENTAL listo:\n\n📄 ${pdfUrl.publicUrl}\n\nVehículo: ${data.vehicleBrand} - ${data.vehiclePlate}\nFechas: ${data.startDate} al ${data.endDate}\n\nGracias por confiar en nosotros. 🚗`;
           
-          const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(mensaje)}`;
-          window.open(whatsappUrl, '_blank');
-          toast.success("WhatsApp abierto para enviar contrato");
+          whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(mensaje)}`;
         } catch (e) {
-          console.error("[WhatsApp] Error:", e);
-          toast.warning("Contrato guardado pero no se pudo abrir WhatsApp");
+          console.error("[WhatsApp] Error construyendo link:", e);
         }
       }
 
       toast.success(`Contrato preliminar ${contractNumber} creado exitosamente`);
       
-      // Si se abrió WhatsApp, dar tiempo antes de recargar
-      if (data.includeWhatsApp && data.customerPhone) {
-        setTimeout(() => window.location.reload(), 3000);
+      // Mostrar diálogo de éxito con opciones (WhatsApp, etc.)
+      if (whatsappUrl) {
+        setSuccessData({ whatsappUrl, contractNumber });
       } else {
-        window.location.reload();
+        setTimeout(() => window.location.reload(), 1500);
       }
 
     } catch (error: any) {
@@ -1305,6 +1300,52 @@ export const PreliminaryContractForm = () => {
           </>
         )}
       </Button>
+
+      {/* Diálogo de Éxito con WhatsApp */}
+      {successData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" data-testid="success-dialog">
+          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4 space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-green-100 p-2 rounded-full">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900">Contrato Creado</h3>
+              </div>
+              <button 
+                onClick={() => { setSuccessData(null); window.location.reload(); }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <p className="text-gray-600">
+              El contrato <strong>{successData.contractNumber}</strong> se generó exitosamente.
+            </p>
+
+            {successData.whatsappUrl && (
+              <a
+                href={successData.whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-3 w-full py-4 px-6 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg transition-colors text-lg"
+                data-testid="whatsapp-send-btn"
+              >
+                <MessageCircle className="h-6 w-6" />
+                Enviar por WhatsApp
+              </a>
+            )}
+
+            <button
+              onClick={() => { setSuccessData(null); window.location.reload(); }}
+              className="w-full py-3 text-gray-600 hover:text-gray-800 font-medium border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cerrar y continuar
+            </button>
+          </div>
+        </div>
+      )}
     </form>
   );
 };

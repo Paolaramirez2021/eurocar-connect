@@ -588,7 +588,14 @@ export const ConvertToFinalDialog = ({
           const mensaje = `Hola ${preliminaryContract.customer_name} 👋\n\nTu contrato FIRMADO de EUROCAR RENTAL está listo:\n\n📄 ${finalPdfUrl.publicUrl}\n\nContrato: ${contractNumber}\n\nGracias por confiar en nosotros. 🚗`;
           
           const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(mensaje)}`;
-          window.open(whatsappUrl, '_blank');
+          // Usar <a> click programático en vez de window.open para evitar bloqueo
+          const link = document.createElement('a');
+          link.href = whatsappUrl;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
           toast.success("WhatsApp abierto para enviar contrato firmado");
         } catch (e) {
           console.error("[WhatsApp Final] Error:", e);
