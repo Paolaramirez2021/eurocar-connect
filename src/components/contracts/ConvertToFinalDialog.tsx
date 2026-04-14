@@ -13,7 +13,7 @@ import { generateContractHTML, ContractData } from "@/utils/contractTemplate";
 import { getApiUrl } from "@/utils/apiUrl";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, FileSignature, ArrowRight, FileText, Shield } from "lucide-react";
+import { Loader2, FileSignature, ArrowRight, FileText, Shield, MessageCircle, CheckCircle, X } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -46,6 +46,9 @@ interface PreliminaryContract {
   conductor3_documento?: string;
   conductor3_licencia?: string;
   conductor3_licencia_vencimiento?: string;
+  forma_pago?: string;
+  deducible?: string;
+  valor_reserva?: number;
 }
 
 interface ConvertToFinalDialogProps {
@@ -74,6 +77,7 @@ export const ConvertToFinalDialog = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [customerDocFront, setCustomerDocFront] = useState<string | null>(null);
   const [customerDocBack, setCustomerDocBack] = useState<string | null>(null);
+  const [whatsappSuccessData, setWhatsappSuccessData] = useState<{ whatsappUrl: string; contractNumber: string } | null>(null);
 
   if (!preliminaryContract) return null;
 
@@ -410,11 +414,11 @@ export const ConvertToFinalDialog = ({
         total_contrato: totalConDescuento,
         iva: ivaCalc,
         total: totalCalc,
-        valor_reserva: 0,
-        forma_pago: 'N/A',
+        valor_reserva: preliminaryContract.valor_reserva || 0,
+        forma_pago: preliminaryContract.forma_pago || 'N/A',
         numero_contrato: contractNumber,
         fecha_contrato: format(new Date(), "dd/MM/yyyy HH:mm", { locale: es }),
-        deducible: 'Según póliza',
+        deducible: preliminaryContract.deducible || 'Según póliza',
         // Nuevas casillas del contrato
         servicio_viajar: preliminaryContract.servicio_viajar || '',
         termino_contrato: preliminaryContract.termino_contrato || '',
@@ -575,7 +579,7 @@ export const ConvertToFinalDialog = ({
         }
       }
 
-      // Enviar por WhatsApp automáticamente con el contrato final
+      // Construir link WhatsApp para contrato final
       if (preliminaryContract.customer_phone) {
         try {
           let phone = preliminaryContract.customer_phone.replace(/[\s\-\(\)\.]/g, '');
@@ -588,23 +592,18 @@ export const ConvertToFinalDialog = ({
           const mensaje = `Hola ${preliminaryContract.customer_name} 👋\n\nTu contrato FIRMADO de EUROCAR RENTAL está listo:\n\n📄 ${finalPdfUrl.publicUrl}\n\nContrato: ${contractNumber}\n\nGracias por confiar en nosotros. 🚗`;
           
           const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(mensaje)}`;
-          // Usar <a> click programático en vez de window.open para evitar bloqueo
-          const link = document.createElement('a');
-          link.href = whatsappUrl;
-          link.target = '_blank';
-          link.rel = 'noopener noreferrer';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          toast.success("WhatsApp abierto para enviar contrato firmado");
+          setWhatsappSuccessData({ whatsappUrl, contractNumber });
         } catch (e) {
           console.error("[WhatsApp Final] Error:", e);
+          onSuccess();
+          onOpenChange(false);
+          resetForm();
         }
+      } else {
+        onSuccess();
+        onOpenChange(false);
+        resetForm();
       }
-
-      onSuccess();
-      onOpenChange(false);
-      resetForm();
 
     } catch (error: any) {
       console.error("Error converting to final contract:", error);
@@ -630,6 +629,7 @@ export const ConvertToFinalDialog = ({
                       (needsBackPhoto ? documentPhotos.back : true);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -814,5 +814,50 @@ export const ConvertToFinalDialog = ({
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Diálogo de Éxito con WhatsApp para contrato final */}
+    {whatsappSuccessData && (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" data-testid="whatsapp-final-dialog">
+        <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4 space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-green-100 p-2 rounded-full">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">Contrato Firmado</h3>
+            </div>
+            <button 
+              onClick={() => { setWhatsappSuccessData(null); resetForm(); onSuccess(); onOpenChange(false); }}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          
+          <p className="text-gray-600">
+            El contrato <strong>{whatsappSuccessData.contractNumber}</strong> fue firmado exitosamente.
+          </p>
+
+          <a
+            href={whatsappSuccessData.whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-3 w-full py-4 px-6 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg transition-colors text-lg"
+            data-testid="whatsapp-final-send-btn"
+          >
+            <MessageCircle className="h-6 w-6" />
+            Enviar por WhatsApp
+          </a>
+
+          <button
+            onClick={() => { setWhatsappSuccessData(null); resetForm(); onSuccess(); onOpenChange(false); }}
+            className="w-full py-3 text-gray-600 hover:text-gray-800 font-medium border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Cerrar y continuar
+          </button>
+        </div>
+      </div>
+    )}
+    </>
   );
 };

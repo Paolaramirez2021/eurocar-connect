@@ -612,6 +612,9 @@ export const PreliminaryContractForm = () => {
         status: "preliminary",
         pdf_url: pdfUrl.publicUrl,
         signature_url: '',
+        forma_pago: data.paymentMethod || null,
+        deducible: data.deducible || null,
+        valor_reserva: data.depositAmount || 0,
       }]);
 
       if (insertError) {
