@@ -608,9 +608,9 @@ export const ReservationForm = () => {
     try {
       const { data: overlapping, error: overlapErr } = await supabase
         .from('reservations')
-        .select('id, status')
+        .select('id, estado')
         .eq('vehicle_id', selectedVehicle)
-        .in('status', ['pending', 'confirmed', 'active'])
+        .in('estado', ['pending', 'confirmed', 'active', 'pending_with_payment', 'pending_no_payment'])
         .lt('fecha_inicio', fechaFin.toISOString())
         .gt('fecha_fin', fechaInicio.toISOString());
 
