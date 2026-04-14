@@ -677,8 +677,12 @@ export const PreliminaryContractForm = () => {
 
       toast.success(`Contrato preliminar ${contractNumber} creado exitosamente`);
       
-      // Reset form
-      window.location.reload();
+      // Si se abrió WhatsApp, dar tiempo antes de recargar
+      if (data.includeWhatsApp && data.customerPhone) {
+        setTimeout(() => window.location.reload(), 3000);
+      } else {
+        window.location.reload();
+      }
 
     } catch (error: any) {
       console.error("[onSubmit] Error completo:", error);
