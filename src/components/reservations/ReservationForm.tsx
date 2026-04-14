@@ -606,23 +606,27 @@ export const ReservationForm = () => {
 
     // Verificación directa de reservas solapadas antes de guardar
     try {
+      const inicioStr = fechaInicio.toISOString().split('T')[0];
+      const finStr = fechaFin.toISOString().split('T')[0];
+      
       const { data: overlapping, error: overlapErr } = await supabase
         .from('reservations')
-        .select('id, estado')
+        .select('id, estado, fecha_inicio, fecha_fin')
         .eq('vehicle_id', selectedVehicle)
         .in('estado', ['pending', 'confirmed', 'active', 'pending_with_payment', 'pending_no_payment'])
-        .lt('fecha_inicio', fechaFin.toISOString())
-        .gt('fecha_fin', fechaInicio.toISOString());
+        .lte('fecha_inicio', finStr)
+        .gte('fecha_fin', inicioStr);
+
+      console.log('[Overlap check]', { inicioStr, finStr, overlapping, overlapErr });
 
       if (!overlapErr && overlapping && overlapping.length > 0) {
-        // Si estamos editando, excluir la reserva actual
         const conflicts = reservation?.id 
           ? overlapping.filter(r => r.id !== reservation.id)
           : overlapping;
         
         if (conflicts.length > 0) {
           toast.error("No se puede reservar", {
-            description: "Ya existe una reserva activa o pendiente en las fechas seleccionadas"
+            description: `Ya existe una reserva del ${conflicts[0].fecha_inicio} al ${conflicts[0].fecha_fin} para este vehículo`
           });
           setIsAvailable(false);
           setLoading(false);
