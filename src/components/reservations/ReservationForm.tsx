@@ -604,6 +604,35 @@ export const ReservationForm = () => {
       console.error("Error verificando mantenimiento:", error);
     }
 
+    // Verificación directa de reservas solapadas antes de guardar
+    try {
+      const { data: overlapping, error: overlapErr } = await supabase
+        .from('reservations')
+        .select('id, status')
+        .eq('vehicle_id', selectedVehicle)
+        .in('status', ['pending', 'confirmed', 'active'])
+        .lt('fecha_inicio', fechaFin.toISOString())
+        .gt('fecha_fin', fechaInicio.toISOString());
+
+      if (!overlapErr && overlapping && overlapping.length > 0) {
+        // Si estamos editando, excluir la reserva actual
+        const conflicts = reservation?.id 
+          ? overlapping.filter(r => r.id !== reservation.id)
+          : overlapping;
+        
+        if (conflicts.length > 0) {
+          toast.error("No se puede reservar", {
+            description: "Ya existe una reserva activa o pendiente en las fechas seleccionadas"
+          });
+          setIsAvailable(false);
+          setLoading(false);
+          return;
+        }
+      }
+    } catch (error) {
+      console.error("Error verificando solapamiento:", error);
+    }
+
     if (!isAvailable) {
       toast.error("El vehículo no está disponible en estas fechas");
       return;
