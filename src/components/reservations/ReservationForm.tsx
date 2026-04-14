@@ -273,55 +273,92 @@ export const ReservationForm = () => {
   const checkAvailability = async () => {
     if (!selectedVehicle || !fechaInicio || !fechaFin) return;
 
+    const newStart = format(fechaInicio, 'yyyy-MM-dd');
+    const newEnd = format(fechaFin, 'yyyy-MM-dd');
+
+    console.log('[checkAvailability] Verificando vehiculo:', selectedVehicle, 'Fechas:', newStart, '->', newEnd);
+
     try {
-      // 1. Verificar disponibilidad de reservas existentes
-      const { data: reservationAvailable, error: resError } = await supabase.rpc("check_reservation_availability", {
-        p_vehicle_id: selectedVehicle,
-        p_fecha_inicio: fechaInicio.toISOString(),
-        p_fecha_fin: fechaFin.toISOString(),
-      });
+      // 1. Consultar TODAS las reservas activas de este vehículo
+      const { data: existingRes, error: resError } = await supabase
+        .from('reservations')
+        .select('id, estado, fecha_inicio, fecha_fin, cliente_nombre')
+        .eq('vehicle_id', selectedVehicle)
+        .in('estado', ['pending', 'confirmed', 'active', 'pending_with_payment', 'pending_no_payment']);
 
-      if (resError) throw resError;
+      if (resError) {
+        console.error('[checkAvailability] Error consultando reservas:', resError);
+        setIsAvailable(false);
+        setOverlapError('Error al verificar disponibilidad. Intente de nuevo.');
+        return;
+      }
 
-      // 2. Verificar si hay mantenimiento programado en esas fechas (con rango fecha_inicio - fecha_fin)
-      const fechaInicioStr = fechaInicio.toISOString().split('T')[0];
-      const fechaFinStr = fechaFin.toISOString().split('T')[0];
-      
+      console.log('[checkAvailability] Reservas existentes:', existingRes?.length || 0, existingRes);
+
+      if (existingRes && existingRes.length > 0) {
+        for (const r of existingRes) {
+          const rStart = String(r.fecha_inicio).substring(0, 10);
+          const rEnd = String(r.fecha_fin).substring(0, 10);
+          const overlaps = newStart <= rEnd && newEnd >= rStart;
+          console.log('[checkAvailability] Comparando:', { newStart, newEnd, rStart, rEnd, overlaps, cliente: r.cliente_nombre });
+          if (overlaps) {
+            setIsAvailable(false);
+            setOverlapError(`Vehículo reservado del ${rStart} al ${rEnd} por ${r.cliente_nombre || 'otro cliente'} (Estado: ${r.estado})`);
+            toast.error("Vehículo no disponible", {
+              description: `Ya reservado del ${rStart} al ${rEnd}`,
+              duration: 5000
+            });
+            return;
+          }
+        }
+      }
+
+      // 2. Verificar mantenimiento
       const { data: maintenanceConflicts, error: maintError } = await supabase
         .from('maintenance')
         .select('id, fecha, fecha_inicio, fecha_fin, tipo, descripcion')
         .eq('vehicle_id', selectedVehicle)
-        .eq('completed', false)
-        .or(`and(fecha_inicio.lte.${fechaFinStr},fecha_fin.gte.${fechaInicioStr}),and(fecha.gte.${fechaInicioStr},fecha.lte.${fechaFinStr})`);
+        .eq('completed', false);
 
-      if (maintError) throw maintError;
+      if (maintError) {
+        console.error('[checkAvailability] Error consultando mantenimiento:', maintError);
+      }
 
-      // Si hay mantenimiento programado, no está disponible
       if (maintenanceConflicts && maintenanceConflicts.length > 0) {
-        setIsAvailable(false);
-        const fechasMantenimiento = maintenanceConflicts.map(m => {
+        for (const m of maintenanceConflicts) {
+          let mStart: string | null = null;
+          let mEnd: string | null = null;
           if (m.fecha_inicio && m.fecha_fin) {
-            return `${new Date(m.fecha_inicio).toLocaleDateString('es-CO')} - ${new Date(m.fecha_fin).toLocaleDateString('es-CO')}`;
+            mStart = String(m.fecha_inicio).substring(0, 10);
+            mEnd = String(m.fecha_fin).substring(0, 10);
+          } else if (m.fecha) {
+            mStart = String(m.fecha).substring(0, 10);
+            mEnd = mStart;
           }
-          return new Date(m.fecha).toLocaleDateString('es-CO');
-        }).join(', ');
-        toast.error(`Vehículo en mantenimiento`, {
-          description: `El vehículo tiene mantenimiento programado: ${fechasMantenimiento}`,
-          duration: 5000
-        });
-        return;
+          if (mStart && mEnd) {
+            const overlaps = newStart <= mEnd && newEnd >= mStart;
+            console.log('[checkAvailability] Mantenimiento:', { mStart, mEnd, overlaps });
+            if (overlaps) {
+              setIsAvailable(false);
+              setOverlapError(`Vehículo en mantenimiento del ${mStart} al ${mEnd}`);
+              toast.error('Vehículo en mantenimiento', {
+                description: `Mantenimiento programado: ${mStart} - ${mEnd}`,
+                duration: 5000
+              });
+              return;
+            }
+          }
+        }
       }
 
-      setIsAvailable(reservationAvailable);
-      
-      if (!reservationAvailable) {
-        toast.error("Vehículo no disponible", {
-          description: "Ya existe una reserva en las fechas seleccionadas"
-        });
-      }
+      // Sin conflictos
+      setIsAvailable(true);
+      setOverlapError(null);
+      console.log('[checkAvailability] Vehículo DISPONIBLE');
     } catch (error) {
       console.error("Error checking availability:", error);
-      toast.error("Error al verificar disponibilidad");
+      setIsAvailable(false);
+      setOverlapError('Error al verificar disponibilidad');
     }
   };
 
@@ -582,58 +619,78 @@ export const ReservationForm = () => {
       return;
     }
 
-    // Verificación adicional de mantenimiento antes de guardar (con rango de fechas)
-    try {
-      const fechaInicioStr = fechaInicio.toISOString().split('T')[0];
-      const fechaFinStr = fechaFin.toISOString().split('T')[0];
-      
-      const { data: maintenanceConflicts } = await supabase
-        .from('maintenance')
-        .select('id, fecha, fecha_inicio, fecha_fin, tipo')
-        .eq('vehicle_id', selectedVehicle)
-        .eq('completed', false)
-        .or(`and(fecha_inicio.lte.${fechaFinStr},fecha_fin.gte.${fechaInicioStr}),and(fecha.gte.${fechaInicioStr},fecha.lte.${fechaFinStr})`);
-
-      if (maintenanceConflicts && maintenanceConflicts.length > 0) {
-        toast.error("No se puede reservar", {
-          description: "El vehículo tiene mantenimiento programado en las fechas seleccionadas"
-        });
-        setIsAvailable(false);
-        return;
-      }
-    } catch (error) {
-      console.error("Error verificando mantenimiento:", error);
-    }
-
-    // Verificación directa de reservas solapadas antes de guardar
-    const inicioStr = fechaInicio.toISOString().split('T')[0];
-    const finStr = fechaFin.toISOString().split('T')[0];
+    // === VALIDACIÓN FINAL: Verificar solapamiento de reservas ===
+    const inicioStr = format(fechaInicio, 'yyyy-MM-dd');
+    const finStr = format(fechaFin, 'yyyy-MM-dd');
     
+    console.log('[handleSubmit] Validación final - Vehiculo:', selectedVehicle, 'Fechas:', inicioStr, '->', finStr);
+
+    // Consultar reservas existentes
     const { data: allReservations, error: overlapErr } = await supabase
       .from('reservations')
       .select('id, estado, fecha_inicio, fecha_fin, cliente_nombre')
       .eq('vehicle_id', selectedVehicle)
       .in('estado', ['pending', 'confirmed', 'active', 'pending_with_payment', 'pending_no_payment']);
 
-    if (!overlapErr && allReservations) {
-      const conflicts = allReservations.filter(r => {
-        if (reservation?.id && r.id === reservation.id) return false; // Excluir la actual si editamos
-        const rInicio = r.fecha_inicio?.split('T')[0] || r.fecha_inicio;
-        const rFin = r.fecha_fin?.split('T')[0] || r.fecha_fin;
-        // Solapamiento: reserva existente inicia antes de que termine la nueva Y termina después de que inicie la nueva
-        return rInicio <= finStr && rFin >= inicioStr;
-      });
+    if (overlapErr) {
+      console.error('[handleSubmit] Error consultando reservas:', overlapErr);
+      toast.error("Error al verificar disponibilidad. Intente de nuevo.");
+      return;
+    }
 
-      if (conflicts.length > 0) {
-        const c = conflicts[0];
-        const cInicio = c.fecha_inicio?.split('T')[0] || c.fecha_inicio;
-        const cFin = c.fecha_fin?.split('T')[0] || c.fecha_fin;
-        setOverlapError(`Vehículo reservado del ${cInicio} al ${cFin} por ${c.cliente_nombre || 'otro cliente'}`);
-        toast.error("No se puede reservar: El vehículo ya está reservado en esas fechas");
-        setIsAvailable(false);
-        return;
+    console.log('[handleSubmit] Reservas encontradas:', allReservations?.length || 0, allReservations);
+
+    if (allReservations && allReservations.length > 0) {
+      for (const r of allReservations) {
+        const rStart = String(r.fecha_inicio).substring(0, 10);
+        const rEnd = String(r.fecha_fin).substring(0, 10);
+        const overlaps = inicioStr <= rEnd && finStr >= rStart;
+        console.log('[handleSubmit] Comparando reserva:', { rStart, rEnd, inicioStr, finStr, overlaps, estado: r.estado, cliente: r.cliente_nombre });
+        if (overlaps) {
+          setOverlapError(`Vehículo reservado del ${rStart} al ${rEnd} por ${r.cliente_nombre || 'otro cliente'} (Estado: ${r.estado})`);
+          toast.error("NO SE PUEDE RESERVAR", {
+            description: `El vehículo ya está reservado del ${rStart} al ${rEnd}`,
+            duration: 8000
+          });
+          setIsAvailable(false);
+          setLoading(false);
+          return;
+        }
       }
     }
+
+    // Verificar mantenimiento
+    try {
+      const { data: maintenanceConflicts } = await supabase
+        .from('maintenance')
+        .select('id, fecha, fecha_inicio, fecha_fin, tipo')
+        .eq('vehicle_id', selectedVehicle)
+        .eq('completed', false);
+
+      if (maintenanceConflicts && maintenanceConflicts.length > 0) {
+        for (const m of maintenanceConflicts) {
+          let mStart: string | null = null;
+          let mEnd: string | null = null;
+          if (m.fecha_inicio && m.fecha_fin) {
+            mStart = String(m.fecha_inicio).substring(0, 10);
+            mEnd = String(m.fecha_fin).substring(0, 10);
+          } else if (m.fecha) {
+            mStart = String(m.fecha).substring(0, 10);
+            mEnd = mStart;
+          }
+          if (mStart && mEnd && inicioStr <= mEnd && finStr >= mStart) {
+            setOverlapError(`Vehículo en mantenimiento del ${mStart} al ${mEnd}`);
+            toast.error("No se puede reservar", { description: "Vehículo en mantenimiento en esas fechas" });
+            setIsAvailable(false);
+            setLoading(false);
+            return;
+          }
+        }
+      }
+    } catch (error) {
+      console.error("[handleSubmit] Error verificando mantenimiento:", error);
+    }
+
     setOverlapError(null);
 
     if (!isAvailable) {
@@ -696,8 +753,8 @@ export const ReservationForm = () => {
           customer_id: customerId,
           cliente_nombre: `${customer.nombres} ${customer.primer_apellido} ${customer.segundo_apellido}`.trim(),
           cliente_contacto: customer.celular,
-          fecha_inicio: fechaInicio.toISOString(),
-          fecha_fin: fechaFin.toISOString(),
+          fecha_inicio: format(fechaInicio, 'yyyy-MM-dd'),
+          fecha_fin: format(fechaFin, 'yyyy-MM-dd'),
           estado: "pending",
           // Valores fiscales correctos
           dias_totales: diasAlquiler, // Días reales (incluye día inicio)
