@@ -317,13 +317,13 @@ export const ConvertToFinalDialog = ({
       // Obtener datos del vehículo y cliente para regenerar el PDF
       const { data: vehicleData } = await supabase
         .from("vehicles")
-        .select("brand, model, plate, color")
+        .select("marca, modelo, placa, color")
         .eq("id", preliminaryContract.vehicle_id)
         .single();
 
       const { data: customerData } = await supabase
         .from("customers")
-        .select("license_number, license_expiry, address, city, tipo_documento")
+        .select("licencia_numero, licencia_fecha_vencimiento, direccion_residencia, ciudad, tipo_documento")
         .eq("id", preliminaryContract.customer_id)
         .single();
 
@@ -337,16 +337,16 @@ export const ConvertToFinalDialog = ({
         cliente_nombre: preliminaryContract.customer_name,
         cliente_tipo_documento: customerData?.tipo_documento || 'cedula',
         cliente_documento: preliminaryContract.customer_document,
-        cliente_licencia: customerData?.license_number || 'N/A',
-        cliente_licencia_vencimiento: customerData?.license_expiry || 'N/A',
-        cliente_direccion: customerData?.address || 'N/A',
+        cliente_licencia: customerData?.licencia_numero || 'N/A',
+        cliente_licencia_vencimiento: customerData?.licencia_fecha_vencimiento || 'N/A',
+        cliente_direccion: customerData?.direccion_residencia || 'N/A',
         cliente_telefono: preliminaryContract.customer_phone || 'N/A',
-        cliente_ciudad: customerData?.city || 'Colombia',
+        cliente_ciudad: customerData?.ciudad || 'Colombia',
         cliente_email: preliminaryContract.customer_email || 'N/A',
-        vehiculo_marca: vehicleData ? `${vehicleData.brand} ${vehicleData.model}` : vehicleInfo,
-        vehiculo_placa: vehicleData?.plate || '',
+        vehiculo_marca: vehicleData ? `${vehicleData.marca} ${vehicleData.modelo}` : vehicleInfo,
+        vehiculo_placa: vehicleData?.placa || '',
         vehiculo_color: vehicleData?.color || 'N/A',
-        vehiculo_km_salida: 'N/A',
+        vehiculo_km_salida: preliminaryContract.vehiculo_km_salida || 'N/A',
         fecha_inicio: format(startDate, "dd/MM/yyyy", { locale: es }),
         hora_inicio: format(startDate, "HH:mm", { locale: es }),
         fecha_fin: format(endDate, "dd/MM/yyyy", { locale: es }),
