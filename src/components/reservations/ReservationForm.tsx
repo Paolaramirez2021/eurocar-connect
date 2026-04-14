@@ -83,6 +83,7 @@ export const ReservationForm = () => {
   const [notas, setNotas] = useState("");
   const [loading, setLoading] = useState(false);
   const [isAvailable, setIsAvailable] = useState<boolean>(true);
+  const [overlapError, setOverlapError] = useState<string | null>(null);
   const [searchingCustomer, setSearchingCustomer] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [diasAlquiler, setDiasAlquiler] = useState<number>(0);
@@ -605,37 +606,35 @@ export const ReservationForm = () => {
     }
 
     // Verificación directa de reservas solapadas antes de guardar
-    try {
-      const inicioStr = fechaInicio.toISOString().split('T')[0];
-      const finStr = fechaFin.toISOString().split('T')[0];
-      
-      const { data: overlapping, error: overlapErr } = await supabase
-        .from('reservations')
-        .select('id, estado, fecha_inicio, fecha_fin')
-        .eq('vehicle_id', selectedVehicle)
-        .in('estado', ['pending', 'confirmed', 'active', 'pending_with_payment', 'pending_no_payment'])
-        .lte('fecha_inicio', finStr)
-        .gte('fecha_fin', inicioStr);
+    const inicioStr = fechaInicio.toISOString().split('T')[0];
+    const finStr = fechaFin.toISOString().split('T')[0];
+    
+    const { data: allReservations, error: overlapErr } = await supabase
+      .from('reservations')
+      .select('id, estado, fecha_inicio, fecha_fin, cliente_nombre')
+      .eq('vehicle_id', selectedVehicle)
+      .in('estado', ['pending', 'confirmed', 'active', 'pending_with_payment', 'pending_no_payment']);
 
-      console.log('[Overlap check]', { inicioStr, finStr, overlapping, overlapErr });
+    if (!overlapErr && allReservations) {
+      const conflicts = allReservations.filter(r => {
+        if (reservation?.id && r.id === reservation.id) return false; // Excluir la actual si editamos
+        const rInicio = r.fecha_inicio?.split('T')[0] || r.fecha_inicio;
+        const rFin = r.fecha_fin?.split('T')[0] || r.fecha_fin;
+        // Solapamiento: reserva existente inicia antes de que termine la nueva Y termina después de que inicie la nueva
+        return rInicio <= finStr && rFin >= inicioStr;
+      });
 
-      if (!overlapErr && overlapping && overlapping.length > 0) {
-        const conflicts = reservation?.id 
-          ? overlapping.filter(r => r.id !== reservation.id)
-          : overlapping;
-        
-        if (conflicts.length > 0) {
-          toast.error("No se puede reservar", {
-            description: `Ya existe una reserva del ${conflicts[0].fecha_inicio} al ${conflicts[0].fecha_fin} para este vehículo`
-          });
-          setIsAvailable(false);
-          setLoading(false);
-          return;
-        }
+      if (conflicts.length > 0) {
+        const c = conflicts[0];
+        const cInicio = c.fecha_inicio?.split('T')[0] || c.fecha_inicio;
+        const cFin = c.fecha_fin?.split('T')[0] || c.fecha_fin;
+        setOverlapError(`Vehículo reservado del ${cInicio} al ${cFin} por ${c.cliente_nombre || 'otro cliente'}`);
+        toast.error("No se puede reservar: El vehículo ya está reservado en esas fechas");
+        setIsAvailable(false);
+        return;
       }
-    } catch (error) {
-      console.error("Error verificando solapamiento:", error);
     }
+    setOverlapError(null);
 
     if (!isAvailable) {
       toast.error("El vehículo no está disponible en estas fechas");
@@ -1187,7 +1186,7 @@ export const ReservationForm = () => {
           
           <div className="space-y-2">
             <Label htmlFor="vehicle">Vehículo *</Label>
-            <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
+            <Select value={selectedVehicle} onValueChange={(v) => { setSelectedVehicle(v); setOverlapError(null); setIsAvailable(true); }}>
               <SelectTrigger id="vehicle">
                 <SelectValue placeholder="Selecciona un vehículo" />
               </SelectTrigger>
@@ -1232,7 +1231,7 @@ export const ReservationForm = () => {
                   <Calendar
                     mode="single"
                     selected={fechaInicio}
-                    onSelect={setFechaInicio}
+                    onSelect={(d) => { setFechaInicio(d); setOverlapError(null); setIsAvailable(true); }}
                     initialFocus
                     locale={es}
                     className="rounded-md"
@@ -1289,7 +1288,7 @@ export const ReservationForm = () => {
                   <Calendar
                     mode="single"
                     selected={fechaFin}
-                    onSelect={setFechaFin}
+                    onSelect={(d) => { setFechaFin(d); setOverlapError(null); setIsAvailable(true); }}
                     initialFocus
                     locale={es}
                     disabled={(date) => fechaInicio ? date < fechaInicio : false}
@@ -1456,9 +1455,15 @@ export const ReservationForm = () => {
           </div>
         </div>
 
+        {overlapError && (
+          <div className="w-full p-3 bg-red-100 border border-red-400 rounded-lg text-red-700 text-sm font-medium" data-testid="overlap-error">
+            <span className="font-bold">No se puede reservar:</span> {overlapError}
+          </div>
+        )}
+
         <Button 
           onClick={handleSubmit} 
-          disabled={loading || !isAvailable || !selectedVehicle || !fechaInicio || !fechaFin || !customer.nombres || !customer.primer_apellido || !customer.cedula_pasaporte || !customer.celular}
+          disabled={loading || !isAvailable || !!overlapError || !selectedVehicle || !fechaInicio || !fechaFin || !customer.nombres || !customer.primer_apellido || !customer.cedula_pasaporte || !customer.celular}
           className="w-full"
         >
           {loading ? (
