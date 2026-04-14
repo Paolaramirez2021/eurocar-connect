@@ -306,7 +306,9 @@ export const PreliminaryContractForm = () => {
       const customer = customers.length === 1 ? customers[0] : customers[0];
       
       if (customers.length > 1) {
-        toast.info(`Se encontraron ${customers.length} clientes. Mostrando: ${customers[0].nombres} ${customers[0].primer_apellido} - ${customers[0].cedula_pasaporte}`);
+        toast.info(`Se encontraron ${customers.length} clientes. Mostrando: ${customer.nombres} ${customer.primer_apellido} - ${customer.cedula_pasaporte}`);
+      } else {
+        toast.success(`Cliente encontrado: ${customer.nombres} ${customer.primer_apellido}`);
       }
 
       setSelectedCustomer(customer);
@@ -368,7 +370,7 @@ export const PreliminaryContractForm = () => {
         const res = reservationsData[0];
         loadReservationData(res);
       } else {
-        toast.warning("Este cliente no tiene reservas activas. Complete los datos manualmente.");
+        toast.warning(`${customer.nombres} ${customer.primer_apellido} no tiene reservas activas. Complete los datos del vehículo y fechas manualmente.`);
       }
     } catch (error) {
       console.error("Error searching customer:", error);
