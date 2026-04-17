@@ -345,6 +345,20 @@ async def api_send_contract_email(request: ContractEmailRequest):
 async def api_health_check():
     return await health_check()
 
+
+# Rutas con prefijo /srv para acceso externo (evita interceptación K8s ingress en /api)
+@app.post("/srv/generate-pdf")
+async def srv_generate_pdf(request: GeneratePDFRequest):
+    return await generate_pdf(request)
+
+@app.post("/srv/send-contract-email")
+async def srv_send_contract_email(request: ContractEmailRequest):
+    return await send_contract_email(request)
+
+@app.get("/srv/health")
+async def srv_health_check():
+    return await health_check()
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)

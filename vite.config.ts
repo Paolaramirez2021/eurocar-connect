@@ -19,6 +19,10 @@ export default defineConfig(({ mode }) => ({
       '/api': {
         target: 'http://localhost:8001',
         changeOrigin: true,
+      },
+      '/srv': {
+        target: 'http://localhost:8001',
+        changeOrigin: true,
       }
     },
   },
