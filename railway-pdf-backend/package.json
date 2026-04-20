@@ -1,0 +1,6 @@
+{
+  "name": "eurocar-pdf",
+  "dependencies": {
+    "puppeteer": "^21.0.0"
+  }
+}

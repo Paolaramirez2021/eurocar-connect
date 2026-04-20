@@ -453,10 +453,40 @@ export const ConvertToFinalDialog = ({
       // Generar HTML del contrato final
       const html = generateContractHTML(templateData);
 
-      // Generar PDF directamente en el navegador (sin backend)
-      const { generatePdfFromHtml } = await import('@/utils/pdfGenerator');
-      const pdfBlob = await generatePdfFromHtml(html);
-      console.log("[ConvertToFinal] PDF generado localmente, tamaño:", pdfBlob.size);
+      // Llamar al backend (Railway) para generar el PDF con Puppeteer
+      const pdfResponse = await fetch(getApiUrl('/api/generate-pdf'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          html: html,
+          options: {
+            format: 'Letter',
+            printBackground: true,
+            margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' }
+          }
+        })
+      });
+
+      if (!pdfResponse.ok) {
+        const errorText = await pdfResponse.text().catch(() => 'Sin detalle');
+        console.error(`PDF generation failed: ${pdfResponse.status} - ${errorText}`);
+        throw new Error(`Error al generar PDF final (${pdfResponse.status})`);
+      }
+
+      const pdfResult = await pdfResponse.json();
+      
+      if (!pdfResult.pdf_base64) {
+        throw new Error('No se recibió el PDF del servidor');
+      }
+
+      // Convertir base64 a blob
+      const byteCharacters = atob(pdfResult.pdf_base64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const pdfBlob = new Blob([byteArray], { type: 'application/pdf' });
 
       // Subir PDF final
       const pdfFilename = `final/${contractId}_final_${Date.now()}.pdf`;
