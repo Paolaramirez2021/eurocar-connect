@@ -1,51 +1,38 @@
 # EuroCar Connect - PRD
 
 ## Problema Original
-Sistema de gestión de alquiler de vehículos (rental management) con React/Vite frontend, FastAPI backend, y Supabase (DB/Storage/Auth).
+Sistema de gestión de alquiler de vehículos con React/Vite frontend, FastAPI backend, y Supabase.
 
 ## Arquitectura
-- Frontend: React + Vite + TypeScript + Tailwind CSS + Shadcn UI
-- Backend: FastAPI (Python) + Puppeteer (PDF generation)
+- Frontend: React + Vite + TypeScript + Tailwind CSS + Shadcn UI (desplegado en Netlify)
+- PDF Generation: html2pdf.js (100% en navegador, sin backend)
+- Backend: FastAPI (solo para email via Resend - opcional)
 - Database: Supabase (PostgreSQL, Auth, Storage)
-- Email: Resend (dominio pendiente verificación DKIM)
 - WhatsApp: wa.me links (sin API paga)
 
+## Cambio Arquitectural Importante (Abril 18, 2026)
+- PDF se genera ahora en el NAVEGADOR con html2pdf.js
+- Ya NO depende del backend de Emergent preview para PDFs
+- Backend solo se usa para envío de emails (Resend)
+- Esto elimina errores de "404 page not found" y "DOCTYPE is not valid JSON"
+
 ## Funcionalidades Implementadas
-
-### Contratos
-- Generación de contrato preliminar con PDF vía Puppeteer
-- Conversión a contrato final con firma digital, huella, foto cliente, documentos
-- Campos: servicio_viajar, termino_contrato, km_adicional, conductores autorizados
-- Compresión de imágenes base64 para evitar 413 payload too large
-- IVA: solo aplica a valor_dias (valor_adicional es exento)
+- Contratos preliminares y finales con PDF
+- Firma digital, huella, foto cliente, documentos
 - Validaciones obligatorias en formulario preliminar
-- Envío por WhatsApp (wa.me link con PDF público)
-- Envío por Email (Resend con fallback a onboarding@resend.dev)
+- WhatsApp envío (wa.me link)
+- Reservas con validación de solapamiento
+- Clientes con documentos frente/reverso
+- IVA: solo aplica a valor_dias (valor_adicional exento)
 
-### Reservas
-- CRUD completo de reservaciones
-- Validación de solapamiento de fechas (reservaciones y mantenimiento)
-- Búsqueda de clientes por nombre/apellido/cédula con dropdown
-- Cálculo automático de precios con IVA
-- Alerta de seguridad para clientes bloqueados
-
-### Clientes
-- Upload de documentos (Cédula, Licencia, Tarjeta) frente/reverso con Supabase Signed URLs
-
-## Completado (Abril 2026)
-- [x] Fix reservas solapadas (P0) - validación directa con format() date-fns
-- [x] Fix valores contrato final - reconstrucción correcta desde tarifa vehículo
-- [x] Fix horas y fechas en contrato final (timezone-safe)
+## Completado
+- [x] PDF generation client-side (html2pdf.js) - elimina dependencia backend
+- [x] Fix reservas solapadas
+- [x] Fix valores contrato final
 - [x] Validaciones obligatorias contrato preliminar
-- [x] WhatsApp: envío contrato preliminar y final via wa.me link
-- [x] Email fallback: onboarding@resend.dev cuando dominio no verificado
+- [x] WhatsApp envío contratos
+- [x] Forma de pago y deducible en BD y PDF final
 
 ## Pendiente
-- [ ] Verificación DKIM en Resend (usuario debe agregar TXT record en DNS)
-- [ ] Políticas RLS de Supabase (P2)
-- [ ] Refactorizar componentes grandes
-
-## Notas Técnicas
-- La tabla `contracts` solo tiene `total_amount`. Valores financieros se reconstruyen desde tarifa vehículo + reserva vinculada.
-- WhatsApp usa wa.me (gratis, sin API). Teléfono se normaliza con código país 57 (Colombia).
-- Email Resend: SENDER_EMAIL=reservas@contact.eurocarental.com. DKIM pendiente. Fallback a onboarding@resend.dev (limitado a email del dueño de cuenta).
+- [ ] Verificación DKIM Resend para emails
+- [ ] Políticas RLS Supabase
