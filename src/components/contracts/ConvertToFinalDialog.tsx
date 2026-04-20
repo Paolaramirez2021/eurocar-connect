@@ -473,20 +473,26 @@ export const ConvertToFinalDialog = ({
         throw new Error(`Error al generar PDF final (${pdfResponse.status})`);
       }
 
-      const pdfResult = await pdfResponse.json();
+      let pdfBlob: Blob;
+      const contentType = pdfResponse.headers.get('content-type') || '';
       
-      if (!pdfResult.pdf_base64) {
-        throw new Error('No se recibió el PDF del servidor');
+      // Railway devuelve PDF binario directo
+      if (contentType.includes('application/pdf')) {
+        pdfBlob = await pdfResponse.blob();
+        console.log("[ConvertToFinal] PDF binario recibido, tamaño:", pdfBlob.size);
+      } else {
+        // Formato JSON con base64
+        const pdfResult = await pdfResponse.json();
+        if (!pdfResult.pdf_base64) {
+          throw new Error('No se recibió el PDF del servidor');
+        }
+        const byteCharacters = atob(pdfResult.pdf_base64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        pdfBlob = new Blob([new Uint8Array(byteNumbers)], { type: 'application/pdf' });
       }
-
-      // Convertir base64 a blob
-      const byteCharacters = atob(pdfResult.pdf_base64);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const pdfBlob = new Blob([byteArray], { type: 'application/pdf' });
 
       // Subir PDF final
       const pdfFilename = `final/${contractId}_final_${Date.now()}.pdf`;

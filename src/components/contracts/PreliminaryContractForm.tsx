@@ -493,14 +493,22 @@ export const PreliminaryContractForm = () => {
         throw new Error(`Error del servidor: ${response.status} - ${errorText}`);
       }
 
-      const result = await response.json();
+      const contentType = response.headers.get('content-type') || '';
       
+      // Railway devuelve PDF binario directo
+      if (contentType.includes('application/pdf')) {
+        const blob = await response.blob();
+        console.log('[generatePreliminaryPDF] PDF binario recibido, tamaño:', blob.size);
+        return blob;
+      }
+      
+      // Backend Emergent devuelve JSON con base64
+      const result = await response.json();
       if (!result.pdf_base64) {
         throw new Error('No se recibió el PDF del servidor');
       }
       
       console.log('[generatePreliminaryPDF] PDF base64 recibido, longitud:', result.pdf_base64.length);
-      
       const byteCharacters = atob(result.pdf_base64);
       const byteNumbers = new Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) {
