@@ -1041,8 +1041,31 @@ export const PreliminaryContractForm = () => {
                 <SelectTrigger>
                   <SelectValue placeholder="Ciudad origen" />
                 </SelectTrigger>
-                <SelectContent>
-                  {["Bogotá", "Medellín", "Cali", "Barranquilla", "Cartagena", "Bucaramanga", "Pereira", "Manizales", "Ibagué", "Villavicencio", "Santa Marta", "Neiva", "Armenia", "Pasto", "Cúcuta", "Tunja", "Popayán", "Montería", "Valledupar", "Sincelejo", "Florencia", "Yopal", "Leticia", "Riohacha", "Quibdó", "Mocoa", "Arauca", "San Andrés", "Mitú", "Puerto Carreño", "Inírida", "Sogamoso", "Duitama", "Zipaquirá", "Girardot", "Fusagasugá", "Facatativá", "Chía", "Soacha", "Melgar"].map(city => (
+                <SelectContent className="max-h-[300px]">
+                  {[
+                    "Aguachica (Cesar)", "Apartadó (Antioquia)", "Arauca (Arauca)", "Armenia (Quindío)",
+                    "Barrancabermeja (Santander)", "Barranquilla (Atlántico)", "Bello (Antioquia)", "Bogotá D.C.", "Bucaramanga (Santander)", "Buenaventura (Valle)", "Buga (Valle)",
+                    "Cajicá (Cundinamarca)", "Cali (Valle del Cauca)", "Cartagena (Bolívar)", "Cartago (Valle)", "Chía (Cundinamarca)", "Chiquinquirá (Boyacá)", "Cúcuta (Norte de Santander)",
+                    "Dosquebradas (Risaralda)", "Duitama (Boyacá)",
+                    "Envigado (Antioquia)", "Espinal (Tolima)",
+                    "Facatativá (Cundinamarca)", "Florencia (Caquetá)", "Floridablanca (Santander)", "Funza (Cundinamarca)", "Fusagasugá (Cundinamarca)",
+                    "Girardot (Cundinamarca)", "Girón (Santander)",
+                    "Honda (Tolima)",
+                    "Ibagué (Tolima)", "Inírida (Guainía)", "Ipiales (Nariño)", "Itagüí (Antioquia)",
+                    "La Dorada (Caldas)", "Leticia (Amazonas)", "Lorica (Córdoba)",
+                    "Magangué (Bolívar)", "Maicao (La Guajira)", "Manizales (Caldas)", "Medellín (Antioquia)", "Melgar (Tolima)", "Mitú (Vaupés)", "Mocoa (Putumayo)", "Montería (Córdoba)", "Mosquera (Cundinamarca)",
+                    "Neiva (Huila)",
+                    "Ocaña (Norte de Santander)",
+                    "Palmira (Valle)", "Pamplona (Norte de Santander)", "Pasto (Nariño)", "Pereira (Risaralda)", "Piedecuesta (Santander)", "Pitalito (Huila)", "Popayán (Cauca)", "Puerto Carreño (Vichada)",
+                    "Quibdó (Chocó)",
+                    "Riohacha (La Guajira)", "Rionegro (Antioquia)",
+                    "Sabaneta (Antioquia)", "San Andrés (San Andrés)", "San Gil (Santander)", "San José del Guaviare (Guaviare)", "Santa Marta (Magdalena)", "Sincelejo (Sucre)", "Soacha (Cundinamarca)", "Sogamoso (Boyacá)", "Soledad (Atlántico)",
+                    "Tuluá (Valle)", "Tumaco (Nariño)", "Tunja (Boyacá)", "Turbaco (Bolívar)",
+                    "Ubaté (Cundinamarca)",
+                    "Valledupar (Cesar)", "Villavicencio (Meta)",
+                    "Yopal (Casanare)",
+                    "Zipaquirá (Cundinamarca)"
+                  ].map(city => (
                     <SelectItem key={city} value={city}>{city}</SelectItem>
                   ))}
                 </SelectContent>
@@ -1055,8 +1078,31 @@ export const PreliminaryContractForm = () => {
                 <SelectTrigger>
                   <SelectValue placeholder="Ciudad destino" />
                 </SelectTrigger>
-                <SelectContent>
-                  {["Bogotá", "Medellín", "Cali", "Barranquilla", "Cartagena", "Bucaramanga", "Pereira", "Manizales", "Ibagué", "Villavicencio", "Santa Marta", "Neiva", "Armenia", "Pasto", "Cúcuta", "Tunja", "Popayán", "Montería", "Valledupar", "Sincelejo", "Florencia", "Yopal", "Leticia", "Riohacha", "Quibdó", "Mocoa", "Arauca", "San Andrés", "Mitú", "Puerto Carreño", "Inírida", "Sogamoso", "Duitama", "Zipaquirá", "Girardot", "Fusagasugá", "Facatativá", "Chía", "Soacha", "Melgar"].map(city => (
+                <SelectContent className="max-h-[300px]">
+                  {[
+                    "Aguachica (Cesar)", "Apartadó (Antioquia)", "Arauca (Arauca)", "Armenia (Quindío)",
+                    "Barrancabermeja (Santander)", "Barranquilla (Atlántico)", "Bello (Antioquia)", "Bogotá D.C.", "Bucaramanga (Santander)", "Buenaventura (Valle)", "Buga (Valle)",
+                    "Cajicá (Cundinamarca)", "Cali (Valle del Cauca)", "Cartagena (Bolívar)", "Cartago (Valle)", "Chía (Cundinamarca)", "Chiquinquirá (Boyacá)", "Cúcuta (Norte de Santander)",
+                    "Dosquebradas (Risaralda)", "Duitama (Boyacá)",
+                    "Envigado (Antioquia)", "Espinal (Tolima)",
+                    "Facatativá (Cundinamarca)", "Florencia (Caquetá)", "Floridablanca (Santander)", "Funza (Cundinamarca)", "Fusagasugá (Cundinamarca)",
+                    "Girardot (Cundinamarca)", "Girón (Santander)",
+                    "Honda (Tolima)",
+                    "Ibagué (Tolima)", "Inírida (Guainía)", "Ipiales (Nariño)", "Itagüí (Antioquia)",
+                    "La Dorada (Caldas)", "Leticia (Amazonas)", "Lorica (Córdoba)",
+                    "Magangué (Bolívar)", "Maicao (La Guajira)", "Manizales (Caldas)", "Medellín (Antioquia)", "Melgar (Tolima)", "Mitú (Vaupés)", "Mocoa (Putumayo)", "Montería (Córdoba)", "Mosquera (Cundinamarca)",
+                    "Neiva (Huila)",
+                    "Ocaña (Norte de Santander)",
+                    "Palmira (Valle)", "Pamplona (Norte de Santander)", "Pasto (Nariño)", "Pereira (Risaralda)", "Piedecuesta (Santander)", "Pitalito (Huila)", "Popayán (Cauca)", "Puerto Carreño (Vichada)",
+                    "Quibdó (Chocó)",
+                    "Riohacha (La Guajira)", "Rionegro (Antioquia)",
+                    "Sabaneta (Antioquia)", "San Andrés (San Andrés)", "San Gil (Santander)", "San José del Guaviare (Guaviare)", "Santa Marta (Magdalena)", "Sincelejo (Sucre)", "Soacha (Cundinamarca)", "Sogamoso (Boyacá)", "Soledad (Atlántico)",
+                    "Tuluá (Valle)", "Tumaco (Nariño)", "Tunja (Boyacá)", "Turbaco (Bolívar)",
+                    "Ubaté (Cundinamarca)",
+                    "Valledupar (Cesar)", "Villavicencio (Meta)",
+                    "Yopal (Casanare)",
+                    "Zipaquirá (Cundinamarca)"
+                  ].map(city => (
                     <SelectItem key={city} value={city}>{city}</SelectItem>
                   ))}
                 </SelectContent>
