@@ -540,7 +540,6 @@ export const PreliminaryContractForm = () => {
 
     // 2. VEHÍCULO - campos obligatorios
     if (!data.vehiclePlate?.trim()) camposFaltantes.push("Placa del vehículo");
-    if (!data.vehicleKmOut?.trim()) camposFaltantes.push("KM Salida");
     if (!data.servicioViajar?.trim()) camposFaltantes.push("Servicio a Viajar");
     if (!data.terminoContrato?.trim()) camposFaltantes.push("Término del Contrato");
     if (!data.kmAdicional?.trim()) camposFaltantes.push("Kilómetro Adicional");
