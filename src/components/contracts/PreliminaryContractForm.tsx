@@ -1042,32 +1042,118 @@ export const PreliminaryContractForm = () => {
                   <SelectValue placeholder="Ciudad origen" />
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
-                  {[
-                    "Aguachica (Cesar)", "Apartadó (Antioquia)", "Arauca (Arauca)", "Armenia (Quindío)",
-                    "Barrancabermeja (Santander)", "Barranquilla (Atlántico)", "Bello (Antioquia)", "Bogotá D.C.", "Bucaramanga (Santander)", "Buenaventura (Valle)", "Buga (Valle)",
-                    "Cajicá (Cundinamarca)", "Cali (Valle del Cauca)", "Cartagena (Bolívar)", "Cartago (Valle)", "Chía (Cundinamarca)", "Chiquinquirá (Boyacá)", "Cúcuta (Norte de Santander)",
-                    "Dosquebradas (Risaralda)", "Duitama (Boyacá)",
-                    "Envigado (Antioquia)", "Espinal (Tolima)",
-                    "Facatativá (Cundinamarca)", "Florencia (Caquetá)", "Floridablanca (Santander)", "Funza (Cundinamarca)", "Fusagasugá (Cundinamarca)",
-                    "Girardot (Cundinamarca)", "Girón (Santander)",
-                    "Honda (Tolima)",
-                    "Ibagué (Tolima)", "Inírida (Guainía)", "Ipiales (Nariño)", "Itagüí (Antioquia)",
-                    "La Dorada (Caldas)", "Leticia (Amazonas)", "Lorica (Córdoba)",
-                    "Magangué (Bolívar)", "Maicao (La Guajira)", "Manizales (Caldas)", "Medellín (Antioquia)", "Melgar (Tolima)", "Mitú (Vaupés)", "Mocoa (Putumayo)", "Montería (Córdoba)", "Mosquera (Cundinamarca)",
-                    "Neiva (Huila)",
-                    "Ocaña (Norte de Santander)",
-                    "Palmira (Valle)", "Pamplona (Norte de Santander)", "Pasto (Nariño)", "Pereira (Risaralda)", "Piedecuesta (Santander)", "Pitalito (Huila)", "Popayán (Cauca)", "Puerto Carreño (Vichada)",
-                    "Quibdó (Chocó)",
-                    "Riohacha (La Guajira)", "Rionegro (Antioquia)",
-                    "Sabaneta (Antioquia)", "San Andrés (San Andrés)", "San Gil (Santander)", "San José del Guaviare (Guaviare)", "Santa Marta (Magdalena)", "Sincelejo (Sucre)", "Soacha (Cundinamarca)", "Sogamoso (Boyacá)", "Soledad (Atlántico)",
-                    "Tuluá (Valle)", "Tumaco (Nariño)", "Tunja (Boyacá)", "Turbaco (Bolívar)",
-                    "Ubaté (Cundinamarca)",
-                    "Valledupar (Cesar)", "Villavicencio (Meta)",
-                    "Yopal (Casanare)",
-                    "Zipaquirá (Cundinamarca)"
-                  ].map(city => (
-                    <SelectItem key={city} value={city}>{city}</SelectItem>
-                  ))}
+                  <SelectItem value="Amazonas">Amazonas</SelectItem>
+                  <SelectItem value="Leticia">  Leticia</SelectItem>
+                  <SelectItem value="Antioquia">Antioquia</SelectItem>
+                  <SelectItem value="Medellín">  Medellín</SelectItem>
+                  <SelectItem value="Bello">  Bello</SelectItem>
+                  <SelectItem value="Envigado">  Envigado</SelectItem>
+                  <SelectItem value="Itagüí">  Itagüí</SelectItem>
+                  <SelectItem value="Rionegro">  Rionegro</SelectItem>
+                  <SelectItem value="Apartadó">  Apartadó</SelectItem>
+                  <SelectItem value="Sabaneta">  Sabaneta</SelectItem>
+                  <SelectItem value="Arauca-Dep">Arauca</SelectItem>
+                  <SelectItem value="Arauca">  Arauca</SelectItem>
+                  <SelectItem value="Atlántico">Atlántico</SelectItem>
+                  <SelectItem value="Barranquilla">  Barranquilla</SelectItem>
+                  <SelectItem value="Soledad">  Soledad</SelectItem>
+                  <SelectItem value="Bolívar">Bolívar</SelectItem>
+                  <SelectItem value="Cartagena">  Cartagena</SelectItem>
+                  <SelectItem value="Magangué">  Magangué</SelectItem>
+                  <SelectItem value="Turbaco">  Turbaco</SelectItem>
+                  <SelectItem value="Boyacá">Boyacá</SelectItem>
+                  <SelectItem value="Tunja">  Tunja</SelectItem>
+                  <SelectItem value="Duitama">  Duitama</SelectItem>
+                  <SelectItem value="Sogamoso">  Sogamoso</SelectItem>
+                  <SelectItem value="Chiquinquirá">  Chiquinquirá</SelectItem>
+                  <SelectItem value="Caldas">Caldas</SelectItem>
+                  <SelectItem value="Manizales">  Manizales</SelectItem>
+                  <SelectItem value="La Dorada">  La Dorada</SelectItem>
+                  <SelectItem value="Caquetá">Caquetá</SelectItem>
+                  <SelectItem value="Florencia">  Florencia</SelectItem>
+                  <SelectItem value="Casanare">Casanare</SelectItem>
+                  <SelectItem value="Yopal">  Yopal</SelectItem>
+                  <SelectItem value="Aguazul">  Aguazul</SelectItem>
+                  <SelectItem value="Cauca">Cauca</SelectItem>
+                  <SelectItem value="Popayán">  Popayán</SelectItem>
+                  <SelectItem value="Cesar">Cesar</SelectItem>
+                  <SelectItem value="Valledupar">  Valledupar</SelectItem>
+                  <SelectItem value="Aguachica">  Aguachica</SelectItem>
+                  <SelectItem value="Chocó">Chocó</SelectItem>
+                  <SelectItem value="Quibdó">  Quibdó</SelectItem>
+                  <SelectItem value="Córdoba">Córdoba</SelectItem>
+                  <SelectItem value="Montería">  Montería</SelectItem>
+                  <SelectItem value="Lorica">  Lorica</SelectItem>
+                  <SelectItem value="Cundinamarca">Cundinamarca</SelectItem>
+                  <SelectItem value="Bogotá">  Bogotá</SelectItem>
+                  <SelectItem value="Soacha">  Soacha</SelectItem>
+                  <SelectItem value="Girardot">  Girardot</SelectItem>
+                  <SelectItem value="Zipaquirá">  Zipaquirá</SelectItem>
+                  <SelectItem value="Facatativá">  Facatativá</SelectItem>
+                  <SelectItem value="Fusagasugá">  Fusagasugá</SelectItem>
+                  <SelectItem value="Chía">  Chía</SelectItem>
+                  <SelectItem value="Cajicá">  Cajicá</SelectItem>
+                  <SelectItem value="Mosquera">  Mosquera</SelectItem>
+                  <SelectItem value="Funza">  Funza</SelectItem>
+                  <SelectItem value="Melgar">  Melgar</SelectItem>
+                  <SelectItem value="Ubaté">  Ubaté</SelectItem>
+                  <SelectItem value="Guainía">Guainía</SelectItem>
+                  <SelectItem value="Inírida">  Inírida</SelectItem>
+                  <SelectItem value="Guaviare">Guaviare</SelectItem>
+                  <SelectItem value="San José del Guaviare">  San José del Guaviare</SelectItem>
+                  <SelectItem value="Huila">Huila</SelectItem>
+                  <SelectItem value="Neiva">  Neiva</SelectItem>
+                  <SelectItem value="Pitalito">  Pitalito</SelectItem>
+                  <SelectItem value="La Guajira">La Guajira</SelectItem>
+                  <SelectItem value="Riohacha">  Riohacha</SelectItem>
+                  <SelectItem value="Maicao">  Maicao</SelectItem>
+                  <SelectItem value="Magdalena">Magdalena</SelectItem>
+                  <SelectItem value="Santa Marta">  Santa Marta</SelectItem>
+                  <SelectItem value="Meta">Meta</SelectItem>
+                  <SelectItem value="Villavicencio">  Villavicencio</SelectItem>
+                  <SelectItem value="Acacías">  Acacías</SelectItem>
+                  <SelectItem value="Granada Meta">  Granada</SelectItem>
+                  <SelectItem value="Nariño">Nariño</SelectItem>
+                  <SelectItem value="Pasto">  Pasto</SelectItem>
+                  <SelectItem value="Ipiales">  Ipiales</SelectItem>
+                  <SelectItem value="Tumaco">  Tumaco</SelectItem>
+                  <SelectItem value="Norte de Santander">Norte de Santander</SelectItem>
+                  <SelectItem value="Cúcuta">  Cúcuta</SelectItem>
+                  <SelectItem value="Ocaña">  Ocaña</SelectItem>
+                  <SelectItem value="Pamplona">  Pamplona</SelectItem>
+                  <SelectItem value="Putumayo">Putumayo</SelectItem>
+                  <SelectItem value="Mocoa">  Mocoa</SelectItem>
+                  <SelectItem value="Quindío">Quindío</SelectItem>
+                  <SelectItem value="Armenia">  Armenia</SelectItem>
+                  <SelectItem value="Risaralda">Risaralda</SelectItem>
+                  <SelectItem value="Pereira">  Pereira</SelectItem>
+                  <SelectItem value="Dosquebradas">  Dosquebradas</SelectItem>
+                  <SelectItem value="San Andrés Dep">San Andrés y Providencia</SelectItem>
+                  <SelectItem value="San Andrés">  San Andrés</SelectItem>
+                  <SelectItem value="Santander">Santander</SelectItem>
+                  <SelectItem value="Bucaramanga">  Bucaramanga</SelectItem>
+                  <SelectItem value="Floridablanca">  Floridablanca</SelectItem>
+                  <SelectItem value="Barrancabermeja">  Barrancabermeja</SelectItem>
+                  <SelectItem value="San Gil">  San Gil</SelectItem>
+                  <SelectItem value="Piedecuesta">  Piedecuesta</SelectItem>
+                  <SelectItem value="Girón">  Girón</SelectItem>
+                  <SelectItem value="Sucre">Sucre</SelectItem>
+                  <SelectItem value="Sincelejo">  Sincelejo</SelectItem>
+                  <SelectItem value="Tolima">Tolima</SelectItem>
+                  <SelectItem value="Ibagué">  Ibagué</SelectItem>
+                  <SelectItem value="Espinal">  Espinal</SelectItem>
+                  <SelectItem value="Honda">  Honda</SelectItem>
+                  <SelectItem value="Valle del Cauca">Valle del Cauca</SelectItem>
+                  <SelectItem value="Cali">  Cali</SelectItem>
+                  <SelectItem value="Buenaventura">  Buenaventura</SelectItem>
+                  <SelectItem value="Palmira">  Palmira</SelectItem>
+                  <SelectItem value="Buga">  Buga</SelectItem>
+                  <SelectItem value="Tuluá">  Tuluá</SelectItem>
+                  <SelectItem value="Cartago">  Cartago</SelectItem>
+                  <SelectItem value="Vaupés">Vaupés</SelectItem>
+                  <SelectItem value="Mitú">  Mitú</SelectItem>
+                  <SelectItem value="Vichada">Vichada</SelectItem>
+                  <SelectItem value="Puerto Carreño">  Puerto Carreño</SelectItem>
                 </SelectContent>
               </Select>
               <Select onValueChange={(val) => {
@@ -1079,32 +1165,118 @@ export const PreliminaryContractForm = () => {
                   <SelectValue placeholder="Ciudad destino" />
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
-                  {[
-                    "Aguachica (Cesar)", "Apartadó (Antioquia)", "Arauca (Arauca)", "Armenia (Quindío)",
-                    "Barrancabermeja (Santander)", "Barranquilla (Atlántico)", "Bello (Antioquia)", "Bogotá D.C.", "Bucaramanga (Santander)", "Buenaventura (Valle)", "Buga (Valle)",
-                    "Cajicá (Cundinamarca)", "Cali (Valle del Cauca)", "Cartagena (Bolívar)", "Cartago (Valle)", "Chía (Cundinamarca)", "Chiquinquirá (Boyacá)", "Cúcuta (Norte de Santander)",
-                    "Dosquebradas (Risaralda)", "Duitama (Boyacá)",
-                    "Envigado (Antioquia)", "Espinal (Tolima)",
-                    "Facatativá (Cundinamarca)", "Florencia (Caquetá)", "Floridablanca (Santander)", "Funza (Cundinamarca)", "Fusagasugá (Cundinamarca)",
-                    "Girardot (Cundinamarca)", "Girón (Santander)",
-                    "Honda (Tolima)",
-                    "Ibagué (Tolima)", "Inírida (Guainía)", "Ipiales (Nariño)", "Itagüí (Antioquia)",
-                    "La Dorada (Caldas)", "Leticia (Amazonas)", "Lorica (Córdoba)",
-                    "Magangué (Bolívar)", "Maicao (La Guajira)", "Manizales (Caldas)", "Medellín (Antioquia)", "Melgar (Tolima)", "Mitú (Vaupés)", "Mocoa (Putumayo)", "Montería (Córdoba)", "Mosquera (Cundinamarca)",
-                    "Neiva (Huila)",
-                    "Ocaña (Norte de Santander)",
-                    "Palmira (Valle)", "Pamplona (Norte de Santander)", "Pasto (Nariño)", "Pereira (Risaralda)", "Piedecuesta (Santander)", "Pitalito (Huila)", "Popayán (Cauca)", "Puerto Carreño (Vichada)",
-                    "Quibdó (Chocó)",
-                    "Riohacha (La Guajira)", "Rionegro (Antioquia)",
-                    "Sabaneta (Antioquia)", "San Andrés (San Andrés)", "San Gil (Santander)", "San José del Guaviare (Guaviare)", "Santa Marta (Magdalena)", "Sincelejo (Sucre)", "Soacha (Cundinamarca)", "Sogamoso (Boyacá)", "Soledad (Atlántico)",
-                    "Tuluá (Valle)", "Tumaco (Nariño)", "Tunja (Boyacá)", "Turbaco (Bolívar)",
-                    "Ubaté (Cundinamarca)",
-                    "Valledupar (Cesar)", "Villavicencio (Meta)",
-                    "Yopal (Casanare)",
-                    "Zipaquirá (Cundinamarca)"
-                  ].map(city => (
-                    <SelectItem key={city} value={city}>{city}</SelectItem>
-                  ))}
+                  <SelectItem value="Amazonas">Amazonas</SelectItem>
+                  <SelectItem value="Leticia">  Leticia</SelectItem>
+                  <SelectItem value="Antioquia">Antioquia</SelectItem>
+                  <SelectItem value="Medellín">  Medellín</SelectItem>
+                  <SelectItem value="Bello">  Bello</SelectItem>
+                  <SelectItem value="Envigado">  Envigado</SelectItem>
+                  <SelectItem value="Itagüí">  Itagüí</SelectItem>
+                  <SelectItem value="Rionegro">  Rionegro</SelectItem>
+                  <SelectItem value="Apartadó">  Apartadó</SelectItem>
+                  <SelectItem value="Sabaneta">  Sabaneta</SelectItem>
+                  <SelectItem value="Arauca-Dep">Arauca</SelectItem>
+                  <SelectItem value="Arauca">  Arauca</SelectItem>
+                  <SelectItem value="Atlántico">Atlántico</SelectItem>
+                  <SelectItem value="Barranquilla">  Barranquilla</SelectItem>
+                  <SelectItem value="Soledad">  Soledad</SelectItem>
+                  <SelectItem value="Bolívar">Bolívar</SelectItem>
+                  <SelectItem value="Cartagena">  Cartagena</SelectItem>
+                  <SelectItem value="Magangué">  Magangué</SelectItem>
+                  <SelectItem value="Turbaco">  Turbaco</SelectItem>
+                  <SelectItem value="Boyacá">Boyacá</SelectItem>
+                  <SelectItem value="Tunja">  Tunja</SelectItem>
+                  <SelectItem value="Duitama">  Duitama</SelectItem>
+                  <SelectItem value="Sogamoso">  Sogamoso</SelectItem>
+                  <SelectItem value="Chiquinquirá">  Chiquinquirá</SelectItem>
+                  <SelectItem value="Caldas">Caldas</SelectItem>
+                  <SelectItem value="Manizales">  Manizales</SelectItem>
+                  <SelectItem value="La Dorada">  La Dorada</SelectItem>
+                  <SelectItem value="Caquetá">Caquetá</SelectItem>
+                  <SelectItem value="Florencia">  Florencia</SelectItem>
+                  <SelectItem value="Casanare">Casanare</SelectItem>
+                  <SelectItem value="Yopal">  Yopal</SelectItem>
+                  <SelectItem value="Aguazul">  Aguazul</SelectItem>
+                  <SelectItem value="Cauca">Cauca</SelectItem>
+                  <SelectItem value="Popayán">  Popayán</SelectItem>
+                  <SelectItem value="Cesar">Cesar</SelectItem>
+                  <SelectItem value="Valledupar">  Valledupar</SelectItem>
+                  <SelectItem value="Aguachica">  Aguachica</SelectItem>
+                  <SelectItem value="Chocó">Chocó</SelectItem>
+                  <SelectItem value="Quibdó">  Quibdó</SelectItem>
+                  <SelectItem value="Córdoba">Córdoba</SelectItem>
+                  <SelectItem value="Montería">  Montería</SelectItem>
+                  <SelectItem value="Lorica">  Lorica</SelectItem>
+                  <SelectItem value="Cundinamarca">Cundinamarca</SelectItem>
+                  <SelectItem value="Bogotá">  Bogotá</SelectItem>
+                  <SelectItem value="Soacha">  Soacha</SelectItem>
+                  <SelectItem value="Girardot">  Girardot</SelectItem>
+                  <SelectItem value="Zipaquirá">  Zipaquirá</SelectItem>
+                  <SelectItem value="Facatativá">  Facatativá</SelectItem>
+                  <SelectItem value="Fusagasugá">  Fusagasugá</SelectItem>
+                  <SelectItem value="Chía">  Chía</SelectItem>
+                  <SelectItem value="Cajicá">  Cajicá</SelectItem>
+                  <SelectItem value="Mosquera">  Mosquera</SelectItem>
+                  <SelectItem value="Funza">  Funza</SelectItem>
+                  <SelectItem value="Melgar">  Melgar</SelectItem>
+                  <SelectItem value="Ubaté">  Ubaté</SelectItem>
+                  <SelectItem value="Guainía">Guainía</SelectItem>
+                  <SelectItem value="Inírida">  Inírida</SelectItem>
+                  <SelectItem value="Guaviare">Guaviare</SelectItem>
+                  <SelectItem value="San José del Guaviare">  San José del Guaviare</SelectItem>
+                  <SelectItem value="Huila">Huila</SelectItem>
+                  <SelectItem value="Neiva">  Neiva</SelectItem>
+                  <SelectItem value="Pitalito">  Pitalito</SelectItem>
+                  <SelectItem value="La Guajira">La Guajira</SelectItem>
+                  <SelectItem value="Riohacha">  Riohacha</SelectItem>
+                  <SelectItem value="Maicao">  Maicao</SelectItem>
+                  <SelectItem value="Magdalena">Magdalena</SelectItem>
+                  <SelectItem value="Santa Marta">  Santa Marta</SelectItem>
+                  <SelectItem value="Meta">Meta</SelectItem>
+                  <SelectItem value="Villavicencio">  Villavicencio</SelectItem>
+                  <SelectItem value="Acacías">  Acacías</SelectItem>
+                  <SelectItem value="Granada Meta">  Granada</SelectItem>
+                  <SelectItem value="Nariño">Nariño</SelectItem>
+                  <SelectItem value="Pasto">  Pasto</SelectItem>
+                  <SelectItem value="Ipiales">  Ipiales</SelectItem>
+                  <SelectItem value="Tumaco">  Tumaco</SelectItem>
+                  <SelectItem value="Norte de Santander">Norte de Santander</SelectItem>
+                  <SelectItem value="Cúcuta">  Cúcuta</SelectItem>
+                  <SelectItem value="Ocaña">  Ocaña</SelectItem>
+                  <SelectItem value="Pamplona">  Pamplona</SelectItem>
+                  <SelectItem value="Putumayo">Putumayo</SelectItem>
+                  <SelectItem value="Mocoa">  Mocoa</SelectItem>
+                  <SelectItem value="Quindío">Quindío</SelectItem>
+                  <SelectItem value="Armenia">  Armenia</SelectItem>
+                  <SelectItem value="Risaralda">Risaralda</SelectItem>
+                  <SelectItem value="Pereira">  Pereira</SelectItem>
+                  <SelectItem value="Dosquebradas">  Dosquebradas</SelectItem>
+                  <SelectItem value="San Andrés Dep">San Andrés y Providencia</SelectItem>
+                  <SelectItem value="San Andrés">  San Andrés</SelectItem>
+                  <SelectItem value="Santander">Santander</SelectItem>
+                  <SelectItem value="Bucaramanga">  Bucaramanga</SelectItem>
+                  <SelectItem value="Floridablanca">  Floridablanca</SelectItem>
+                  <SelectItem value="Barrancabermeja">  Barrancabermeja</SelectItem>
+                  <SelectItem value="San Gil">  San Gil</SelectItem>
+                  <SelectItem value="Piedecuesta">  Piedecuesta</SelectItem>
+                  <SelectItem value="Girón">  Girón</SelectItem>
+                  <SelectItem value="Sucre">Sucre</SelectItem>
+                  <SelectItem value="Sincelejo">  Sincelejo</SelectItem>
+                  <SelectItem value="Tolima">Tolima</SelectItem>
+                  <SelectItem value="Ibagué">  Ibagué</SelectItem>
+                  <SelectItem value="Espinal">  Espinal</SelectItem>
+                  <SelectItem value="Honda">  Honda</SelectItem>
+                  <SelectItem value="Valle del Cauca">Valle del Cauca</SelectItem>
+                  <SelectItem value="Cali">  Cali</SelectItem>
+                  <SelectItem value="Buenaventura">  Buenaventura</SelectItem>
+                  <SelectItem value="Palmira">  Palmira</SelectItem>
+                  <SelectItem value="Buga">  Buga</SelectItem>
+                  <SelectItem value="Tuluá">  Tuluá</SelectItem>
+                  <SelectItem value="Cartago">  Cartago</SelectItem>
+                  <SelectItem value="Vaupés">Vaupés</SelectItem>
+                  <SelectItem value="Mitú">  Mitú</SelectItem>
+                  <SelectItem value="Vichada">Vichada</SelectItem>
+                  <SelectItem value="Puerto Carreño">  Puerto Carreño</SelectItem>
                 </SelectContent>
               </Select>
             </div>
