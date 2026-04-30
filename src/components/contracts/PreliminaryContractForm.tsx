@@ -414,8 +414,8 @@ export const PreliminaryContractForm = () => {
     const valorDias = data.dailyRate * days;
     const subtotal = valorDias + data.additionalValue;
     const totalConDescuento = subtotal - data.discount;
-    // IVA solo aplica al valor de días menos descuento (valor adicional es exento)
-    const baseIva = Math.max(0, valorDias - data.discount);
+    // IVA solo aplica a contratos con prefijo (facturación). Sin prefijo = turismo, sin IVA.
+    const baseIva = data.contractType === 'facturacion' ? Math.max(0, valorDias - data.discount) : 0;
     const iva = Math.round(baseIva * 0.19);
     const total = totalConDescuento + iva;
 
@@ -710,8 +710,8 @@ export const PreliminaryContractForm = () => {
   const valorDias = watchedValues.dailyRate * days;
   const subtotal = valorDias + watchedValues.additionalValue;
   const totalConDescuento = subtotal - watchedValues.discount;
-  // IVA solo aplica al valor de días menos descuento (valor adicional es exento)
-  const baseIva = Math.max(0, valorDias - watchedValues.discount);
+  // IVA solo aplica a contratos con prefijo (facturación). Sin prefijo = turismo, sin IVA.
+  const baseIva = watchedValues.contractType === 'facturacion' ? Math.max(0, valorDias - watchedValues.discount) : 0;
   const iva = Math.round(baseIva * 0.19);
   const totalFinal = totalConDescuento + iva;
 

@@ -369,11 +369,15 @@ export const ConvertToFinalDialog = ({
       const valorDias = valorDia * dias;
       const descuentoContrato = reservationFinancials?.descuento || 0;
       // valor_adicional = total_amount - valorDias + descuento (despejar de la fórmula original)
-      const valorAdicional = Math.max(0, preliminaryContract.total_amount - valorDias + descuentoContrato);
+      // Detectar tipo de contrato: sin prefijo EUROCAR- = turismo (sin IVA)
+      const esFacturacion = contractNumber.startsWith('EUROCAR-');
+      const valorAdicionalRaw = preliminaryContract.total_amount - valorDias + descuentoContrato;
+      // Si no es facturación (sin IVA), el total_amount ya es sin IVA
+      const valorAdicional = Math.max(0, esFacturacion ? valorAdicionalRaw : valorAdicionalRaw);
       const subtotalCalc = valorDias + valorAdicional;
       const totalConDescuento = subtotalCalc - descuentoContrato;
-      // IVA solo aplica a valor de días menos descuento (valor adicional es EXENTO de IVA)
-      const baseIva = Math.max(0, valorDias - descuentoContrato);
+      // IVA solo aplica a contratos con prefijo EUROCAR- (facturación). Sin prefijo = turismo, sin IVA.
+      const baseIva = esFacturacion ? Math.max(0, valorDias - descuentoContrato) : 0;
       const ivaCalc = Math.round(baseIva * 0.19);
       const totalCalc = totalConDescuento + ivaCalc;
 
