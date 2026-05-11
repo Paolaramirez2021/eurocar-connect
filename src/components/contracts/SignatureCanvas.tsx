@@ -44,42 +44,82 @@ export const SignatureCanvas = ({ onSignatureChange }: SignatureCanvasProps) => 
   const wacomClickBtnRef = useRef(-1);
   const wacomImgDataRef = useRef<any>(null);
 
-  // Check if Wacom SigCaptX is available
+  // Check if Wacom SigCaptX SDK is loaded (the actual connection happens when user clicks)
   useEffect(() => {
     let retries = 0;
-    const maxRetries = 10;
+    const maxRetries = 15;
 
     const checkService = () => {
       try {
-        if (typeof WacomGSS !== 'undefined' && WacomGSS.STU && WacomGSS.STU.isServiceReady()) {
-          console.log('[Wacom] SigCaptX listo');
-          setWacomStatus('connected');
-          return;
+        if (typeof WacomGSS !== 'undefined' && WacomGSS.STU) {
+          // SDK is loaded. Check if service is ready
+          if (WacomGSS.STU.isServiceReady()) {
+            console.log('[Wacom] SigCaptX servicio listo');
+            setWacomStatus('connected');
+            return;
+          }
+          // SDK loaded but service not ready yet - keep trying
+          console.log('[Wacom] SDK cargado, esperando servicio... intento', retries);
         }
       } catch (e) {
-        // SDK not loaded
+        console.log('[Wacom] Error checking:', e);
       }
       retries++;
       if (retries < maxRetries) {
-        setTimeout(checkService, 1000);
+        setTimeout(checkService, 1500);
       } else {
-        console.log('[Wacom] SigCaptX no disponible, usando canvas manual');
-        setWacomStatus('unavailable');
+        // If SDK is loaded, show the button anyway - connection will be attempted on click
+        if (typeof WacomGSS !== 'undefined' && WacomGSS.STU) {
+          console.log('[Wacom] SDK cargado pero servicio no responde. Botón disponible para intentar.');
+          setWacomStatus('connected');
+        } else {
+          console.log('[Wacom] SDK no cargado');
+          setWacomStatus('unavailable');
+        }
       }
     };
 
-    setTimeout(checkService, 500);
+    setTimeout(checkService, 1000);
   }, []);
 
   // ==================== WACOM STU CAPTURE ====================
   const startWacomCapture = useCallback(() => {
-    if (typeof WacomGSS === 'undefined') {
+    if (typeof WacomGSS === 'undefined' || !WacomGSS.STU) {
+      alert('El SDK de Wacom no está cargado. Asegúrese de tener instalado Wacom STU SigCaptX.');
       setWacomStatus('unavailable');
       return;
     }
 
     setWacomCapturing(true);
     wacomPenDataRef.current = [];
+
+    // Reinicializar el WebSocket del SDK antes de cada captura
+    // Esto asegura una conexión fresca al SigCaptX
+    if (!WacomGSS.STU.isServiceReady()) {
+      console.log('[Wacom] Servicio no conectado, reinicializando...');
+      WacomGSS.STU.Reinitialize();
+      
+      // Esperar a que el WebSocket se conecte
+      let wsRetries = 0;
+      const waitForWs = () => {
+        wsRetries++;
+        if (WacomGSS.STU.isServiceReady()) {
+          console.log('[Wacom] WebSocket conectado tras reinicialización');
+          doWacomCapture();
+        } else if (wsRetries < 10) {
+          setTimeout(waitForWs, 500);
+        } else {
+          setWacomCapturing(false);
+          alert('No se pudo conectar con Wacom SigCaptX.\n\nVerifique que:\n1. Wacom STU SigCaptX esté instalado y corriendo\n2. La tableta STU-500 esté conectada por USB\n3. En Chrome, visite chrome://flags/#allow-insecure-localhost y active la opción');
+        }
+      };
+      setTimeout(waitForWs, 500);
+    } else {
+      doWacomCapture();
+    }
+  }, []);
+
+  const doWacomCapture = useCallback(() => {
 
     const p = new WacomGSS.STU.Protocol();
     let intf: any;
