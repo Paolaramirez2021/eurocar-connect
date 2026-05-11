@@ -391,7 +391,7 @@ export const SignatureCanvas = ({ onSignatureChange }: SignatureCanvasProps) => 
 
       if (!isDown && isDown2) lastPt = { x: nx, y: ny };
       const dist = Math.pow(lastPt.x - nx, 2) + Math.pow(lastPt.y - ny, 2);
-      if ((isDown2 && dist > 10) || (isDown && !isDown2)) {
+      if ((isDown2 && dist > 4) || (isDown && !isDown2)) {
         sigCtx.beginPath();
         sigCtx.moveTo(lastPt.x, lastPt.y);
         sigCtx.lineTo(nx, ny);
@@ -402,19 +402,29 @@ export const SignatureCanvas = ({ onSignatureChange }: SignatureCanvasProps) => 
       isDown = isDown2;
     }
 
+    // Now create a transparent version - remove white background
+    const imgData = sigCtx.getImageData(0, 0, sigCanvas.width, sigCanvas.height);
+    for (let i = 0; i < imgData.data.length; i += 4) {
+      const r = imgData.data[i], g = imgData.data[i+1], b = imgData.data[i+2];
+      // If pixel is white or near-white, make it transparent
+      if (r > 230 && g > 230 && b > 230) {
+        imgData.data[i+3] = 0; // alpha = 0
+      }
+    }
+    sigCtx.putImageData(imgData, 0, 0);
+
     // Draw on main component canvas - ampliar firma
     mainCtx.setTransform(1, 0, 0, 1, 0, 0);
     mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
     mainCtx.scale(dprRef.current, dprRef.current);
 
-    // Find bounding box of the actual signature strokes (crop whitespace)
-    const sigImgData = sigCtx.getImageData(0, 0, sigCanvas.width, sigCanvas.height);
+    // Find bounding box of the actual signature strokes (non-transparent pixels)
+    const finalImgData = sigCtx.getImageData(0, 0, sigCanvas.width, sigCanvas.height);
     let minX = sigCanvas.width, minY = sigCanvas.height, maxX = 0, maxY = 0;
     for (let y = 0; y < sigCanvas.height; y++) {
       for (let x = 0; x < sigCanvas.width; x++) {
         const idx = (y * sigCanvas.width + x) * 4;
-        // Check if pixel is not white
-        if (sigImgData.data[idx] < 200 || sigImgData.data[idx+1] < 200 || sigImgData.data[idx+2] < 200) {
+        if (finalImgData.data[idx + 3] > 50) {
           if (x < minX) minX = x;
           if (x > maxX) maxX = x;
           if (y < minY) minY = y;

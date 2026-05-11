@@ -185,7 +185,7 @@ export const generateContractHTML = (data: ContractData): string => {
     .clausulas strong { color: #0066cc; }
     .signatures { margin-top: 25px; }
     .sig-box { display: inline-block; width: 45%; text-align: center; vertical-align: top; }
-    .sig-line { border-bottom: 1px solid #333; height: 40px; margin-bottom: 5px; position: relative; }
+    .sig-line { border-bottom: 2px solid #333; height: 80px; margin-bottom: 5px; position: relative; display: flex; align-items: flex-end; justify-content: center; }
     .footer { text-align: center; font-size: 7px; color: #666; margin-top: 15px; border-top: 1px solid #ccc; padding-top: 8px; }
     .verification-section { margin-top: 20px; page-break-inside: avoid; }
     .verification-grid { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; }
@@ -193,7 +193,7 @@ export const generateContractHTML = (data: ContractData): string => {
     .verification-item img { max-width: 140px; max-height: 100px; border: 1px solid #ccc; border-radius: 4px; }
     .verification-item p { font-size: 8px; color: #666; margin-top: 4px; }
     .final-badge { background: #28a745; color: white; padding: 8px; text-align: center; font-weight: bold; margin-bottom: 15px; }
-    .signature-img { max-height: 50px; max-width: 150px; background-color: #FFFFFF; }
+    .signature-img { max-height: 75px; max-width: 200px; margin-bottom: -2px; }
   </style>
 </head>
 <body>
