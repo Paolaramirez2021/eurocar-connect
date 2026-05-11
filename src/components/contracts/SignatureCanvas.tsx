@@ -13,7 +13,9 @@ interface Point {
   pressure: number;
 }
 
-// Wacom SigCaptX connection state
+// Declare global WacomGSS type
+declare const WacomGSS: any;
+
 type WacomStatus = 'checking' | 'connected' | 'unavailable';
 
 export const SignatureCanvas = ({ onSignatureChange }: SignatureCanvasProps) => {
@@ -25,205 +27,465 @@ export const SignatureCanvas = ({ onSignatureChange }: SignatureCanvasProps) => 
   const dprRef = useRef(window.devicePixelRatio || 1);
   const [wacomStatus, setWacomStatus] = useState<WacomStatus>('checking');
   const [wacomCapturing, setWacomCapturing] = useState(false);
-  const wsRef = useRef<WebSocket | null>(null);
-  const penDataRef = useRef<Array<{x: number; y: number; pressure: number}>>([]);
+
+  // Wacom state refs (to avoid re-renders during capture)
+  const wacomTabletRef = useRef<any>(null);
+  const wacomCapabilityRef = useRef<any>(null);
+  const wacomInkThresholdRef = useRef<any>(null);
+  const wacomEncodingModeRef = useRef<any>(null);
+  const wacomPenDataRef = useRef<any[]>([]);
+  const wacomBtnsRef = useRef<any[]>([]);
+  const wacomCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const wacomCtxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const wacomModalRef = useRef<HTMLDivElement | null>(null);
+  const wacomFormRef = useRef<HTMLDivElement | null>(null);
+  const wacomIsDownRef = useRef(false);
+  const wacomLastPointRef = useRef({ x: 0, y: 0 });
+  const wacomClickBtnRef = useRef(-1);
+  const wacomImgDataRef = useRef<any>(null);
 
   // Check if Wacom SigCaptX is available
   useEffect(() => {
-    checkWacomAvailability();
-    return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
+    let retries = 0;
+    const maxRetries = 10;
+
+    const checkService = () => {
+      try {
+        if (typeof WacomGSS !== 'undefined' && WacomGSS.STU && WacomGSS.STU.isServiceReady()) {
+          console.log('[Wacom] SigCaptX listo');
+          setWacomStatus('connected');
+          return;
+        }
+      } catch (e) {
+        // SDK not loaded
       }
-    };
-  }, []);
-
-  const checkWacomAvailability = async () => {
-    setWacomStatus('checking');
-    try {
-      // Try connecting to the SigCaptX WebSocket server on port 9000
-      const ws = new WebSocket('ws://localhost:9000');
-      
-      const timeout = setTimeout(() => {
-        ws.close();
-        setWacomStatus('unavailable');
-      }, 3000);
-
-      ws.onopen = () => {
-        clearTimeout(timeout);
-        console.log('[Wacom] SigCaptX WebSocket conectado');
-        wsRef.current = ws;
-        setWacomStatus('connected');
-      };
-
-      ws.onerror = () => {
-        clearTimeout(timeout);
+      retries++;
+      if (retries < maxRetries) {
+        setTimeout(checkService, 1000);
+      } else {
         console.log('[Wacom] SigCaptX no disponible, usando canvas manual');
         setWacomStatus('unavailable');
-      };
-
-      ws.onclose = () => {
-        if (wsRef.current === ws) {
-          wsRef.current = null;
-        }
-      };
-    } catch {
-      setWacomStatus('unavailable');
-    }
-  };
-
-  // Capture signature from Wacom STU-500 using SigCaptX
-  const startWacomCapture = useCallback(async () => {
-    setWacomCapturing(true);
-    penDataRef.current = [];
-
-    try {
-      // Use the SigCaptX approach: send commands via WebSocket
-      const ws = wsRef.current;
-      if (!ws || ws.readyState !== WebSocket.OPEN) {
-        // Try reconnecting
-        await checkWacomAvailability();
-        if (!wsRef.current) {
-          throw new Error('No se pudo conectar con la tableta Wacom');
-        }
       }
+    };
 
-      // Send capture command to SigCaptX
-      const captureCmd = JSON.stringify({
-        method: "wireCapture",
-        params: {
-          who: "EuroCar Rental",
-          why: "Firma de Contrato",
-          width: 396,
-          height: 100,
-          inkColor: "#000000",
-          backgroundColor: "#FFFFFF"
-        }
-      });
-
-      if (wsRef.current) {
-        wsRef.current.send(captureCmd);
-
-        // Listen for response
-        wsRef.current.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            
-            if (data.method === "wireCapture" && data.result) {
-              // Signature captured - data.result contains base64 image
-              if (data.result.image) {
-                const imgDataUrl = `data:image/png;base64,${data.result.image}`;
-                drawImageToCanvas(imgDataUrl);
-                setWacomCapturing(false);
-              } else if (data.result.status === "cancelled") {
-                setWacomCapturing(false);
-              }
-            } else if (data.penData) {
-              // Real-time pen data - draw on canvas
-              drawPenPoint(data.penData.x, data.penData.y, data.penData.pressure);
-            }
-          } catch (e) {
-            console.error('[Wacom] Error parsing response:', e);
-          }
-        };
-      }
-    } catch (error) {
-      console.error('[Wacom] Error de captura:', error);
-      setWacomCapturing(false);
-      setWacomStatus('unavailable');
-    }
+    setTimeout(checkService, 500);
   }, []);
 
-  const drawImageToCanvas = (dataUrl: string) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+  // ==================== WACOM STU CAPTURE ====================
+  const startWacomCapture = useCallback(() => {
+    if (typeof WacomGSS === 'undefined') {
+      setWacomStatus('unavailable');
+      return;
+    }
 
-    const img = new Image();
-    img.onload = () => {
-      // Clear canvas
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.scale(dprRef.current, dprRef.current);
+    setWacomCapturing(true);
+    wacomPenDataRef.current = [];
 
-      // Draw the Wacom signature image, fitting to canvas
-      const displayWidth = canvas.width / dprRef.current;
-      const displayHeight = 200;
-      const scale = Math.min(displayWidth / img.width, displayHeight / img.height) * 0.9;
-      const x = (displayWidth - img.width * scale) / 2;
-      const y = (displayHeight - img.height * scale) / 2;
-      ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+    const p = new WacomGSS.STU.Protocol();
+    let intf: any;
+    let m_usbDevices: any;
 
-      strokeCountRef.current = 1;
-      setHasSignature(true);
-      
-      // Export as data URL
-      const outputDataUrl = canvas.toDataURL("image/png");
-      onSignatureChange(outputDataUrl);
-    };
-    img.src = dataUrl;
+    WacomGSS.STU.isDCAReady()
+      .then((message: boolean) => {
+        if (!message) throw new Error('DCA not ready');
+        WacomGSS.STU.onDCAtimeout = () => {
+          console.log('[Wacom] DCA timeout');
+          wacomClose();
+        };
+        return WacomGSS.STU.getUsbDevices();
+      })
+      .then((devices: any[]) => {
+        if (!devices || devices.length === 0) throw new Error('No se encontró tableta Wacom STU');
+        m_usbDevices = devices;
+        console.log('[Wacom] Dispositivo encontrado:', JSON.stringify(devices[0]));
+        return WacomGSS.STU.isSupportedUsbDevice(devices[0].idVendor, devices[0].idProduct);
+      })
+      .then(() => {
+        intf = new WacomGSS.STU.UsbInterface();
+        return intf.Constructor();
+      })
+      .then(() => intf.connect(m_usbDevices[0], true))
+      .then(() => {
+        const tablet = new WacomGSS.STU.Tablet();
+        wacomTabletRef.current = tablet;
+        return tablet.Constructor(intf, null, null);
+      })
+      .then(() => {
+        intf = null;
+        return wacomTabletRef.current.getInkThreshold();
+      })
+      .then((threshold: any) => {
+        wacomInkThresholdRef.current = threshold;
+        return wacomTabletRef.current.getCapability();
+      })
+      .then((cap: any) => {
+        wacomCapabilityRef.current = cap;
+        console.log('[Wacom] Pantalla:', cap.screenWidth, 'x', cap.screenHeight);
+
+        // Create modal window for signature capture
+        createWacomModal(cap.screenWidth, cap.screenHeight);
+        return wacomTabletRef.current.getInformation();
+      })
+      .then(() => wacomTabletRef.current.getProductId())
+      .then((productId: number) => {
+        return WacomGSS.STU.ProtocolHelper.simulateEncodingFlag(productId, wacomCapabilityRef.current.encodingFlag);
+      })
+      .then((encodingFlag: number) => {
+        if ((encodingFlag & p.EncodingFlag.EncodingFlag_24bit) !== 0) {
+          return wacomTabletRef.current.supportsWrite().then((sw: boolean) => {
+            wacomEncodingModeRef.current = sw ? p.EncodingMode.EncodingMode_24bit_Bulk : p.EncodingMode.EncodingMode_24bit;
+          });
+        } else if ((encodingFlag & p.EncodingFlag.EncodingFlag_16bit) !== 0) {
+          return wacomTabletRef.current.supportsWrite().then((sw: boolean) => {
+            wacomEncodingModeRef.current = sw ? p.EncodingMode.EncodingMode_16bit_Bulk : p.EncodingMode.EncodingMode_16bit;
+          });
+        } else {
+          wacomEncodingModeRef.current = p.EncodingMode.EncodingMode_1bit;
+        }
+      })
+      .then(() => wacomTabletRef.current.setClearScreen())
+      .then(() => wacomTabletRef.current.isSupported(p.ReportId.ReportId_PenDataOptionMode))
+      .then((supported: boolean) => {
+        if (supported) {
+          return wacomTabletRef.current.getProductId().then((pid: number) => {
+            let mode = p.PenDataOptionMode.PenDataOptionMode_None;
+            switch (pid) {
+              case WacomGSS.STU.ProductId.ProductId_520A:
+                mode = p.PenDataOptionMode.PenDataOptionMode_TimeCount; break;
+              case WacomGSS.STU.ProductId.ProductId_430:
+              case WacomGSS.STU.ProductId.ProductId_530:
+              case WacomGSS.STU.ProductId.ProductId_540:
+                mode = p.PenDataOptionMode.PenDataOptionMode_TimeCountSequence; break;
+            }
+            return wacomTabletRef.current.setPenDataOptionMode(mode);
+          });
+        }
+      })
+      .then(() => {
+        // Add buttons to the modal canvas and send to tablet
+        addWacomButtons();
+        const wacomCanvas = wacomCanvasRef.current!;
+        const canvasImage = wacomCanvas.toDataURL("image/jpeg");
+        return WacomGSS.STU.ProtocolHelper.resizeAndFlatten(
+          canvasImage, 0, 0, 0, 0,
+          wacomCapabilityRef.current.screenWidth,
+          wacomCapabilityRef.current.screenHeight,
+          wacomEncodingModeRef.current, 1, false, 0, true
+        );
+      })
+      .then((imgData: any) => {
+        wacomImgDataRef.current = imgData;
+        return wacomTabletRef.current.writeImage(wacomEncodingModeRef.current, imgData);
+      })
+      .then(() => wacomTabletRef.current.setInkingMode(p.InkingMode.InkingMode_On))
+      .then(() => {
+        // Setup pen data handler
+        const reportHandler = new WacomGSS.STU.ProtocolHelper.ReportHandler();
+        wacomLastPointRef.current = { x: 0, y: 0 };
+        wacomIsDownRef.current = false;
+        wacomCtxRef.current!.lineWidth = 1;
+
+        const penDataHandler = (report: any) => {
+          processWacomButtons(report);
+          processWacomPoint(report);
+          wacomPenDataRef.current.push(report);
+        };
+        const penDataEncHandler = (report: any) => {
+          processWacomButtons(report.penData[0]);
+          processWacomPoint(report.penData[0]);
+          processWacomButtons(report.penData[1]);
+          processWacomPoint(report.penData[1]);
+          wacomPenDataRef.current.push(report.penData[0], report.penData[1]);
+        };
+
+        reportHandler.onReportPenData = penDataHandler;
+        reportHandler.onReportPenDataOption = penDataHandler;
+        reportHandler.onReportPenDataTimeCountSequence = penDataHandler;
+        reportHandler.onReportPenDataEncrypted = penDataEncHandler;
+        reportHandler.onReportPenDataEncryptedOption = penDataEncHandler;
+        reportHandler.onReportPenDataTimeCountSequenceEncrypted = penDataHandler;
+        reportHandler.onReportDevicePublicKey = () => {};
+        reportHandler.onReportEncryptionStatus = () => {};
+        reportHandler.decrypt = () => {};
+
+        return reportHandler.startReporting(wacomTabletRef.current, true);
+      })
+      .fail((ex: any) => {
+        console.error('[Wacom] Error:', ex);
+        setWacomCapturing(false);
+        if (ex.message?.includes('DCA')) {
+          WacomGSS.STU.Reinitialize();
+        } else {
+          alert('Error con tableta Wacom: ' + (ex.message || ex));
+        }
+        wacomClose();
+      });
+  }, []);
+
+  // Create modal window for Wacom signature capture
+  const createWacomModal = (width: number, height: number) => {
+    const bg = document.createElement('div');
+    bg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;';
+    document.body.appendChild(bg);
+    wacomModalRef.current = bg;
+
+    const form = document.createElement('div');
+    form.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10001;background:white;border-radius:8px;padding:0;box-shadow:0 25px 50px rgba(0,0,0,0.25);`;
+    form.style.width = width + 'px';
+    form.style.height = height + 'px';
+    document.body.appendChild(form);
+    wacomFormRef.current = form;
+
+    const wCanvas = document.createElement('canvas');
+    wCanvas.width = width;
+    wCanvas.height = height;
+    wCanvas.style.cursor = 'crosshair';
+    form.appendChild(wCanvas);
+    wacomCanvasRef.current = wCanvas;
+    wacomCtxRef.current = wCanvas.getContext('2d');
+
+    // Handle mouse clicks on simulated buttons
+    wCanvas.addEventListener('click', (e) => {
+      const rect = form.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      for (let i = 0; i < wacomBtnsRef.current.length; i++) {
+        const b = wacomBtnsRef.current[i];
+        if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) {
+          b.click();
+          break;
+        }
+      }
+    });
   };
 
-  const drawPenPoint = (x: number, y: number, pressure: number) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+  // Add OK/Clear/Cancel buttons to Wacom canvas
+  const addWacomButtons = () => {
+    const cap = wacomCapabilityRef.current;
+    const w1 = Math.floor(cap.screenWidth / 3);
+    const w2 = Math.floor(cap.screenWidth / 3);
+    const w3 = cap.screenWidth - w1 - w2;
+    const y = Math.floor(cap.screenHeight * 6 / 7);
+    const h = cap.screenHeight - y;
 
-    const displayWidth = canvas.width / dprRef.current;
-    const displayHeight = 200;
-    
-    // Scale Wacom coordinates (typically 0-396, 0-100 for STU-500) to canvas
-    const canvasX = (x / 396) * displayWidth;
-    const canvasY = (y / 100) * displayHeight;
+    wacomBtnsRef.current = [
+      { x: 0, y, w: w1, h, text: 'OK', click: wacomOk },
+      { x: w1, y, w: w2, h, text: 'Limpiar', click: wacomClear },
+      { x: w1 + w2, y, w: w3, h, text: 'Cancelar', click: wacomCancel },
+    ];
 
-    if (pressure > 0) {
-      ctx.lineWidth = 1.5 + (pressure / 1024) * 2;
-      ctx.strokeStyle = "#000000";
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      
-      const lastPen = penDataRef.current.length > 0 ? penDataRef.current[penDataRef.current.length - 1] : null;
-      if (lastPen && lastPen.pressure > 0) {
-        const lastX = (lastPen.x / 396) * displayWidth;
-        const lastY = (lastPen.y / 100) * displayHeight;
-        ctx.beginPath();
-        ctx.moveTo(lastX, lastY);
-        ctx.lineTo(canvasX, canvasY);
-        ctx.stroke();
+    // Draw buttons on canvas
+    const ctx = wacomCtxRef.current!;
+    const wCanvas = wacomCanvasRef.current!;
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, wCanvas.width, wCanvas.height);
+
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'black';
+    ctx.font = '24px Arial';
+
+    for (const btn of wacomBtnsRef.current) {
+      ctx.fillStyle = '#e0e0e0';
+      ctx.fillRect(btn.x, btn.y, btn.w, btn.h);
+      ctx.fillStyle = 'black';
+      ctx.strokeRect(btn.x, btn.y, btn.w, btn.h);
+      const txtW = ctx.measureText(btn.text).width;
+      ctx.fillText(btn.text, btn.x + (btn.w - txtW) / 2, btn.y + 32);
+    }
+    ctx.strokeStyle = 'black';
+  };
+
+  // Wacom button handlers
+  const wacomOk = () => {
+    generateWacomSignatureImage();
+    wacomClose();
+  };
+
+  const wacomCancel = () => {
+    wacomClose();
+  };
+
+  const wacomClear = () => {
+    wacomPenDataRef.current = [];
+    const ctx = wacomCtxRef.current;
+    const wCanvas = wacomCanvasRef.current;
+    if (ctx && wCanvas) {
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, wCanvas.width, wCanvas.height);
+      addWacomButtons();
+      // Resend canvas to tablet
+      if (wacomTabletRef.current && wacomImgDataRef.current) {
+        wacomTabletRef.current.writeImage(wacomEncodingModeRef.current, wacomImgDataRef.current);
       }
-      
-      penDataRef.current.push({ x, y, pressure });
-      strokeCountRef.current = 1;
-      setHasSignature(true);
-    } else {
-      penDataRef.current.push({ x, y, pressure: 0 });
     }
   };
 
-  // Setup canvas with devicePixelRatio scaling
+  // Generate signature image from pen data and pass to main canvas
+  const generateWacomSignatureImage = () => {
+    const mainCanvas = canvasRef.current;
+    if (!mainCanvas) return;
+    const mainCtx = mainCanvas.getContext('2d');
+    if (!mainCtx) return;
+
+    // Create temp canvas to render signature at proper size
+    const sigCanvas = document.createElement('canvas');
+    const cap = wacomCapabilityRef.current;
+    sigCanvas.width = cap.screenWidth;
+    sigCanvas.height = cap.screenHeight;
+    const sigCtx = sigCanvas.getContext('2d')!;
+    sigCtx.fillStyle = 'white';
+    sigCtx.fillRect(0, 0, sigCanvas.width, sigCanvas.height);
+    sigCtx.lineWidth = 1;
+    sigCtx.strokeStyle = 'black';
+
+    let lastPt = { x: 0, y: 0 };
+    let isDown = false;
+
+    for (const pt of wacomPenDataRef.current) {
+      const nx = Math.round(sigCanvas.width * pt.x / cap.tabletMaxX);
+      const ny = Math.round(sigCanvas.height * pt.y / cap.tabletMaxY);
+      const threshold = wacomInkThresholdRef.current;
+      const isDown2 = isDown
+        ? !(pt.pressure <= threshold.offPressureMark)
+        : (pt.pressure > threshold.onPressureMark);
+
+      if (!isDown && isDown2) lastPt = { x: nx, y: ny };
+      const dist = Math.pow(lastPt.x - nx, 2) + Math.pow(lastPt.y - ny, 2);
+      if ((isDown2 && dist > 10) || (isDown && !isDown2)) {
+        sigCtx.beginPath();
+        sigCtx.moveTo(lastPt.x, lastPt.y);
+        sigCtx.lineTo(nx, ny);
+        sigCtx.stroke();
+        sigCtx.closePath();
+        lastPt = { x: nx, y: ny };
+      }
+      isDown = isDown2;
+    }
+
+    // Draw on main component canvas
+    mainCtx.setTransform(1, 0, 0, 1, 0, 0);
+    mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+    mainCtx.scale(dprRef.current, dprRef.current);
+
+    const displayW = mainCanvas.width / dprRef.current;
+    const displayH = 200;
+    const scale = Math.min(displayW / sigCanvas.width, displayH / sigCanvas.height) * 0.9;
+    const x = (displayW - sigCanvas.width * scale) / 2;
+    const y = (displayH - sigCanvas.height * scale) / 2;
+    mainCtx.drawImage(sigCanvas, x, y, sigCanvas.width * scale, sigCanvas.height * scale);
+
+    strokeCountRef.current = 1;
+    setHasSignature(true);
+    onSignatureChange(mainCanvas.toDataURL('image/png'));
+  };
+
+  // Process pen data for button clicks
+  const processWacomButtons = (point: any) => {
+    const cap = wacomCapabilityRef.current;
+    const wCanvas = wacomCanvasRef.current!;
+    const nx = Math.round(wCanvas.width * point.x / cap.tabletMaxX);
+    const ny = Math.round(wCanvas.height * point.y / cap.tabletMaxY);
+    const threshold = wacomInkThresholdRef.current;
+    const isDown2 = wacomIsDownRef.current
+      ? !(point.pressure <= threshold.offPressureMark)
+      : (point.pressure > threshold.onPressureMark);
+
+    let btn = -1;
+    for (let i = 0; i < wacomBtnsRef.current.length; i++) {
+      const b = wacomBtnsRef.current[i];
+      if (nx >= b.x && nx <= b.x + b.w && ny >= b.y && ny <= b.y + b.h) {
+        btn = i; break;
+      }
+    }
+
+    if (wacomIsDownRef.current && !isDown2) {
+      if (btn !== -1 && wacomClickBtnRef.current === btn) {
+        wacomBtnsRef.current[btn].click();
+      }
+      wacomClickBtnRef.current = -1;
+    } else if (btn !== -1 && !wacomIsDownRef.current && isDown2) {
+      wacomClickBtnRef.current = btn;
+    }
+  };
+
+  // Process pen data for drawing
+  const processWacomPoint = (point: any) => {
+    const cap = wacomCapabilityRef.current;
+    const wCanvas = wacomCanvasRef.current;
+    const ctx = wacomCtxRef.current;
+    if (!wCanvas || !ctx) return;
+
+    const nx = Math.round(wCanvas.width * point.x / cap.tabletMaxX);
+    const ny = Math.round(wCanvas.height * point.y / cap.tabletMaxY);
+    const threshold = wacomInkThresholdRef.current;
+    const isDown2 = wacomIsDownRef.current
+      ? !(point.pressure <= threshold.offPressureMark)
+      : (point.pressure > threshold.onPressureMark);
+
+    if (!wacomIsDownRef.current && isDown2) {
+      wacomLastPointRef.current = { x: nx, y: ny };
+    }
+
+    const dist = Math.pow(wacomLastPointRef.current.x - nx, 2) + Math.pow(wacomLastPointRef.current.y - ny, 2);
+    if ((isDown2 && dist > 10) || (wacomIsDownRef.current && !isDown2)) {
+      ctx.beginPath();
+      ctx.moveTo(wacomLastPointRef.current.x, wacomLastPointRef.current.y);
+      ctx.lineTo(nx, ny);
+      ctx.stroke();
+      ctx.closePath();
+      wacomLastPointRef.current = { x: nx, y: ny };
+    }
+    wacomIsDownRef.current = isDown2;
+  };
+
+  // Close Wacom session and cleanup
+  const wacomClose = () => {
+    WacomGSS.STU.onDCAtimeout = null;
+
+    const tablet = wacomTabletRef.current;
+    if (tablet) {
+      const p = new WacomGSS.STU.Protocol();
+      tablet.setInkingMode(p.InkingMode.InkingMode_Off)
+        .then(() => tablet.endCapture())
+        .then(() => {
+          if (wacomImgDataRef.current) return wacomImgDataRef.current.remove();
+        })
+        .then(() => { wacomImgDataRef.current = null; return tablet.setClearScreen(); })
+        .then(() => tablet.disconnect())
+        .then(() => { wacomTabletRef.current = null; })
+        .fail((e: any) => console.error('[Wacom] disconnect error:', e));
+    }
+
+    // Remove modal
+    if (wacomModalRef.current) {
+      document.body.removeChild(wacomModalRef.current);
+      wacomModalRef.current = null;
+    }
+    if (wacomFormRef.current) {
+      document.body.removeChild(wacomFormRef.current);
+      wacomFormRef.current = null;
+    }
+    wacomCanvasRef.current = null;
+    wacomCtxRef.current = null;
+    setWacomCapturing(false);
+  };
+
+  // ==================== MANUAL CANVAS (fallback) ====================
   const setupCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const container = canvas.parentElement;
     if (!container) return;
-
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-
     const dpr = window.devicePixelRatio || 1;
     dprRef.current = dpr;
-
     const displayWidth = container.clientWidth;
     const displayHeight = 200;
-
     canvas.width = displayWidth * dpr;
     canvas.height = displayHeight * dpr;
     canvas.style.width = `${displayWidth}px`;
     canvas.style.height = `${displayHeight}px`;
-
     ctx.scale(dpr, dpr);
     ctx.strokeStyle = "#000000";
     ctx.lineWidth = 2;
@@ -233,30 +495,23 @@ export const SignatureCanvas = ({ onSignatureChange }: SignatureCanvasProps) => 
 
   useEffect(() => {
     setupCanvas();
-
     const handleResize = () => {
       const canvas = canvasRef.current;
       if (!canvas) return;
       const tempDataUrl = strokeCountRef.current > 0 ? canvas.toDataURL("image/png") : null;
-
       setupCanvas();
-
       if (tempDataUrl) {
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
         const img = new Image();
-        img.onload = () => {
-          ctx.drawImage(img, 0, 0, canvas.width / dprRef.current, 200);
-        };
+        img.onload = () => { ctx.drawImage(img, 0, 0, canvas.width / dprRef.current, 200); };
         img.src = tempDataUrl;
       }
     };
-
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, [setupCanvas]);
 
-  // Get coordinates relative to canvas
   const getPoint = useCallback((e: PointerEvent): Point => {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
@@ -281,7 +536,6 @@ export const SignatureCanvas = ({ onSignatureChange }: SignatureCanvasProps) => 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const onPointerDown = (e: PointerEvent) => {
       e.preventDefault();
       canvas.setPointerCapture(e.pointerId);
@@ -296,7 +550,6 @@ export const SignatureCanvas = ({ onSignatureChange }: SignatureCanvasProps) => 
       ctx.lineTo(pt.x + 0.1, pt.y + 0.1);
       ctx.stroke();
     };
-
     const onPointerMove = (e: PointerEvent) => {
       if (!isDrawingRef.current) return;
       e.preventDefault();
@@ -315,7 +568,6 @@ export const SignatureCanvas = ({ onSignatureChange }: SignatureCanvasProps) => 
         lastPointRef.current = pt;
       }
     };
-
     const onPointerUp = (e: PointerEvent) => {
       if (!isDrawingRef.current) return;
       canvas.releasePointerCapture(e.pointerId);
@@ -323,27 +575,20 @@ export const SignatureCanvas = ({ onSignatureChange }: SignatureCanvasProps) => 
       lastPointRef.current = null;
       strokeCountRef.current += 1;
       setHasSignature(true);
-      const dataUrl = canvas.toDataURL("image/png");
-      onSignatureChange(dataUrl);
+      onSignatureChange(canvas.toDataURL("image/png"));
     };
-
     const onPointerLeave = (e: PointerEvent) => {
       if (!isDrawingRef.current) return;
       if (!canvas.hasPointerCapture(e.pointerId)) {
         isDrawingRef.current = false;
         lastPointRef.current = null;
-        if (strokeCountRef.current > 0) {
-          const dataUrl = canvas.toDataURL("image/png");
-          onSignatureChange(dataUrl);
-        }
+        if (strokeCountRef.current > 0) onSignatureChange(canvas.toDataURL("image/png"));
       }
     };
-
     canvas.addEventListener("pointerdown", onPointerDown);
     canvas.addEventListener("pointermove", onPointerMove);
     canvas.addEventListener("pointerup", onPointerUp);
     canvas.addEventListener("pointerleave", onPointerLeave);
-
     return () => {
       canvas.removeEventListener("pointerdown", onPointerDown);
       canvas.removeEventListener("pointermove", onPointerMove);
@@ -357,18 +602,15 @@ export const SignatureCanvas = ({ onSignatureChange }: SignatureCanvasProps) => 
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.scale(dprRef.current, dprRef.current);
     ctx.strokeStyle = "#000000";
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-
     strokeCountRef.current = 0;
     lastPointRef.current = null;
     isDrawingRef.current = false;
-    penDataRef.current = [];
     setHasSignature(false);
     onSignatureChange(null);
   };
@@ -386,33 +628,23 @@ export const SignatureCanvas = ({ onSignatureChange }: SignatureCanvasProps) => 
               </span>
             )}
             {wacomStatus === 'checking' && (
-              <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-medium">
-                Buscando tableta...
+              <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                <Loader2 className="h-3 w-3 animate-spin" /> Buscando tableta...
               </span>
             )}
           </div>
           <div className="flex items-center gap-2">
-            {wacomStatus === 'connected' && (
+            {wacomStatus === 'connected' && !wacomCapturing && (
               <Button
                 type="button"
                 variant="default"
                 size="sm"
                 onClick={startWacomCapture}
-                disabled={wacomCapturing}
                 data-testid="wacom-capture-btn"
                 className="bg-blue-600 hover:bg-blue-700"
               >
-                {wacomCapturing ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Capturando...
-                  </>
-                ) : (
-                  <>
-                    <Tablet className="h-4 w-4 mr-2" />
-                    Firmar en Tableta
-                  </>
-                )}
+                <Tablet className="h-4 w-4 mr-2" />
+                Firmar en Tableta
               </Button>
             )}
             {wacomStatus === 'unavailable' && (
@@ -420,20 +652,20 @@ export const SignatureCanvas = ({ onSignatureChange }: SignatureCanvasProps) => 
                 type="button"
                 variant="ghost"
                 size="sm"
-                onClick={checkWacomAvailability}
+                onClick={() => { setWacomStatus('checking'); setTimeout(() => {
+                  try {
+                    if (typeof WacomGSS !== 'undefined' && WacomGSS.STU.isServiceReady()) {
+                      setWacomStatus('connected');
+                    } else { setWacomStatus('unavailable'); }
+                  } catch { setWacomStatus('unavailable'); }
+                }, 1000); }}
                 className="text-xs"
               >
                 <Tablet className="h-3 w-3 mr-1" />
                 Reconectar Wacom
               </Button>
             )}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={clearSignature}
-              disabled={!hasSignature}
-            >
+            <Button type="button" variant="outline" size="sm" onClick={clearSignature} disabled={!hasSignature}>
               <Eraser className="h-4 w-4 mr-2" />
               Limpiar
             </Button>
@@ -441,27 +673,14 @@ export const SignatureCanvas = ({ onSignatureChange }: SignatureCanvasProps) => 
         </div>
 
         <div className="border-2 border-dashed border-muted rounded-lg bg-background relative overflow-hidden touch-none">
-          <canvas
-            ref={canvasRef}
-            className="w-full cursor-crosshair"
-            style={{ touchAction: "none" }}
-          />
+          <canvas ref={canvasRef} className="w-full cursor-crosshair" style={{ touchAction: "none" }} />
           {!hasSignature && !wacomCapturing && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <p className="text-muted-foreground text-sm">
-                {wacomStatus === 'connected' 
-                  ? 'Haga clic en "Firmar en Tableta" o firme aquí con mouse/lápiz'
+                {wacomStatus === 'connected'
+                  ? 'Haga clic en "Firmar en Tableta" o firme aquí con mouse'
                   : 'Firme aquí con su dedo, lápiz o mouse'}
               </p>
-            </div>
-          )}
-          {wacomCapturing && (
-            <div className="absolute inset-0 flex items-center justify-center bg-blue-50/80 pointer-events-none">
-              <div className="text-center">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-2" />
-                <p className="text-blue-700 font-medium">Firme en la tableta Wacom...</p>
-                <p className="text-blue-500 text-sm">Presione "Aceptar" en la tableta cuando termine</p>
-              </div>
             </div>
           )}
         </div>
