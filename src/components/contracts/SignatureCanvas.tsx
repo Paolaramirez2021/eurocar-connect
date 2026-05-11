@@ -223,7 +223,7 @@ export const SignatureCanvas = ({ onSignatureChange }: SignatureCanvasProps) => 
         const reportHandler = new WacomGSS.STU.ProtocolHelper.ReportHandler();
         wacomLastPointRef.current = { x: 0, y: 0 };
         wacomIsDownRef.current = false;
-        wacomCtxRef.current!.lineWidth = 1;
+        wacomCtxRef.current!.lineWidth = 3;
 
         const penDataHandler = (report: any) => {
           processWacomButtons(report);
@@ -375,7 +375,7 @@ export const SignatureCanvas = ({ onSignatureChange }: SignatureCanvasProps) => 
     const sigCtx = sigCanvas.getContext('2d')!;
     sigCtx.fillStyle = 'white';
     sigCtx.fillRect(0, 0, sigCanvas.width, sigCanvas.height);
-    sigCtx.lineWidth = 1;
+    sigCtx.lineWidth = 3;
     sigCtx.strokeStyle = 'black';
 
     let lastPt = { x: 0, y: 0 };
@@ -402,17 +402,52 @@ export const SignatureCanvas = ({ onSignatureChange }: SignatureCanvasProps) => 
       isDown = isDown2;
     }
 
-    // Draw on main component canvas
+    // Draw on main component canvas - ampliar firma
     mainCtx.setTransform(1, 0, 0, 1, 0, 0);
     mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
     mainCtx.scale(dprRef.current, dprRef.current);
 
+    // Find bounding box of the actual signature strokes (crop whitespace)
+    const sigImgData = sigCtx.getImageData(0, 0, sigCanvas.width, sigCanvas.height);
+    let minX = sigCanvas.width, minY = sigCanvas.height, maxX = 0, maxY = 0;
+    for (let y = 0; y < sigCanvas.height; y++) {
+      for (let x = 0; x < sigCanvas.width; x++) {
+        const idx = (y * sigCanvas.width + x) * 4;
+        // Check if pixel is not white
+        if (sigImgData.data[idx] < 200 || sigImgData.data[idx+1] < 200 || sigImgData.data[idx+2] < 200) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+
     const displayW = mainCanvas.width / dprRef.current;
     const displayH = 200;
-    const scale = Math.min(displayW / sigCanvas.width, displayH / sigCanvas.height) * 0.9;
-    const x = (displayW - sigCanvas.width * scale) / 2;
-    const y = (displayH - sigCanvas.height * scale) / 2;
-    mainCtx.drawImage(sigCanvas, x, y, sigCanvas.width * scale, sigCanvas.height * scale);
+    const padding = 10;
+
+    if (maxX > minX && maxY > minY) {
+      // Crop to bounding box with padding
+      const cropW = (maxX - minX) + padding * 2;
+      const cropH = (maxY - minY) + padding * 2;
+      const cropX = Math.max(0, minX - padding);
+      const cropY = Math.max(0, minY - padding);
+      
+      // Scale to fill the canvas
+      const scale = Math.min(displayW / cropW, displayH / cropH) * 0.95;
+      const drawW = cropW * scale;
+      const drawH = cropH * scale;
+      const x = (displayW - drawW) / 2;
+      const y = (displayH - drawH) / 2;
+      mainCtx.drawImage(sigCanvas, cropX, cropY, cropW, cropH, x, y, drawW, drawH);
+    } else {
+      // Fallback: draw full image
+      const scale = Math.min(displayW / sigCanvas.width, displayH / sigCanvas.height) * 0.95;
+      const x = (displayW - sigCanvas.width * scale) / 2;
+      const y = (displayH - sigCanvas.height * scale) / 2;
+      mainCtx.drawImage(sigCanvas, x, y, sigCanvas.width * scale, sigCanvas.height * scale);
+    }
 
     strokeCountRef.current = 1;
     setHasSignature(true);
@@ -467,7 +502,8 @@ export const SignatureCanvas = ({ onSignatureChange }: SignatureCanvasProps) => 
     }
 
     const dist = Math.pow(wacomLastPointRef.current.x - nx, 2) + Math.pow(wacomLastPointRef.current.y - ny, 2);
-    if ((isDown2 && dist > 10) || (wacomIsDownRef.current && !isDown2)) {
+    if ((isDown2 && dist > 4) || (wacomIsDownRef.current && !isDown2)) {
+      ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(wacomLastPointRef.current.x, wacomLastPointRef.current.y);
       ctx.lineTo(nx, ny);
