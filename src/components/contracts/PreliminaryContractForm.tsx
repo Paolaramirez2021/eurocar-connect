@@ -1159,7 +1159,9 @@ export const PreliminaryContractForm = () => {
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
                   {CIUDADES_COLOMBIA.map(c => (
-                    <SelectItem key={c.value} value={c.value}>{c.isDept ? c.label : `  ${c.label}`}</SelectItem>
+                    <SelectItem key={c.value} value={c.value} className={c.isDept ? "font-bold underline text-blue-800" : "pl-6"}>
+                      {c.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -1173,7 +1175,9 @@ export const PreliminaryContractForm = () => {
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
                   {CIUDADES_COLOMBIA.map(c => (
-                    <SelectItem key={c.value} value={c.value}>{c.isDept ? c.label : `  ${c.label}`}</SelectItem>
+                    <SelectItem key={c.value} value={c.value} className={c.isDept ? "font-bold underline text-blue-800" : "pl-6"}>
+                      {c.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
