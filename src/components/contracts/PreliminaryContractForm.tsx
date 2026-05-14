@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { FileText, Loader2, Search, Send, MessageCircle, CheckCircle, X } from "lucide-react";
+import { FileText, Loader2, Search, Send, MessageCircle, CheckCircle, X, Eye } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { generateContractHTML, ContractData } from "@/utils/contractTemplate";
 import { getApiUrl } from "@/utils/apiUrl";
@@ -249,6 +249,7 @@ export const PreliminaryContractForm = () => {
   const [nextEfectivoNumber, setNextEfectivoNumber] = useState(1);
   const [loadingNumbers, setLoadingNumbers] = useState(true);
   const [successData, setSuccessData] = useState<{ whatsappUrl?: string; contractNumber?: string } | null>(null);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
 
   const { register, handleSubmit, watch, setValue, getValues, formState: { errors } } = useForm<ContractFormData>({
     defaultValues: {
@@ -521,6 +522,73 @@ export const PreliminaryContractForm = () => {
     setValue("endTime", endDate.toISOString().slice(11, 16) || "08:00");
     setValue("dailyRate", Math.round(dailyRate));
     setValue("totalAmount", totalAmount);
+  };
+
+  const generatePreviewHtml = () => {
+    const data = watch();
+    if (!data.startDate || !data.endDate) {
+      toast.error("Complete las fechas para ver la vista previa");
+      return;
+    }
+    const startDate = new Date(`${data.startDate}T${data.startTime || '08:00'}`);
+    const endDate = new Date(`${data.endDate}T${data.endTime || '08:00'}`);
+    const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) || 1;
+    const valorDias = (data.dailyRate || 0) * days;
+    const subtotal = valorDias + (data.additionalValue || 0);
+    const totalConDescuento = subtotal - (data.discount || 0);
+    const baseIva = data.contractType === 'facturacion' ? Math.max(0, valorDias - (data.discount || 0)) : 0;
+    const iva = Math.round(baseIva * 0.19);
+    const total = totalConDescuento + iva;
+
+    const templateData: ContractData = {
+      cliente_nombre: data.customerName || '',
+      cliente_tipo_documento: data.customerDocumentType || 'cedula',
+      cliente_documento: data.customerDocument || '',
+      cliente_licencia: data.customerLicense || '',
+      cliente_licencia_vencimiento: data.customerLicenseExpiry || '',
+      cliente_direccion: data.customerAddress || '',
+      cliente_telefono: data.customerPhone || '',
+      cliente_ciudad: data.customerCity || '',
+      cliente_email: data.customerEmail || '',
+      vehiculo_marca: data.vehicleBrand || '',
+      vehiculo_placa: data.vehiclePlate || '',
+      vehiculo_color: data.vehicleColor || '',
+      vehiculo_km_salida: data.vehicleKmOut || '',
+      servicio_viajar: data.servicioViajar || '',
+      termino_contrato: data.terminoContrato || '',
+      km_adicional: data.kmAdicional || '',
+      fecha_inicio: data.startDate ? format(startDate, "dd/MM/yyyy", { locale: es }) : '',
+      hora_inicio: data.startTime || '',
+      fecha_fin: data.endDate ? format(endDate, "dd/MM/yyyy", { locale: es }) : '',
+      hora_fin: data.endTime || '',
+      dias: days,
+      servicio: data.serviceType || 'Turismo',
+      valor_dia: data.dailyRate || 0,
+      valor_dias: valorDias,
+      valor_adicional: data.additionalValue || 0,
+      subtotal: subtotal,
+      descuento: data.discount || 0,
+      total_contrato: totalConDescuento,
+      iva: iva,
+      total: total,
+      valor_reserva: data.depositAmount || 0,
+      forma_pago: data.paymentMethod || '',
+      numero_contrato: data.contractNumber || 'BORRADOR',
+      fecha_contrato: format(new Date(), "dd/MM/yyyy HH:mm", { locale: es }),
+      deducible: data.deducible || '',
+      es_preliminar: true,
+      conductor2_nombre: data.conductor2Nombre || '',
+      conductor2_tipo_doc: data.conductor2TipoDoc || '',
+      conductor2_documento: data.conductor2Documento || '',
+      conductor2_licencia: data.conductor2Licencia || '',
+      conductor2_licencia_vencimiento: data.conductor2LicenciaVencimiento || '',
+      conductor3_nombre: data.conductor3Nombre || '',
+      conductor3_tipo_doc: data.conductor3TipoDoc || '',
+      conductor3_documento: data.conductor3Documento || '',
+      conductor3_licencia: data.conductor3Licencia || '',
+      conductor3_licencia_vencimiento: data.conductor3LicenciaVencimiento || '',
+    };
+    setPreviewHtml(generateContractHTML(templateData));
   };
 
   const generatePreliminaryPDF = async (data: ContractFormData, contractNumber: string): Promise<Blob> => {
@@ -1413,12 +1481,22 @@ export const PreliminaryContractForm = () => {
         </div>
       </Card>
 
-      {/* Botón Generar */}
-      <Button 
-        type="submit" 
-        className="w-full py-6 text-lg"
-        disabled={isSubmitting}
-      >
+      {/* Botones */}
+      <div className="flex gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          className="flex-1 py-6 text-lg"
+          onClick={generatePreviewHtml}
+        >
+          <Eye className="mr-2 h-5 w-5" />
+          Vista Previa
+        </Button>
+        <Button 
+          type="submit" 
+          className="flex-1 py-6 text-lg"
+          disabled={isSubmitting}
+        >
         {isSubmitting ? (
           <>
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -1431,6 +1509,34 @@ export const PreliminaryContractForm = () => {
           </>
         )}
       </Button>
+      </div>
+
+      {/* Modal Vista Previa */}
+      {previewHtml && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" data-testid="preview-modal">
+          <div className="bg-white rounded-xl shadow-2xl w-[95vw] max-w-4xl h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-bold">Vista Previa del Contrato</h3>
+              <button onClick={() => setPreviewHtml(null)} className="text-gray-400 hover:text-gray-600">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-2">
+              <iframe
+                srcDoc={previewHtml}
+                className="w-full h-full border-0"
+                title="Vista previa contrato"
+                style={{ minHeight: '100%' }}
+              />
+            </div>
+            <div className="p-4 border-t flex justify-end">
+              <Button variant="outline" onClick={() => setPreviewHtml(null)}>
+                Cerrar Vista Previa
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Diálogo de Éxito con WhatsApp */}
       {successData && (
