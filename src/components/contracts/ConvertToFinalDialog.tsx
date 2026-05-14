@@ -370,16 +370,13 @@ export const ConvertToFinalDialog = ({
       // Detectar tipo: EUROCAR- = facturación (con IVA), sin prefijo = turismo (sin IVA)
       const esFacturacion = contractNumber.startsWith('EUROCAR-');
 
-      // Para facturación: total_amount en BD INCLUYE IVA, hay que descontarlo para despejar valorAdicional
-      // Fórmula preliminar: total = (valorDias + valorAdicional - descuento) + (valorDias - descuento) * 0.19
-      // Despejando: valorAdicional = total - valorDias * 1.19 + descuento * 1.19
-      // Para turismo: total_amount NO incluye IVA → valorAdicional = total - valorDias + descuento
-      const valorAdicional = esFacturacion
-        ? Math.max(0, Math.round(preliminaryContract.total_amount - valorDias * 1.19 + descuentoContrato * 1.19))
-        : Math.max(0, preliminaryContract.total_amount - valorDias + descuentoContrato);
-
+      // total_amount en BD = valorDias + valorAdicional - descuento (SIEMPRE sin IVA)
+      // Despejar: valorAdicional = total_amount - valorDias + descuento
+      const valorAdicional = Math.max(0, preliminaryContract.total_amount - valorDias + descuentoContrato);
       const subtotalCalc = valorDias + valorAdicional;
       const totalConDescuento = subtotalCalc - descuentoContrato;
+      // IVA: con prefijo = 19% sobre (valorDias - descuento). Sin prefijo = 0.
+      // Valor adicional SIEMPRE exento de IVA.
       const baseIva = esFacturacion ? Math.max(0, valorDias - descuentoContrato) : 0;
       const ivaCalc = Math.round(baseIva * 0.19);
       const totalCalc = totalConDescuento + ivaCalc;
