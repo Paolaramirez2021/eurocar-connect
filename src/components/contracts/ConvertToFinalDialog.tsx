@@ -364,19 +364,22 @@ export const ConvertToFinalDialog = ({
       const dias = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 
       // === RECONSTRUIR VALORES FINANCIEROS EXACTOS DEL PRELIMINAR ===
-      // Usar tarifa del vehículo (misma fuente que usa PreliminaryContractForm)
       const valorDia = reservationFinancials?.tarifa_diaria || vehicleData?.tarifa_dia_iva || 0;
       const valorDias = valorDia * dias;
       const descuentoContrato = reservationFinancials?.descuento || 0;
-      // valor_adicional = total_amount - valorDias + descuento (despejar de la fórmula original)
-      // Detectar tipo de contrato: sin prefijo EUROCAR- = turismo (sin IVA)
+      // Detectar tipo: EUROCAR- = facturación (con IVA), sin prefijo = turismo (sin IVA)
       const esFacturacion = contractNumber.startsWith('EUROCAR-');
-      const valorAdicionalRaw = preliminaryContract.total_amount - valorDias + descuentoContrato;
-      // Si no es facturación (sin IVA), el total_amount ya es sin IVA
-      const valorAdicional = Math.max(0, esFacturacion ? valorAdicionalRaw : valorAdicionalRaw);
+
+      // Para facturación: total_amount en BD INCLUYE IVA, hay que descontarlo para despejar valorAdicional
+      // Fórmula preliminar: total = (valorDias + valorAdicional - descuento) + (valorDias - descuento) * 0.19
+      // Despejando: valorAdicional = total - valorDias * 1.19 + descuento * 1.19
+      // Para turismo: total_amount NO incluye IVA → valorAdicional = total - valorDias + descuento
+      const valorAdicional = esFacturacion
+        ? Math.max(0, Math.round(preliminaryContract.total_amount - valorDias * 1.19 + descuentoContrato * 1.19))
+        : Math.max(0, preliminaryContract.total_amount - valorDias + descuentoContrato);
+
       const subtotalCalc = valorDias + valorAdicional;
       const totalConDescuento = subtotalCalc - descuentoContrato;
-      // IVA solo aplica a contratos con prefijo EUROCAR- (facturación). Sin prefijo = turismo, sin IVA.
       const baseIva = esFacturacion ? Math.max(0, valorDias - descuentoContrato) : 0;
       const ivaCalc = Math.round(baseIva * 0.19);
       const totalCalc = totalConDescuento + ivaCalc;
