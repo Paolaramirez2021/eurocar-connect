@@ -256,33 +256,29 @@ export const ConvertToFinalDialog = ({
     if (!previewHtml) return;
     try {
       toast.info('Generando PDF para descarga...');
-      const response = await fetch(getApiUrl('/api/generate-pdf'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html: previewHtml, options: { format: 'Letter', printBackground: true, margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' } } })
-      });
-      if (!response.ok) throw new Error('Error generando PDF');
-      const contentType = response.headers.get('content-type') || '';
-      let blob: Blob;
-      if (contentType.includes('application/pdf')) {
-        blob = await response.blob();
-      } else {
-        const result = await response.json();
-        const byteChars = atob(result.pdf_base64);
-        const byteNums = new Array(byteChars.length);
-        for (let i = 0; i < byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
-        blob = new Blob([new Uint8Array(byteNums)], { type: 'application/pdf' });
-      }
+      
+      const { generatePdfFromHtml } = await import('@/utils/pdfGenerator');
+      const blob = await generatePdfFromHtml(previewHtml);
+      
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `contrato-${preliminaryContract.contract_number}.pdf`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast.success('PDF descargado');
     } catch (error) {
       console.error('[Download] Error:', error);
-      toast.error('Error al descargar PDF. Puede imprimir desde la vista previa (Ctrl+P).');
+      // Fallback: abrir para imprimir
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(previewHtml);
+        printWindow.document.close();
+        setTimeout(() => printWindow.print(), 500);
+        toast.info('Se abrió ventana para imprimir');
+      }
     }
   };
 
