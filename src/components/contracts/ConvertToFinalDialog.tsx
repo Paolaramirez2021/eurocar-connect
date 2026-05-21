@@ -979,29 +979,38 @@ export const ConvertToFinalDialog = ({
       </DialogContent>
     </Dialog>
 
-    {/* Modal Vista Previa Contrato Final */}
+    {/* Modal Vista Previa Contrato Final - FUERA del Dialog para evitar bloqueo */}
     {previewHtml && (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60" data-testid="preview-final-modal">
-        <div className="bg-white rounded-xl shadow-2xl w-[95vw] max-w-4xl h-[90vh] flex flex-col">
-          <div className="flex items-center justify-between p-4 border-b">
+      <div 
+        className="fixed inset-0 flex items-center justify-center" 
+        style={{ zIndex: 99999, backgroundColor: 'rgba(0,0,0,0.7)' }}
+        data-testid="preview-final-modal"
+      >
+        <div className="bg-white rounded-xl shadow-2xl w-[95vw] max-w-4xl h-[90vh] flex flex-col" style={{ zIndex: 100000 }}>
+          <div className="flex items-center justify-between p-4 border-b shrink-0">
             <h3 className="text-lg font-bold">Vista Previa - Contrato Final</h3>
-            <button onClick={() => setPreviewHtml(null)} className="text-gray-400 hover:text-gray-600">
+            <button onClick={() => setPreviewHtml(null)} className="text-gray-400 hover:text-gray-600 p-2">
               <X className="h-6 w-6" />
             </button>
           </div>
-          <div className="flex-1 overflow-auto p-2">
-            <iframe
-              srcDoc={previewHtml}
-              className="w-full h-full border-0"
-              title="Vista previa contrato final"
-              style={{ minHeight: '100%' }}
-            />
+          <div className="flex-1 overflow-auto">
+            <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
           </div>
-          <div className="p-4 border-t flex justify-between">
+          <div className="p-4 border-t flex justify-between shrink-0">
             <Button variant="outline" onClick={() => setPreviewHtml(null)}>
               Cerrar
             </Button>
-            <Button onClick={handleDownloadPreview} className="bg-blue-600 hover:bg-blue-700">
+            <Button 
+              onClick={() => {
+                const printWindow = window.open('', '_blank');
+                if (printWindow) {
+                  printWindow.document.write(previewHtml!);
+                  printWindow.document.close();
+                  setTimeout(() => printWindow.print(), 1000);
+                }
+              }} 
+              className="bg-blue-600 hover:bg-blue-700"
+            >
               <Download className="mr-2 h-4 w-4" />
               Imprimir / Guardar PDF
             </Button>
