@@ -125,7 +125,7 @@ export const generateContractHTML = (data: ContractData): string => {
   }
 
   const firmaRepresentanteHtml = esFinal
-    ? '<img src="data:image/png;base64,' + FIRMA_REPRESENTANTE_BASE64 + '" style="height:38px; width:auto; object-fit:contain; display:block; margin:0 auto; position:absolute; bottom:2px; left:50%; transform:translateX(-50%); background-color:#FFFFFF;" alt="Firma Representante Legal">'
+    ? '<img src="data:image/png;base64,' + FIRMA_REPRESENTANTE_BASE64 + '" style="height:50px; width:auto; object-fit:contain; display:block; margin:0 auto; margin-bottom:-2px;" alt="Firma Representante Legal">'
     : '';
   const representanteLegalText = esFinal ? 'Representante Legal' : '';
   const prelimBadgeCss = data.es_preliminar ? '.prelim-badge { background: #ff9800; color: white; padding: 8px; text-align: center; font-weight: bold; margin-bottom: 15px; }' : '';
@@ -161,7 +161,7 @@ export const generateContractHTML = (data: ContractData): string => {
   <meta charset="UTF-8">
   <title>Contrato EUROCAR - ${data.numero_contrato}</title>
   <style>
-    body { font-family: Arial, sans-serif; font-size: 11px; line-height: 1.4; color: #333; margin: 20px; }
+    body { font-family: Arial, sans-serif; font-size: 11px; line-height: 1.4; color: #333; margin: 40px 50px; max-width: 800px; margin-left: auto; margin-right: auto; }
     .header { text-align: center; border-bottom: 3px solid #0066cc; padding-bottom: 10px; margin-bottom: 15px; }
     .logo-img { height: 100px; }
     .title { font-size: 14px; font-weight: bold; color: #0066cc; text-align: center; margin: 15px 0 5px 0; }
