@@ -252,33 +252,21 @@ export const ConvertToFinalDialog = ({
     }
   };
 
-  const handleDownloadPreview = async () => {
+  const handleDownloadPreview = () => {
     if (!previewHtml) return;
-    try {
-      toast.info('Generando PDF para descarga...');
-      
-      const { generatePdfFromHtml } = await import('@/utils/pdfGenerator');
-      const blob = await generatePdfFromHtml(previewHtml);
-      
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `contrato-${preliminaryContract.contract_number}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast.success('PDF descargado');
-    } catch (error) {
-      console.error('[Download] Error:', error);
-      // Fallback: abrir para imprimir
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(previewHtml);
-        printWindow.document.close();
-        setTimeout(() => printWindow.print(), 500);
-        toast.info('Se abrió ventana para imprimir');
-      }
+    // Abrir en nueva ventana para imprimir/guardar como PDF
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(previewHtml);
+      printWindow.document.close();
+      // Esperar a que cargue y luego imprimir
+      printWindow.onload = () => setTimeout(() => printWindow.print(), 500);
+      // Fallback si onload no dispara
+      setTimeout(() => {
+        try { printWindow.print(); } catch (e) { /* ya se abrió */ }
+      }, 2000);
+    } else {
+      toast.error('Permita ventanas emergentes para descargar el PDF');
     }
   };
 
@@ -1015,7 +1003,7 @@ export const ConvertToFinalDialog = ({
             </Button>
             <Button onClick={handleDownloadPreview} className="bg-blue-600 hover:bg-blue-700">
               <Download className="mr-2 h-4 w-4" />
-              Descargar PDF
+              Imprimir / Guardar PDF
             </Button>
           </div>
         </div>
