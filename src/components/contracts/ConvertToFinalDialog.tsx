@@ -271,28 +271,8 @@ export const ConvertToFinalDialog = ({
   };
 
   const handleConvert = async () => {
-    if (!signatureDataUrl) {
-      toast.error("Por favor firme el contrato");
-      return;
-    }
-
     if (!termsAccepted || !privacyAccepted) {
       toast.error("Debe aceptar los términos y condiciones y la política de datos");
-      return;
-    }
-
-    if (!contractPhotoDataUrl) {
-      toast.error("Debe capturar una foto del cliente");
-      return;
-    }
-
-    if (!documentPhotos.front) {
-      toast.error("Debe capturar la foto del documento de identidad");
-      return;
-    }
-
-    if (needsBackPhoto && !documentPhotos.back) {
-      toast.error("Debe capturar ambos lados de la cédula");
       return;
     }
 
@@ -358,35 +338,43 @@ export const ConvertToFinalDialog = ({
       // Mantener el mismo número de contrato
       const contractNumber = preliminaryContract.contract_number;
 
-      // Upload signature
-      const signatureResponse = await fetch(signatureDataUrl);
-      const signatureBlob = await signatureResponse.blob();
-      const signatureFilename = `signatures/${contractId}_signature_${Date.now()}.png`;
-      
-      const { data: signatureUpload, error: signatureError } = await supabase.storage
-        .from("contracts")
-        .upload(signatureFilename, signatureBlob);
+      // Upload signature (optional)
+      let signatureUrl = { publicUrl: '' };
+      if (signatureDataUrl) {
+        const signatureResponse = await fetch(signatureDataUrl);
+        const signatureBlob = await signatureResponse.blob();
+        const signatureFilename = `signatures/${contractId}_signature_${Date.now()}.png`;
+        
+        const { data: signatureUpload, error: signatureError } = await supabase.storage
+          .from("contracts")
+          .upload(signatureFilename, signatureBlob);
 
-      if (signatureError) throw signatureError;
+        if (signatureError) throw signatureError;
 
-      const { data: signatureUrl } = supabase.storage
-        .from("contracts")
-        .getPublicUrl(signatureUpload.path);
+        const { data: sigUrl } = supabase.storage
+          .from("contracts")
+          .getPublicUrl(signatureUpload.path);
+        signatureUrl = sigUrl;
+      }
 
-      // Upload contract photo (foto del cliente)
-      const contractPhotoResponse = await fetch(contractPhotoDataUrl);
-      const contractPhotoBlob = await contractPhotoResponse.blob();
-      const contractPhotoFilename = `photos/${contractId}_photo_${Date.now()}.png`;
-      
-      const { data: contractPhotoUpload, error: contractPhotoError } = await supabase.storage
-        .from("contracts")
-        .upload(contractPhotoFilename, contractPhotoBlob);
+      // Upload contract photo (optional)
+      let contractPhotoUrl = { publicUrl: '' };
+      if (contractPhotoDataUrl) {
+        const contractPhotoResponse = await fetch(contractPhotoDataUrl);
+        const contractPhotoBlob = await contractPhotoResponse.blob();
+        const contractPhotoFilename = `photos/${contractId}_photo_${Date.now()}.png`;
+        
+        const { data: contractPhotoUpload, error: contractPhotoError } = await supabase.storage
+          .from("contracts")
+          .upload(contractPhotoFilename, contractPhotoBlob);
 
-      if (contractPhotoError) throw contractPhotoError;
+        if (contractPhotoError) throw contractPhotoError;
 
-      const { data: contractPhotoUrl } = supabase.storage
-        .from("contracts")
-        .getPublicUrl(contractPhotoUpload.path);
+        const { data: cpUrl } = supabase.storage
+          .from("contracts")
+          .getPublicUrl(contractPhotoUpload.path);
+        contractPhotoUrl = cpUrl;
+      }
 
       // Upload fingerprint if exists
       let fingerprintUrl: string | undefined;
@@ -776,9 +764,7 @@ export const ConvertToFinalDialog = ({
     setPrivacyAccepted(false);
   };
 
-  const isFormValid = signatureDataUrl && termsAccepted && privacyAccepted && 
-                      contractPhotoDataUrl && documentPhotos.front && 
-                      (needsBackPhoto ? documentPhotos.back : true);
+  const isFormValid = termsAccepted && privacyAccepted;
 
   return (
     <>
@@ -985,35 +971,53 @@ export const ConvertToFinalDialog = ({
         className="fixed inset-0 flex items-center justify-center" 
         style={{ zIndex: 99999, backgroundColor: 'rgba(0,0,0,0.7)' }}
         data-testid="preview-final-modal"
+        onClick={(e) => { if (e.target === e.currentTarget) setPreviewHtml(null); }}
       >
-        <div className="bg-white rounded-xl shadow-2xl w-[95vw] max-w-4xl h-[90vh] flex flex-col" style={{ zIndex: 100000 }}>
-          <div className="flex items-center justify-between p-4 border-b shrink-0">
+        <div className="bg-white rounded-xl shadow-2xl w-[95vw] max-w-4xl flex flex-col" style={{ zIndex: 100000, height: '90vh' }}>
+          <div className="flex items-center justify-between p-4 border-b" style={{ flexShrink: 0 }}>
             <h3 className="text-lg font-bold">Vista Previa - Contrato Final</h3>
             <button onClick={() => setPreviewHtml(null)} className="text-gray-400 hover:text-gray-600 p-2">
               <X className="h-6 w-6" />
             </button>
           </div>
-          <div className="flex-1 overflow-auto">
+          <div style={{ flex: 1, overflow: 'auto', WebkitOverflowScrolling: 'touch', padding: '8px' }}>
             <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
           </div>
-          <div className="p-4 border-t flex justify-between shrink-0">
-            <Button variant="outline" onClick={() => setPreviewHtml(null)}>
-              Cerrar
-            </Button>
-            <Button 
-              onClick={() => {
-                const printWindow = window.open('', '_blank');
-                if (printWindow) {
-                  printWindow.document.write(previewHtml!);
-                  printWindow.document.close();
-                  setTimeout(() => printWindow.print(), 1000);
-                }
-              }} 
-              className="bg-blue-600 hover:bg-blue-700"
+          <div className="flex justify-between items-center p-4 border-t gap-3" style={{ flexShrink: 0 }}>
+            <button 
+              type="button"
+              onClick={() => setPreviewHtml(null)}
+              className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
             >
-              <Download className="mr-2 h-4 w-4" />
+              Cerrar
+            </button>
+            <button 
+              type="button"
+              onClick={() => {
+                const w = window.open('', '_blank');
+                if (w) {
+                  w.document.write(previewHtml!);
+                  w.document.close();
+                  setTimeout(() => w.print(), 1000);
+                } else {
+                  // Fallback: crear blob y descargar
+                  const blob = new Blob([previewHtml!], { type: 'text/html' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `contrato-${preliminaryContract.contract_number}.html`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                  toast.info('Archivo HTML descargado. Ábrelo y usa Ctrl+P para guardar como PDF.');
+                }
+              }}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
               Imprimir / Guardar PDF
-            </Button>
+            </button>
           </div>
         </div>
       </div>
