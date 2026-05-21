@@ -94,8 +94,8 @@ export const generateContractHTML = (data: ContractData): string => {
 
   const tipoDoc = formatDocumentType(data.cliente_tipo_documento);
   
-  // Determinar si es contrato final (tiene firma y no es preliminar)
-  const esFinal = !data.es_preliminar && (data.firma_url || data.firma_base64);
+  // Determinar si es contrato final (no es preliminar)
+  const esFinal = !data.es_preliminar;
 
   // Usar base64 si está disponible, sino URL
   const firmaImg = data.firma_base64 || data.firma_url;
