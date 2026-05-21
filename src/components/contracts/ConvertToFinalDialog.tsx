@@ -13,7 +13,7 @@ import { generateContractHTML, ContractData } from "@/utils/contractTemplate";
 import { getApiUrl } from "@/utils/apiUrl";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, FileSignature, ArrowRight, FileText, Shield, MessageCircle, CheckCircle, X } from "lucide-react";
+import { Loader2, FileSignature, ArrowRight, FileText, Shield, MessageCircle, CheckCircle, X, Eye, Download } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -78,6 +78,8 @@ export const ConvertToFinalDialog = ({
   const [customerDocFront, setCustomerDocFront] = useState<string | null>(null);
   const [customerDocBack, setCustomerDocBack] = useState<string | null>(null);
   const [whatsappSuccessData, setWhatsappSuccessData] = useState<{ whatsappUrl: string; contractNumber: string } | null>(null);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [generatingPreview, setGeneratingPreview] = useState(false);
 
   if (!preliminaryContract) return null;
 
@@ -134,6 +136,155 @@ export const ConvertToFinalDialog = ({
 
   const documentType = getDocumentType();
   const needsBackPhoto = documentType === "cedula";
+
+
+  const handlePreview = async () => {
+    setGeneratingPreview(true);
+    try {
+      const contractNumber = preliminaryContract.contract_number;
+
+      const { data: vehicleData } = await supabase
+        .from("vehicles")
+        .select("marca, modelo, placa, color, tarifa_dia_iva")
+        .eq("id", preliminaryContract.vehicle_id)
+        .single();
+
+      const { data: customerData } = await supabase
+        .from("customers")
+        .select("licencia_numero, licencia_fecha_vencimiento, direccion_residencia, ciudad, tipo_documento")
+        .eq("id", preliminaryContract.customer_id)
+        .single();
+
+      let reservationFinancials: any = null;
+      if (preliminaryContract.reservation_id) {
+        const { data: resData } = await supabase
+          .from("reservations")
+          .select("tarifa_diaria, dias_totales, subtotal, iva, valor_total, descuento, price_total, tarifa_dia_iva")
+          .eq("id", preliminaryContract.reservation_id)
+          .single();
+        reservationFinancials = resData;
+      }
+
+      const startDateRaw = preliminaryContract.start_date;
+      const endDateRaw = preliminaryContract.end_date;
+      const startDatePart = startDateRaw.split('T')[0];
+      const startTimePart = startDateRaw.includes('T') ? startDateRaw.split('T')[1].substring(0, 5) : '00:00';
+      const endDatePart = endDateRaw.split('T')[0];
+      const endTimePart = endDateRaw.includes('T') ? endDateRaw.split('T')[1].substring(0, 5) : '00:00';
+      const formatDateStr = (ds: string) => { const [y, m, d] = ds.split('-'); return `${d}/${m}/${y}`; };
+      const startDate = new Date(startDatePart + 'T12:00:00');
+      const endDate = new Date(endDatePart + 'T12:00:00');
+      const dias = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      const valorDia = reservationFinancials?.tarifa_diaria || vehicleData?.tarifa_dia_iva || 0;
+      const valorDias = valorDia * dias;
+      const descuentoContrato = reservationFinancials?.descuento || 0;
+      const esFacturacion = contractNumber.startsWith('EUROCAR-');
+      const valorAdicional = Math.max(0, preliminaryContract.total_amount - valorDias + descuentoContrato);
+      const subtotalCalc = valorDias + valorAdicional;
+      const totalConDescuento = subtotalCalc - descuentoContrato;
+      const baseIva = esFacturacion ? Math.max(0, valorDias - descuentoContrato) : 0;
+      const ivaCalc = Math.round(baseIva * 0.19);
+      const totalCalc = totalConDescuento + ivaCalc;
+
+      const templateData: ContractData = {
+        cliente_nombre: preliminaryContract.customer_name,
+        cliente_tipo_documento: customerData?.tipo_documento || 'cedula',
+        cliente_documento: preliminaryContract.customer_document,
+        cliente_licencia: customerData?.licencia_numero || 'N/A',
+        cliente_licencia_vencimiento: customerData?.licencia_fecha_vencimiento
+          ? formatDateStr(customerData.licencia_fecha_vencimiento.split('T')[0])
+          : 'N/A',
+        cliente_direccion: customerData?.direccion_residencia || 'N/A',
+        cliente_telefono: preliminaryContract.customer_phone || 'N/A',
+        cliente_ciudad: customerData?.ciudad || 'Colombia',
+        cliente_email: preliminaryContract.customer_email || 'N/A',
+        vehiculo_marca: vehicleData ? `${vehicleData.marca} ${vehicleData.modelo}` : vehicleInfo,
+        vehiculo_placa: vehicleData?.placa || '',
+        vehiculo_color: vehicleData?.color || 'N/A',
+        vehiculo_km_salida: preliminaryContract.vehiculo_km_salida || 'N/A',
+        fecha_inicio: formatDateStr(startDatePart),
+        hora_inicio: startTimePart,
+        fecha_fin: formatDateStr(endDatePart),
+        hora_fin: endTimePart,
+        dias: dias,
+        servicio: 'Turismo',
+        valor_dia: valorDia,
+        valor_dias: valorDias,
+        valor_adicional: valorAdicional,
+        subtotal: subtotalCalc,
+        descuento: descuentoContrato,
+        total_contrato: totalConDescuento,
+        iva: ivaCalc,
+        total: totalCalc,
+        valor_reserva: preliminaryContract.valor_reserva || 0,
+        forma_pago: preliminaryContract.forma_pago || 'N/A',
+        numero_contrato: contractNumber,
+        fecha_contrato: format(new Date(), "dd/MM/yyyy HH:mm", { locale: es }),
+        deducible: preliminaryContract.deducible || 'Según póliza',
+        servicio_viajar: preliminaryContract.servicio_viajar || '',
+        termino_contrato: preliminaryContract.termino_contrato || '',
+        km_adicional: preliminaryContract.km_adicional || '',
+        conductor2_nombre: preliminaryContract.conductor2_nombre || '',
+        conductor2_tipo_doc: preliminaryContract.conductor2_tipo_doc || '',
+        conductor2_documento: preliminaryContract.conductor2_documento || '',
+        conductor2_licencia: preliminaryContract.conductor2_licencia || '',
+        conductor2_licencia_vencimiento: preliminaryContract.conductor2_licencia_vencimiento || '',
+        conductor3_nombre: preliminaryContract.conductor3_nombre || '',
+        conductor3_tipo_doc: preliminaryContract.conductor3_tipo_doc || '',
+        conductor3_documento: preliminaryContract.conductor3_documento || '',
+        conductor3_licencia: preliminaryContract.conductor3_licencia || '',
+        conductor3_licencia_vencimiento: preliminaryContract.conductor3_licencia_vencimiento || '',
+        es_preliminar: false,
+        firma_base64: signatureDataUrl || undefined,
+        huella_base64: fingerprintDataUrl || undefined,
+        foto_cliente_base64: contractPhotoDataUrl || undefined,
+        documento_frente_base64: documentPhotos.front || customerDocFront || undefined,
+        documento_reverso_base64: documentPhotos.back || customerDocBack || undefined,
+      };
+
+      setPreviewHtml(generateContractHTML(templateData));
+    } catch (error) {
+      console.error('[Preview] Error:', error);
+      toast.error('Error al generar vista previa');
+    } finally {
+      setGeneratingPreview(false);
+    }
+  };
+
+  const handleDownloadPreview = async () => {
+    if (!previewHtml) return;
+    try {
+      toast.info('Generando PDF para descarga...');
+      const response = await fetch(getApiUrl('/api/generate-pdf'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ html: previewHtml, options: { format: 'Letter', printBackground: true, margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' } } })
+      });
+      if (!response.ok) throw new Error('Error generando PDF');
+      const contentType = response.headers.get('content-type') || '';
+      let blob: Blob;
+      if (contentType.includes('application/pdf')) {
+        blob = await response.blob();
+      } else {
+        const result = await response.json();
+        const byteChars = atob(result.pdf_base64);
+        const byteNums = new Array(byteChars.length);
+        for (let i = 0; i < byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
+        blob = new Blob([new Uint8Array(byteNums)], { type: 'application/pdf' });
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `contrato-${preliminaryContract.contract_number}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('PDF descargado');
+    } catch (error) {
+      console.error('[Download] Error:', error);
+      toast.error('Error al descargar PDF. Puede imprimir desde la vista previa (Ctrl+P).');
+    }
+  };
 
   const handleConvert = async () => {
     if (!signatureDataUrl) {
@@ -806,9 +957,21 @@ export const ConvertToFinalDialog = ({
                 resetForm();
               }}
               disabled={isSubmitting}
-              className="flex-1"
             >
               Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handlePreview}
+              disabled={generatingPreview || isSubmitting}
+              data-testid="preview-final-btn"
+            >
+              {generatingPreview ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Cargando...</>
+              ) : (
+                <><Eye className="mr-2 h-4 w-4" />Previsualizar</>
+              )}
             </Button>
             <Button
               onClick={handleConvert}
@@ -831,6 +994,37 @@ export const ConvertToFinalDialog = ({
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Modal Vista Previa Contrato Final */}
+    {previewHtml && (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60" data-testid="preview-final-modal">
+        <div className="bg-white rounded-xl shadow-2xl w-[95vw] max-w-4xl h-[90vh] flex flex-col">
+          <div className="flex items-center justify-between p-4 border-b">
+            <h3 className="text-lg font-bold">Vista Previa - Contrato Final</h3>
+            <button onClick={() => setPreviewHtml(null)} className="text-gray-400 hover:text-gray-600">
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-auto p-2">
+            <iframe
+              srcDoc={previewHtml}
+              className="w-full h-full border-0"
+              title="Vista previa contrato final"
+              style={{ minHeight: '100%' }}
+            />
+          </div>
+          <div className="p-4 border-t flex justify-between">
+            <Button variant="outline" onClick={() => setPreviewHtml(null)}>
+              Cerrar
+            </Button>
+            <Button onClick={handleDownloadPreview} className="bg-blue-600 hover:bg-blue-700">
+              <Download className="mr-2 h-4 w-4" />
+              Descargar PDF
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
 
     {/* Diálogo de Éxito con WhatsApp para contrato final */}
     {whatsappSuccessData && (
