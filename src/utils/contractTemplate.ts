@@ -125,7 +125,7 @@ export const generateContractHTML = (data: ContractData): string => {
   }
 
   const firmaRepresentanteHtml = esFinal
-    ? '<img src="data:image/png;base64,' + FIRMA_REPRESENTANTE_BASE64 + '" style="height:50px; width:auto; object-fit:contain; display:block; margin:0 auto; margin-bottom:-2px;" alt="Firma Representante Legal">'
+    ? '<img src="data:image/png;base64,' + FIRMA_REPRESENTANTE_BASE64 + '" style="height:50px; width:auto; object-fit:contain; display:block; margin:0 auto; margin-bottom:5px;" alt="Firma Representante Legal">'
     : '';
   const representanteLegalText = esFinal ? 'Representante Legal' : '';
   const prelimBadgeCss = data.es_preliminar ? '.prelim-badge { background: #ff9800; color: white; padding: 8px; text-align: center; font-weight: bold; margin-bottom: 15px; }' : '';
