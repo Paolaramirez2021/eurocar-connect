@@ -161,25 +161,29 @@ export const generateContractHTML = (data: ContractData): string => {
   <meta charset="UTF-8">
   <title>Contrato EUROCAR - ${data.numero_contrato}</title>
   <style>
-    body { font-family: Arial, sans-serif; font-size: 11px; line-height: 1.4; color: #333; margin: 40px 50px; max-width: 800px; margin-left: auto; margin-right: auto; }
+    @page { size: letter; margin: 15mm; }
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; font-size: 11px; line-height: 1.4; color: #333; margin: 0; padding: 15mm; max-width: 215.9mm; }
+    @media print { body { padding: 0; margin: 0; } }
     .header { text-align: center; border-bottom: 3px solid #0066cc; padding-bottom: 10px; margin-bottom: 15px; }
     .logo-img { height: 100px; }
     .title { font-size: 14px; font-weight: bold; color: #0066cc; text-align: center; margin: 15px 0 5px 0; }
     .contract-num { text-align: center; font-size: 11px; color: #666; margin-bottom: 15px; }
     ${prelimBadgeCss}
-    .section { margin-bottom: 12px; }
+    .section { margin-bottom: 12px; overflow: hidden; }
     .section-title { background: #0066cc; color: white; padding: 4px 8px; font-weight: bold; font-size: 10px; margin-bottom: 6px; }
     .row { margin-bottom: 3px; }
-    .label { font-weight: bold; display: inline-block; width: 140px; font-size: 10px; }
-    .value { border-bottom: 1px solid #ccc; display: inline-block; min-width: 180px; padding-left: 5px; font-size: 10px; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-    th, td { border: 1px solid #ccc; padding: 4px; text-align: left; font-size: 9px; }
+    .label { font-weight: bold; display: inline-block; width: 130px; font-size: 10px; }
+    .value { border-bottom: 1px solid #ccc; display: inline-block; min-width: 150px; padding-left: 5px; font-size: 10px; word-break: break-word; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 8px; table-layout: fixed; }
+    th, td { border: 1px solid #ccc; padding: 4px; text-align: left; font-size: 9px; overflow: hidden; word-break: break-word; }
     th { background: #f0f0f0; }
-    .two-col { width: 100%; }
-    .two-col td { width: 50%; vertical-align: top; border: none; padding: 0 10px 0 0; }
+    .two-col { width: 100%; table-layout: fixed; }
+    .two-col td { width: 50%; vertical-align: top; border: none; padding: 0 8px 0 0; }
+    .values-table { table-layout: fixed; }
     .values-table td { padding: 2px 6px; font-size: 9px; }
     .values-table .total { background: #0066cc; color: white; font-weight: bold; }
-    .info-text { font-size: 9px; text-align: justify; background: #f9f9f9; padding: 8px; margin: 10px 0; border-left: 3px solid #0066cc; }
+    .info-text { font-size: 9px; text-align: justify; background: #f9f9f9; padding: 8px; margin: 10px 0; border-left: 3px solid #0066cc; word-break: break-word; }
     .clausulas { font-size: 8px; text-align: justify; }
     .clausulas p { margin-bottom: 5px; }
     .clausulas strong { color: #0066cc; }
@@ -193,7 +197,7 @@ export const generateContractHTML = (data: ContractData): string => {
     .verification-item img { max-width: 140px; max-height: 100px; border: 1px solid #ccc; border-radius: 4px; }
     .verification-item p { font-size: 8px; color: #666; margin-top: 4px; }
     .final-badge { background: #28a745; color: white; padding: 8px; text-align: center; font-weight: bold; margin-bottom: 15px; }
-    .signature-img { max-height: 75px; max-width: 200px; margin-bottom: -2px; }
+    .signature-img { max-height: 75px; max-width: 200px; margin-bottom: 5px; }
   </style>
 </head>
 <body>
