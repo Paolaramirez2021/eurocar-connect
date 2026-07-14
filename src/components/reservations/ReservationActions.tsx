@@ -247,68 +247,46 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
     setCancellationReason("");
   };
 
-  // Componente de diálogo de cancelación controlado
-  const CancelDialogModal = () => {
-    if (!cancelDialogOpen) return null;
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={(e) => { if (e.target === e.currentTarget) closeCancelDialog(); }}>
-        <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-          <h3 className="text-lg font-semibold mb-2">¿Cancelar reserva?</h3>
-          <p className="text-sm text-gray-500 mb-4">
-            Esta acción cancelará la reserva de {reservation.cliente_nombre} y liberará el vehículo.
-          </p>
-          <div className="mb-4">
-            <label className="text-sm font-medium mb-2 block">Motivo de cancelación *</label>
-            <textarea
-              value={cancellationReason}
-              onChange={(e) => setCancellationReason(e.target.value)}
-              placeholder="Ingrese el motivo..."
-              className="w-full min-h-[80px] p-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              autoFocus
-            />
-          </div>
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={closeCancelDialog}
-              className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
-            >
-              Cancelar
-            </button>
-            {cancelShowRefund ? (
-              <>
-                <button
-                  type="button"
-                  onClick={async () => { await handleCancelWithoutRefund(); closeCancelDialog(); }}
-                  disabled={loading}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
-                >
-                  {loading ? 'Procesando...' : 'Sin Devolución'}
-                </button>
-                <button
-                  type="button"
-                  onClick={async () => { await handleCancelWithRefund(); closeCancelDialog(); }}
-                  disabled={loading}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {loading ? 'Procesando...' : 'Con Devolución'}
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={async () => { await handleCancelWithRefund(); closeCancelDialog(); }}
-                disabled={loading}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50"
-              >
-                {loading ? 'Procesando...' : 'Confirmar Cancelación'}
+  // Diálogo de cancelación controlado - renderizado una sola vez al final del componente
+  const cancelDialogJsx = cancelDialogOpen ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={(e) => { if (e.target === e.currentTarget) closeCancelDialog(); }}>
+      <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-semibold mb-2">¿Cancelar reserva?</h3>
+        <p className="text-sm text-gray-500 mb-4">
+          Esta acción cancelará la reserva de {reservation.cliente_nombre} y liberará el vehículo.
+        </p>
+        <div className="mb-4">
+          <label className="text-sm font-medium mb-2 block">Motivo de cancelación *</label>
+          <textarea
+            value={cancellationReason}
+            onChange={(e) => setCancellationReason(e.target.value)}
+            placeholder="Ingrese el motivo..."
+            className="w-full min-h-[80px] p-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            autoFocus
+          />
+        </div>
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={closeCancelDialog} className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50">
+            Cancelar
+          </button>
+          {cancelShowRefund ? (
+            <>
+              <button type="button" onClick={async () => { await handleCancelWithoutRefund(); closeCancelDialog(); }} disabled={loading} className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50">
+                {loading ? 'Procesando...' : 'Sin Devolución'}
               </button>
-            )}
-          </div>
+              <button type="button" onClick={async () => { await handleCancelWithRefund(); closeCancelDialog(); }} disabled={loading} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50">
+                {loading ? 'Procesando...' : 'Con Devolución'}
+              </button>
+            </>
+          ) : (
+            <button type="button" onClick={async () => { await handleCancelWithRefund(); closeCancelDialog(); }} disabled={loading} className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50">
+              {loading ? 'Procesando...' : 'Confirmar Cancelación'}
+            </button>
+          )}
         </div>
       </div>
-    );
-  };
+    </div>
+  ) : null;
 
   // ============================================
   // RENDERIZADO POR ESTADO - Usando estados nativos de BD
@@ -332,7 +310,7 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
           <XCircle className="mr-2 h-4 w-4" />
           Cancelar
         </Button>
-        <CancelDialogModal />
+        {cancelDialogJsx}
       </div>
     );
   }
@@ -346,7 +324,7 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
           <XCircle className="mr-2 h-4 w-4" />
           Cancelar Reserva
         </Button>
-        <CancelDialogModal />
+        {cancelDialogJsx}
       </div>
     );
   }
@@ -363,7 +341,7 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
           <XCircle className="mr-2 h-4 w-4" />
           Cancelar Reserva
         </Button>
-        <CancelDialogModal />
+        {cancelDialogJsx}
       </div>
     );
   }
@@ -407,6 +385,7 @@ export const ReservationActions = ({ reservation, onUpdate }: ReservationActions
   return (
     <div className="text-xs text-center text-muted-foreground">
       {stateConfig.label}
+      {cancelDialogJsx}
     </div>
   );
 };
