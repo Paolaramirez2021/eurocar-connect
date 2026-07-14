@@ -299,7 +299,8 @@ export const ReservationForm = () => {
         for (const r of existingRes) {
           const rStart = String(r.fecha_inicio).substring(0, 10);
           const rEnd = String(r.fecha_fin).substring(0, 10);
-          const overlaps = newStart <= rEnd && newEnd >= rStart;
+          // Permitir que nueva reserva empiece el día que termina otra (entrega y re-alquiler mismo día)
+          const overlaps = newStart < rEnd && newEnd > rStart;
           console.log('[checkAvailability] Comparando:', { newStart, newEnd, rStart, rEnd, overlaps, cliente: r.cliente_nombre });
           if (overlaps) {
             setIsAvailable(false);
@@ -336,7 +337,7 @@ export const ReservationForm = () => {
             mEnd = mStart;
           }
           if (mStart && mEnd) {
-            const overlaps = newStart <= mEnd && newEnd >= mStart;
+            const overlaps = newStart < mEnd && newEnd > mStart;
             console.log('[checkAvailability] Mantenimiento:', { mStart, mEnd, overlaps });
             if (overlaps) {
               setIsAvailable(false);
@@ -644,7 +645,8 @@ export const ReservationForm = () => {
       for (const r of allReservations) {
         const rStart = String(r.fecha_inicio).substring(0, 10);
         const rEnd = String(r.fecha_fin).substring(0, 10);
-        const overlaps = inicioStr <= rEnd && finStr >= rStart;
+        // Permitir que nueva reserva empiece el día que termina otra (entrega y re-alquiler mismo día)
+        const overlaps = inicioStr < rEnd && finStr > rStart;
         console.log('[handleSubmit] Comparando reserva:', { rStart, rEnd, inicioStr, finStr, overlaps, estado: r.estado, cliente: r.cliente_nombre });
         if (overlaps) {
           setOverlapError(`Vehículo reservado del ${rStart} al ${rEnd} por ${r.cliente_nombre || 'otro cliente'} (Estado: ${r.estado})`);
@@ -678,7 +680,7 @@ export const ReservationForm = () => {
             mStart = String(m.fecha).substring(0, 10);
             mEnd = mStart;
           }
-          if (mStart && mEnd && inicioStr <= mEnd && finStr >= mStart) {
+          if (mStart && mEnd && inicioStr < mEnd && finStr > mStart) {
             setOverlapError(`Vehículo en mantenimiento del ${mStart} al ${mEnd}`);
             toast.error("No se puede reservar", { description: "Vehículo en mantenimiento en esas fechas" });
             setIsAvailable(false);
