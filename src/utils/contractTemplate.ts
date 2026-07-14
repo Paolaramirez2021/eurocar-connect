@@ -207,7 +207,7 @@ export const generateContractHTML = (data: ContractData): string => {
 </div>
 
 <div class="title">CONTRATO DE ARRENDAMIENTO DE VEHÍCULO AUTOMOTOR</div>
-<div class="contract-num">No. ${data.numero_contrato} | Fecha: ${data.fecha_contrato}</div>
+<div class="contract-num">No. <strong style="color:#000;font-size:13px">${data.numero_contrato}</strong> | Fecha: ${data.fecha_contrato}</div>
 
 ${prelimBadgeHtml}
 ${finalBadgeHtml}
@@ -259,7 +259,7 @@ ${finalBadgeHtml}
   <div class="section">
     <div class="section-title">3. VEHÍCULO</div>
     <div class="row"><span class="label">MARCA/MODELO:</span> <span class="value">${data.vehiculo_marca}</span></div>
-    <div class="row"><span class="label">PLACA:</span> <span class="value">${data.vehiculo_placa}</span></div>
+    <div class="row"><span class="label">PLACA:</span> <span class="value"><strong style="font-size:11px">${data.vehiculo_placa}</strong></span></div>
     <div class="row"><span class="label">COLOR:</span> <span class="value">${data.vehiculo_color || 'N/A'}</span></div>
     <div class="row"><span class="label">KM SALIDA:</span> <span class="value">${data.vehiculo_km_salida || 'N/A'}</span></div>
   </div>
