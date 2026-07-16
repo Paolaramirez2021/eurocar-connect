@@ -10,7 +10,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CalendarIcon, Plus, Search, Download, CheckCircle } from "lucide-react";
+import { CalendarIcon, Plus, Search, Download, CheckCircle, Pencil, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { User } from "@supabase/supabase-js";
@@ -73,6 +73,18 @@ const GestionReservas = () => {
   const [activeReservations, setActiveReservations] = useState<Reservation[]>([]);
   const [historicalReservations, setHistoricalReservations] = useState<Reservation[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Edit reservation state
+  const [editingReservation, setEditingReservation] = useState<Reservation | null>(null);
+  const [editVehicleId, setEditVehicleId] = useState("");
+  const [editClienteNombre, setEditClienteNombre] = useState("");
+  const [editClienteDocumento, setEditClienteDocumento] = useState("");
+  const [editClienteEmail, setEditClienteEmail] = useState("");
+  const [editClienteTelefono, setEditClienteTelefono] = useState("");
+  const [editFechaInicio, setEditFechaInicio] = useState<Date>();
+  const [editFechaFin, setEditFechaFin] = useState<Date>();
+  const [editSaving, setEditSaving] = useState(false);
+  const [allVehicles, setAllVehicles] = useState<Vehicle[]>([]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -228,6 +240,72 @@ const GestionReservas = () => {
       console.error("Error auto-finalizing reservations:", error);
     }
   };
+
+  // Load ALL vehicles for edit dropdown
+  const loadAllVehicles = async () => {
+    const { data } = await supabase.from("vehicles").select("*").order("placa");
+    setAllVehicles(data || []);
+  };
+
+  useEffect(() => {
+    if (user) loadAllVehicles();
+  }, [user]);
+
+  const openEditReservation = (reservation: Reservation) => {
+    setEditingReservation(reservation);
+    setEditVehicleId(reservation.vehicle_id);
+    setEditClienteNombre(reservation.cliente_nombre);
+    setEditClienteDocumento(reservation.cliente_documento);
+    setEditClienteEmail(reservation.cliente_email || "");
+    setEditClienteTelefono(reservation.cliente_telefono || "");
+    setEditFechaInicio(new Date(reservation.fecha_inicio));
+    setEditFechaFin(new Date(reservation.fecha_fin));
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingReservation || !editFechaInicio || !editFechaFin) return;
+    setEditSaving(true);
+
+    try {
+      const oldVehicleId = editingReservation.vehicle_id;
+      const newVehicleId = editVehicleId;
+      const vehicleChanged = oldVehicleId !== newVehicleId;
+
+      // Update reservation
+      const { error } = await supabase
+        .from("reservations")
+        .update({
+          vehicle_id: newVehicleId,
+          cliente_nombre: editClienteNombre,
+          cliente_documento: editClienteDocumento,
+          cliente_email: editClienteEmail,
+          cliente_telefono: editClienteTelefono,
+          fecha_inicio: format(editFechaInicio, 'yyyy-MM-dd'),
+          fecha_fin: format(editFechaFin, 'yyyy-MM-dd'),
+        })
+        .eq("id", editingReservation.id);
+
+      if (error) throw error;
+
+      // If vehicle changed, update vehicle statuses
+      if (vehicleChanged) {
+        // Free old vehicle
+        await supabase.from("vehicles").update({ estado: "disponible" }).eq("id", oldVehicleId);
+        // Block new vehicle
+        await supabase.from("vehicles").update({ estado: "reservado" }).eq("id", newVehicleId);
+      }
+
+      toast({ title: "Reserva actualizada", description: "Los cambios se guardaron correctamente" });
+      setEditingReservation(null);
+      loadReservations();
+    } catch (error: any) {
+      console.error("Error updating reservation:", error);
+      toast({ title: "Error", description: error.message || "No se pudo actualizar la reserva", variant: "destructive" });
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
 
   const handleSubmitReservation = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -663,15 +741,25 @@ const GestionReservas = () => {
                           </TableCell>
                           <TableCell>{getStatusBadge(reservation.estado)}</TableCell>
                           <TableCell>
-                            <Button
-                              size="sm"
-                              onClick={() =>
-                                handleFinalizeReservation(reservation.id, reservation.vehicle_id)
-                              }
-                            >
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                              Finalizar
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openEditReservation(reservation)}
+                                data-testid={`edit-reservation-${reservation.id}`}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() =>
+                                  handleFinalizeReservation(reservation.id, reservation.vehicle_id)
+                                }
+                              >
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Finalizar
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -776,6 +864,79 @@ const GestionReservas = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Modal Editar Reserva */}
+      {editingReservation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={(e) => { if (e.target === e.currentTarget) setEditingReservation(null); }}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10">
+              <h3 className="text-lg font-bold">Editar Reserva</h3>
+              <button onClick={() => setEditingReservation(null)} className="text-gray-400 hover:text-gray-600 p-1">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="text-sm font-medium block mb-1">Vehículo</label>
+                <select
+                  value={editVehicleId}
+                  onChange={(e) => setEditVehicleId(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                >
+                  {allVehicles.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.placa} - {v.marca} {v.modelo} ({v.estado})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium block mb-1">Nombre Cliente</label>
+                  <input type="text" value={editClienteNombre} onChange={(e) => setEditClienteNombre(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md text-sm" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium block mb-1">Documento</label>
+                  <input type="text" value={editClienteDocumento} onChange={(e) => setEditClienteDocumento(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md text-sm" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium block mb-1">Email</label>
+                  <input type="email" value={editClienteEmail} onChange={(e) => setEditClienteEmail(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md text-sm" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium block mb-1">Teléfono</label>
+                  <input type="text" value={editClienteTelefono} onChange={(e) => setEditClienteTelefono(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md text-sm" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium block mb-1">Fecha Inicio</label>
+                  <input type="date" value={editFechaInicio ? format(editFechaInicio, 'yyyy-MM-dd') : ''} onChange={(e) => setEditFechaInicio(e.target.value ? new Date(e.target.value + 'T12:00:00') : undefined)} className="w-full p-2 border border-gray-300 rounded-md text-sm" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium block mb-1">Fecha Fin</label>
+                  <input type="date" value={editFechaFin ? format(editFechaFin, 'yyyy-MM-dd') : ''} onChange={(e) => setEditFechaFin(e.target.value ? new Date(e.target.value + 'T12:00:00') : undefined)} className="w-full p-2 border border-gray-300 rounded-md text-sm" />
+                </div>
+              </div>
+              {editVehicleId !== editingReservation.vehicle_id && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 text-sm text-yellow-800">
+                  <strong>Cambio de vehículo:</strong> El vehículo anterior ({editingReservation.vehicles?.placa}) será liberado y el nuevo será reservado automáticamente.
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 p-4 border-t">
+              <button type="button" onClick={() => setEditingReservation(null)} className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50">
+                Cancelar
+              </button>
+              <button type="button" onClick={handleSaveEdit} disabled={editSaving} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50">
+                {editSaving ? 'Guardando...' : 'Guardar Cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 };
