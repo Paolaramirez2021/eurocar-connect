@@ -1,0 +1,33 @@
+{
+  "summary": "Code review of duplicate customer creation fix in CustomerForm.tsx. All 4 requested review points verified in code (lines 362-415).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "code_review_findings": {
+    "requirement_1_duplicate_check_before_insert": "PASS - Duplicate check (lines 366-380) executes BEFORE the insert call (line 384-391). Flow: query existing -> early return if found -> only then call insert.",
+    "requirement_2_query_uses_eq_trim_and_blocks_when_gt_0": "PASS - Query at line 366-370 uses supabase.from('customers').select('id, nombres, primer_apellido, cedula_pasaporte').eq('cedula_pasaporte', data.cedula_pasaporte.trim()).limit(1). Blocking condition at line 372 checks 'existing && existing.length > 0'.",
+    "requirement_3_error_toast_shows_name_and_document_and_returns": "PASS - Line 374-377 shows toast.error('Cliente ya existe', { description: `${existingCustomer.nombres} ${existingCustomer.primer_apellido} ya está registrado con documento ${existingCustomer.cedula_pasaporte}`, duration: 6000 }). Line 378 calls setIsSubmitting(false). Line 379 returns without creating.",
+    "requirement_4_check_only_on_create_not_update": "PASS - Duplicate check lives inside the 'else' branch of 'if (customer) { ...update... } else { ...check + create... }'. On update path (lines 342-361), no duplicate check runs, so existing customer edits are unaffected."
+  },
+  "critical_code_review_comments": [
+    "Minor: If checkError is thrown (e.g., network/RLS issue), the code silently proceeds to insert due to '!checkError && existing && ...'. Consider handling checkError explicitly with a toast and abort, otherwise a DB read failure could still allow duplicate creation.",
+    "Minor: Duplicate check uses .trim() on the query value but the subsequent insert on line 386-389 spreads 'data' unmodified — if user typed trailing spaces they get stored un-trimmed, causing future .eq('cedula_pasaporte', trimmed) checks to still match but the stored value has whitespace. Suggest trimming cedula_pasaporte in the insert payload as well.",
+    "Enhancement: Consider adding a DB-level UNIQUE constraint on customers.cedula_pasaporte as a safety net against race conditions (two concurrent creates could both pass the check).",
+    "Enhancement: Case sensitivity — passports can be mixed case (e.g., 'AB123' vs 'ab123'). Consider normalizing to uppercase before both storing and querying."
+  ],
+  "test_report_links": [],
+  "action_items": [
+    "Consider handling checkError explicitly (currently silently ignored) to prevent duplicate creation if the pre-check query fails.",
+    "Trim cedula_pasaporte in the insert payload (not just in the check query) to keep stored data consistent.",
+    "Recommend adding a unique DB constraint on cedula_pasaporte for race-safe deduplication."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100% (code review only)"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "This iteration was code review only (Supabase-backed app, no local backend). All 4 requested checkpoints for the duplicate-customer fix in /app/src/components/customers/CustomerForm.tsx (lines 362-415) are correctly implemented. Minor hardening suggestions noted but not blocking."
+}

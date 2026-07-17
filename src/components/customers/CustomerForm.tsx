@@ -360,7 +360,25 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
         console.log('[CustomerForm] Cliente actualizado exitosamente:', updatedData);
         toast.success("Cliente actualizado exitosamente");
       } else {
-        // Create new customer
+        // Create new customer - verificar que no exista duplicado por documento
+        console.log('[CustomerForm] Verificando duplicado por documento:', data.cedula_pasaporte);
+        
+        const { data: existing, error: checkError } = await supabase
+          .from("customers")
+          .select("id, nombres, primer_apellido, cedula_pasaporte")
+          .eq("cedula_pasaporte", data.cedula_pasaporte.trim())
+          .limit(1);
+
+        if (!checkError && existing && existing.length > 0) {
+          const existingCustomer = existing[0];
+          toast.error("Cliente ya existe", {
+            description: `${existingCustomer.nombres} ${existingCustomer.primer_apellido} ya está registrado con documento ${existingCustomer.cedula_pasaporte}`,
+            duration: 6000,
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
         console.log('[CustomerForm] Creando nuevo cliente...');
         
         const { data: newCustomer, error: insertError } = await supabase
