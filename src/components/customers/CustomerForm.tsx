@@ -69,6 +69,8 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
   const [tarjetaReversoFile, setTarjetaReversoFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [showCvv, setShowCvv] = useState(false);
+  const [duplicateCustomer, setDuplicateCustomer] = useState<{ id: string; nombres: string; primer_apellido: string; cedula_pasaporte: string; celular?: string } | null>(null);
+  const [checkingDuplicate, setCheckingDuplicate] = useState(false);
 
   const viewSignedDoc = async (publicUrl: string) => {
     try {
@@ -175,6 +177,38 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
       reset(getDefaultValues());
     }
   }, [customer, reset]);
+
+  // Verificación en tiempo real de duplicado por número de documento
+  const checkDuplicateDocument = async (docNumber: string) => {
+    const trimmed = docNumber.trim().toUpperCase();
+    if (!trimmed || trimmed.length < 3) {
+      setDuplicateCustomer(null);
+      return;
+    }
+    // Si estamos editando un cliente existente, no verificar contra sí mismo
+    if (customer) {
+      setDuplicateCustomer(null);
+      return;
+    }
+    setCheckingDuplicate(true);
+    try {
+      const { data: existing, error } = await supabase
+        .from("customers")
+        .select("id, nombres, primer_apellido, cedula_pasaporte, celular")
+        .eq("cedula_pasaporte", trimmed)
+        .limit(1);
+
+      if (!error && existing && existing.length > 0) {
+        setDuplicateCustomer(existing[0]);
+      } else {
+        setDuplicateCustomer(null);
+      }
+    } catch (err) {
+      console.error("[CustomerForm] Error verificando duplicado:", err);
+    } finally {
+      setCheckingDuplicate(false);
+    }
+  };
 
   const handleFrenteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -361,15 +395,23 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
         toast.success("Cliente actualizado exitosamente");
       } else {
         // Create new customer - verificar que no exista duplicado por documento
-        console.log('[CustomerForm] Verificando duplicado por documento:', data.cedula_pasaporte);
+        const docTrimmed = data.cedula_pasaporte.trim().toUpperCase();
+        console.log('[CustomerForm] Verificando duplicado por documento:', docTrimmed);
         
         const { data: existing, error: checkError } = await supabase
           .from("customers")
           .select("id, nombres, primer_apellido, cedula_pasaporte")
-          .eq("cedula_pasaporte", data.cedula_pasaporte.trim())
+          .eq("cedula_pasaporte", docTrimmed)
           .limit(1);
 
-        if (!checkError && existing && existing.length > 0) {
+        if (checkError) {
+          console.error('[CustomerForm] Error verificando duplicado:', checkError);
+          toast.error("Error al verificar si el cliente existe. Intente de nuevo.");
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (existing && existing.length > 0) {
           const existingCustomer = existing[0];
           toast.error("Cliente ya existe", {
             description: `${existingCustomer.nombres} ${existingCustomer.primer_apellido} ya está registrado con documento ${existingCustomer.cedula_pasaporte}`,
@@ -385,6 +427,7 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
           .from("customers")
           .insert([{
             ...data,
+            cedula_pasaporte: docTrimmed,
             created_by: user?.id,
           }])
           .select()
@@ -479,13 +522,52 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
               </div>
               <div className="space-y-2">
                 <Label htmlFor="cedula_pasaporte">Número de Documento *</Label>
-                <Input 
-                  id="cedula_pasaporte" 
-                  {...register("cedula_pasaporte", { required: "Número de documento es obligatorio" })} 
-                  className={errors.cedula_pasaporte ? "border-red-500" : ""}
-                />
+                <div className="relative">
+                  <Input 
+                    id="cedula_pasaporte" 
+                    {...register("cedula_pasaporte", { required: "Número de documento es obligatorio" })} 
+                    className={errors.cedula_pasaporte || duplicateCustomer ? "border-red-500" : ""}
+                    onBlur={(e) => {
+                      register("cedula_pasaporte").onBlur(e);
+                      checkDuplicateDocument(e.target.value);
+                    }}
+                    onChange={(e) => {
+                      register("cedula_pasaporte").onChange(e);
+                      // Limpiar duplicado mientras escribe
+                      if (duplicateCustomer) setDuplicateCustomer(null);
+                    }}
+                    data-testid="cedula-pasaporte-input"
+                  />
+                  {checkingDuplicate && (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                  )}
+                </div>
                 {errors.cedula_pasaporte && <span className="text-xs text-red-500">{errors.cedula_pasaporte.message}</span>}
               </div>
+
+              {/* Alerta bloqueante de cliente duplicado */}
+              {duplicateCustomer && !customer && (
+                <div className="col-span-1 md:col-span-2 bg-red-50 border-2 border-red-400 rounded-lg p-4" data-testid="duplicate-customer-alert">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-red-800 font-bold text-sm">Este cliente ya está registrado</h4>
+                      <p className="text-red-700 text-sm mt-1">
+                        <strong>{duplicateCustomer.nombres} {duplicateCustomer.primer_apellido}</strong> ya existe con documento <strong>{duplicateCustomer.cedula_pasaporte}</strong>
+                        {duplicateCustomer.celular && <span> — Cel: {duplicateCustomer.celular}</span>}
+                      </p>
+                      <p className="text-red-600 text-xs mt-2">
+                        No se puede crear otro cliente con el mismo número de documento. Busque el cliente existente en el listado.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="fecha_nacimiento">Fecha Nacimiento</Label>
                 <Input id="fecha_nacimiento" type="date" {...register("fecha_nacimiento")} />
@@ -784,7 +866,7 @@ export const CustomerForm = ({ customer, onSuccess, onCancel }: CustomerFormProp
             </Button>
             <Button 
               type="submit" 
-              disabled={isSubmitting || uploading}
+              disabled={isSubmitting || uploading || !!duplicateCustomer}
               data-testid="customer-form-submit-btn"
             >
               {(isSubmitting || uploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
