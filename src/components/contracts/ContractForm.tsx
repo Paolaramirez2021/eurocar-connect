@@ -178,7 +178,7 @@ export const ContractForm = () => {
           )
         `)
         .eq("customer_id", customer.id)
-        .in("estado", ["confirmed", "pending"])
+        .in("estado", ["confirmed", "pending", "Confirmed", "Pending"])
         .order("fecha_inicio", { ascending: false });
 
       if (reservationsError) {

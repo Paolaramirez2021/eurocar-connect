@@ -59,7 +59,7 @@ export const VehicleCalendar = ({ vehicleId, placa, marca, modelo, currentMonth 
       .from("reservations")
       .select("*")
       .eq("vehicle_id", vehicleId)
-      .in("estado", ["pending", "confirmed"])
+      .in("estado", ["pending", "confirmed", "Pending", "Confirmed"])
       .gte("fecha_inicio", start.toISOString())
       .lte("fecha_fin", end.toISOString());
 

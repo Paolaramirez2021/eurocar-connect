@@ -117,7 +117,7 @@ export const UnifiedCalendar = ({ vehicleId, placa, currentMonth }: UnifiedCalen
       .from("reservations")
       .select("id, fecha_inicio, fecha_fin, estado, cliente_nombre, cliente_telefono, valor_total, price_total, notas, payment_status")
       .eq("vehicle_id", vehicleId)
-      .in("estado", ["pending", "confirmed", "completed", "pending_no_payment", "pending_with_payment"])
+      .in("estado", ["pending", "confirmed", "completed", "pending_no_payment", "pending_with_payment", "Pending", "Confirmed", "Completed"])
       .gte("fecha_fin", startOfMonth.toISOString())
       .lte("fecha_inicio", endOfMonth.toISOString());
 
@@ -291,7 +291,7 @@ export const UnifiedCalendar = ({ vehicleId, placa, currentMonth }: UnifiedCalen
             let reservationBadgeClass = '';
             
             if (reservation) {
-              if (reservation.estado === 'confirmed' || reservation.contract_id) {
+              if (reservation.estado.toLowerCase() === 'confirmed' || reservation.contract_id) {
                 // Confirmado con contrato = ROJO (Rentado)
                 reservationColor = 'bg-red-500/10 border-red-500 hover:bg-red-500/20';
                 reservationLabel = 'Rentado';

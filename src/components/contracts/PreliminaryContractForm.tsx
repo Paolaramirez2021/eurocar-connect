@@ -481,7 +481,7 @@ export const PreliminaryContractForm = () => {
         )
       `)
       .eq("customer_id", customer.id)
-      .in("estado", ["confirmed", "pending", "pending_with_payment", "pending_no_payment"])
+      .in("estado", ["confirmed", "pending", "pending_with_payment", "pending_no_payment", "Confirmed", "Pending"])
       .order("fecha_inicio", { ascending: false });
 
     if (reservationsError) {

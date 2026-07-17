@@ -181,7 +181,7 @@ const GestionReservas = () => {
       const { data: active, error: activeError } = await supabase
         .from("reservations")
         .select("*, vehicles(placa, marca, modelo)")
-        .in("estado", ["pending", "confirmed"])
+        .in("estado", ["pending", "confirmed", "Pending", "Confirmed"])
         .gte("fecha_fin", now)
         .order("fecha_inicio", { ascending: true });
 
@@ -192,7 +192,7 @@ const GestionReservas = () => {
       const { data: historical, error: historicalError } = await supabase
         .from("reservations")
         .select("*, vehicles(placa, marca, modelo)")
-        .or(`estado.eq.completed,estado.eq.cancelled,and(estado.in.(pending,confirmed),fecha_fin.lt.${now})`)
+        .or(`estado.eq.completed,estado.eq.Completed,estado.eq.cancelled,estado.eq.Cancelled,and(estado.in.(pending,confirmed,Pending,Confirmed),fecha_fin.lt.${now})`)
         .order("fecha_fin", { ascending: false });
 
       if (historicalError) throw historicalError;
@@ -213,7 +213,7 @@ const GestionReservas = () => {
       const { data: expired, error: expiredError } = await supabase
         .from("reservations")
         .select("id, vehicle_id")
-        .in("estado", ["pending", "confirmed"])
+        .in("estado", ["pending", "confirmed", "Pending", "Confirmed"])
         .lt("fecha_fin", now);
 
       if (expiredError) throw expiredError;

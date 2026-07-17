@@ -47,7 +47,7 @@ export const EventDetailsModal = ({
 
   const hasMultipleEvents = reservation && maintenance;
   const hasContract = reservation?.contract_id != null;
-  const isConfirmed = hasContract || reservation?.estado === 'confirmed';
+  const isConfirmed = hasContract || reservation?.estado?.toLowerCase() === 'confirmed';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -68,7 +68,7 @@ export const EventDetailsModal = ({
                   {hasContract ? "Contrato" : "Reserva"}
                 </Badge>
                 <Badge variant="outline">
-                  {hasContract ? 'Confirmado' : (reservation.estado === 'confirmed' ? 'Confirmada' : 'Pendiente')}
+                  {hasContract ? 'Confirmado' : (reservation.estado?.toLowerCase() === 'confirmed' ? 'Confirmada' : 'Pendiente')}
                 </Badge>
               </div>
 
