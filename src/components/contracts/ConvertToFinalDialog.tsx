@@ -180,7 +180,7 @@ export const ConvertToFinalDialog = ({
       const endDate = new Date(endDatePart + 'T12:00:00');
       const dias = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 
-      const valorDia = preliminaryContract.tarifa_diaria || reservationFinancials?.tarifa_diaria || vehicleData?.tarifa_dia_iva || 0;
+      const valorDia = preliminaryContract.tarifa_diaria ?? reservationFinancials?.tarifa_diaria ?? vehicleData?.tarifa_dia_iva ?? 0;
       const valorDias = valorDia * dias;
       const valorAdicional = preliminaryContract.valor_adicional ?? 0;
       const descuentoContrato = preliminaryContract.descuento_contrato ?? 0;
@@ -494,7 +494,7 @@ export const ConvertToFinalDialog = ({
       const esFacturacion = contractNumber.startsWith('EUROCAR-');
       
       // Preferir valores guardados directamente del contrato
-      const valorDia = preliminaryContract.tarifa_diaria || reservationFinancials?.tarifa_diaria || vehicleData?.tarifa_dia_iva || 0;
+      const valorDia = preliminaryContract.tarifa_diaria ?? reservationFinancials?.tarifa_diaria ?? vehicleData?.tarifa_dia_iva ?? 0;
       const valorDias = valorDia * dias;
       const valorAdicional = preliminaryContract.valor_adicional ?? 0;
       const descuentoContrato = preliminaryContract.descuento_contrato ?? 0;
