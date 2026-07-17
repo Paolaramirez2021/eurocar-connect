@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Loader2, Search, Filter, Clock, CheckCircle2, XCircle, CalendarDays, Info } from "lucide-react";
+import { Loader2, Search, Filter, Clock, CheckCircle2, XCircle, CalendarDays, Info, Pencil, X } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
@@ -54,6 +54,18 @@ export const ReservationsManagementPanel = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+
+  // Edit reservation state
+  const [editingReservation, setEditingReservation] = useState<Reservation | null>(null);
+  const [editVehicleId, setEditVehicleId] = useState("");
+  const [editClienteNombre, setEditClienteNombre] = useState("");
+  const [editClienteDocumento, setEditClienteDocumento] = useState("");
+  const [editClienteEmail, setEditClienteEmail] = useState("");
+  const [editClienteTelefono, setEditClienteTelefono] = useState("");
+  const [editFechaInicio, setEditFechaInicio] = useState("");
+  const [editFechaFin, setEditFechaFin] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+  const [allVehicles, setAllVehicles] = useState<any[]>([]);
 
   // Habilitar actualización en tiempo real
   useRealtimeReservations();
@@ -108,6 +120,59 @@ export const ReservationsManagementPanel = () => {
       setLoading(false);
     }
   };
+
+  // Load vehicles for edit dropdown
+  useEffect(() => {
+    supabase.from("vehicles").select("id, placa, marca, modelo, estado").order("placa")
+      .then(({ data }) => setAllVehicles(data || []));
+  }, []);
+
+  const openEditReservation = (res: Reservation) => {
+    setEditingReservation(res);
+    setEditVehicleId(res.vehicle_id);
+    setEditClienteNombre(res.cliente_nombre);
+    setEditClienteDocumento(res.cliente_documento || "");
+    setEditClienteEmail(res.cliente_email || "");
+    setEditClienteTelefono(res.cliente_contacto || "");
+    setEditFechaInicio(String(res.fecha_inicio).substring(0, 10));
+    setEditFechaFin(String(res.fecha_fin).substring(0, 10));
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingReservation) return;
+    setEditSaving(true);
+    try {
+      const oldVehicleId = editingReservation.vehicle_id;
+      const vehicleChanged = oldVehicleId !== editVehicleId;
+
+      const { error } = await supabase.from("reservations").update({
+        vehicle_id: editVehicleId,
+        cliente_nombre: editClienteNombre,
+        cliente_documento: editClienteDocumento,
+        cliente_email: editClienteEmail,
+        cliente_contacto: editClienteTelefono,
+        fecha_inicio: editFechaInicio,
+        fecha_fin: editFechaFin,
+      }).eq("id", editingReservation.id);
+
+      if (error) throw error;
+
+      if (vehicleChanged) {
+        await supabase.from("vehicles").update({ estado: "disponible" }).eq("id", oldVehicleId);
+        await supabase.from("vehicles").update({ estado: "reservado" }).eq("id", editVehicleId);
+      }
+
+      toast.success("Reserva actualizada correctamente");
+      setEditingReservation(null);
+      loadReservations();
+    } catch (error: any) {
+      console.error("Error:", error);
+      toast.error("Error al actualizar: " + (error.message || ""));
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
 
   const filterReservations = () => {
     let filtered = [...reservations];
@@ -325,17 +390,29 @@ export const ReservationsManagementPanel = () => {
                       />
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedReservation(reservation);
-                          setDetailsModalOpen(true);
-                        }}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Info className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditReservation(reservation)}
+                          className="h-8 w-8 p-0"
+                          title="Editar reserva"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedReservation(reservation);
+                            setDetailsModalOpen(true);
+                          }}
+                          className="h-8 w-8 p-0"
+                          title="Ver detalles"
+                        >
+                          <Info className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -350,6 +427,69 @@ export const ReservationsManagementPanel = () => {
         open={detailsModalOpen}
         onOpenChange={setDetailsModalOpen}
       />
+
+      {/* Modal Editar Reserva */}
+      {editingReservation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={(e) => { if (e.target === e.currentTarget) setEditingReservation(null); }}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10">
+              <h3 className="text-lg font-bold">Editar Reserva</h3>
+              <button onClick={() => setEditingReservation(null)} className="text-gray-400 hover:text-gray-600 p-1">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="text-sm font-medium block mb-1">Vehículo</label>
+                <select value={editVehicleId} onChange={(e) => setEditVehicleId(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md text-sm">
+                  {allVehicles.map((v) => (
+                    <option key={v.id} value={v.id}>{v.placa} - {v.marca} {v.modelo} ({v.estado})</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium block mb-1">Nombre Cliente</label>
+                  <input type="text" value={editClienteNombre} onChange={(e) => setEditClienteNombre(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md text-sm" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium block mb-1">Documento</label>
+                  <input type="text" value={editClienteDocumento} onChange={(e) => setEditClienteDocumento(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md text-sm" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium block mb-1">Email</label>
+                  <input type="email" value={editClienteEmail} onChange={(e) => setEditClienteEmail(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md text-sm" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium block mb-1">Teléfono</label>
+                  <input type="text" value={editClienteTelefono} onChange={(e) => setEditClienteTelefono(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md text-sm" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium block mb-1">Fecha Inicio</label>
+                  <input type="date" value={editFechaInicio} onChange={(e) => setEditFechaInicio(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md text-sm" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium block mb-1">Fecha Fin</label>
+                  <input type="date" value={editFechaFin} onChange={(e) => setEditFechaFin(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md text-sm" />
+                </div>
+              </div>
+              {editVehicleId !== editingReservation.vehicle_id && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 text-sm text-yellow-800">
+                  <strong>Cambio de vehículo:</strong> {editingReservation.vehicles?.placa} será liberado y el nuevo será reservado automáticamente.
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 p-4 border-t">
+              <button type="button" onClick={() => setEditingReservation(null)} className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50">Cancelar</button>
+              <button type="button" onClick={handleSaveEdit} disabled={editSaving} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50">{editSaving ? 'Guardando...' : 'Guardar Cambios'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 };
