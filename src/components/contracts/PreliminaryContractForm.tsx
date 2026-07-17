@@ -754,6 +754,11 @@ export const PreliminaryContractForm = () => {
       // Usar el número de contrato del formulario
       const contractNumber = data.contractNumber;
 
+      // Calcular días para guardar en BD
+      const startD = new Date(`${data.startDate}T${data.startTime || '08:00'}`);
+      const endD = new Date(`${data.endDate}T${data.endTime || '08:00'}`);
+      const days = Math.ceil((endD.getTime() - startD.getTime()) / (1000 * 60 * 60 * 24)) || 1;
+
       // Generar PDF
       const pdfBlob = await generatePreliminaryPDF(data, contractNumber);
       const pdfFilename = `preliminary/${contractId}_preliminary_${Date.now()}.pdf`;
@@ -807,6 +812,10 @@ export const PreliminaryContractForm = () => {
         forma_pago: data.paymentMethod || null,
         deducible: data.deducible || null,
         valor_reserva: data.depositAmount || 0,
+        valor_adicional: data.additionalValue || 0,
+        descuento_contrato: data.discount || 0,
+        tarifa_diaria: data.dailyRate || 0,
+        dias_contrato: days || 0,
       }]);
 
       if (insertError) {

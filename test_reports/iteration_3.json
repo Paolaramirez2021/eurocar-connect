@@ -1,0 +1,25 @@
+{
+  "summary": "Static code review of the valor_adicional/descuento_contrato persistence fix. All 4 verification points PASS. PreliminaryContractForm.tsx correctly persists the 4 new fields (valor_adicional, descuento_contrato, tarifa_diaria, dias_contrato) on insert at lines 815-818. ConvertToFinalDialog.tsx interface declares them (lines 52-55), and both handlePreview (lines 183-186) and handleConvert (lines 497-500) read them directly from preliminaryContract using `?? 0` fallback instead of reverse-engineering from total_amount. Logic is symmetric between preview and convert, so preview PDF and final PDF will match.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "USER ACTION REQUIRED: Ensure the ALTER TABLE SQL adding columns valor_adicional, descuento_contrato, tarifa_diaria, dias_contrato has been executed on Supabase contracts table. Without this, the insert at PreliminaryContractForm.tsx:815-818 will fail with a schema error.",
+    "Recommended runtime smoke test: Create a preliminary contract with additionalValue > 0 and discount > 0, verify DB row contains the 4 fields populated, then convert to final and verify preview/final totals match the preliminary PDF."
+  ],
+  "critical_code_review_comments": [
+    "Fallback chain in handlePreview/handleConvert uses `preliminaryContract.tarifa_diaria || reservationFinancials?.tarifa_diaria || vehicleData?.tarifa_dia_iva || 0` — the `||` operator will fall through if tarifa_diaria is 0. This is acceptable since 0 daily rate is nonsensical, but consider `??` for consistency with valor_adicional/descuento (which correctly use `??`).",
+    "PreliminaryContractForm.tsx is 1600 lines — exceeds 700 line guideline. Recommend splitting into sub-components in a future refactor.",
+    "Line 568 and 632 also reference valor_adicional in the same file (for PDF generation / other flows) — verified those are consistent with the insert value."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "100% (static review)"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Fix verified via static analysis only. Runtime testing skipped since it requires Supabase auth + ALTER TABLE migration executed by user. Prior iterations (1: overlap logic, 2: cancel dialog) already passed. Data flow: PreliminaryContractForm.onSubmit persists 4 fields -> ConvertToFinalDialog reads directly via preliminaryContract.<field> with ?? 0 fallback -> same values used in both PDF preview and final conversion."
+}

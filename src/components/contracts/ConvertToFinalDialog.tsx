@@ -49,6 +49,10 @@ interface PreliminaryContract {
   forma_pago?: string;
   deducible?: string;
   valor_reserva?: number;
+  valor_adicional?: number;
+  descuento_contrato?: number;
+  tarifa_diaria?: number;
+  dias_contrato?: number;
 }
 
 interface ConvertToFinalDialogProps {
@@ -176,11 +180,11 @@ export const ConvertToFinalDialog = ({
       const endDate = new Date(endDatePart + 'T12:00:00');
       const dias = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 
-      const valorDia = reservationFinancials?.tarifa_diaria || vehicleData?.tarifa_dia_iva || 0;
+      const valorDia = preliminaryContract.tarifa_diaria || reservationFinancials?.tarifa_diaria || vehicleData?.tarifa_dia_iva || 0;
       const valorDias = valorDia * dias;
-      const descuentoContrato = reservationFinancials?.descuento || 0;
+      const valorAdicional = preliminaryContract.valor_adicional ?? 0;
+      const descuentoContrato = preliminaryContract.descuento_contrato ?? 0;
       const esFacturacion = contractNumber.startsWith('EUROCAR-');
-      const valorAdicional = Math.max(0, preliminaryContract.total_amount - valorDias + descuentoContrato);
       const subtotalCalc = valorDias + valorAdicional;
       const totalConDescuento = subtotalCalc - descuentoContrato;
       const baseIva = esFacturacion ? Math.max(0, valorDias - descuentoContrato) : 0;
@@ -486,23 +490,26 @@ export const ConvertToFinalDialog = ({
       const endDate = new Date(endDatePart + 'T12:00:00');
       const dias = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 
-      // === RECONSTRUIR VALORES FINANCIEROS EXACTOS DEL PRELIMINAR ===
-      const valorDia = reservationFinancials?.tarifa_diaria || vehicleData?.tarifa_dia_iva || 0;
-      const valorDias = valorDia * dias;
-      const descuentoContrato = reservationFinancials?.descuento || 0;
-      // Detectar tipo: EUROCAR- = facturación (con IVA), sin prefijo = turismo (sin IVA)
+      // === VALORES FINANCIEROS: Usar campos guardados si existen, reconstruir si no ===
       const esFacturacion = contractNumber.startsWith('EUROCAR-');
-
-      // total_amount en BD = valorDias + valorAdicional - descuento (SIEMPRE sin IVA)
-      // Despejar: valorAdicional = total_amount - valorDias + descuento
-      const valorAdicional = Math.max(0, preliminaryContract.total_amount - valorDias + descuentoContrato);
+      
+      // Preferir valores guardados directamente del contrato
+      const valorDia = preliminaryContract.tarifa_diaria || reservationFinancials?.tarifa_diaria || vehicleData?.tarifa_dia_iva || 0;
+      const valorDias = valorDia * dias;
+      const valorAdicional = preliminaryContract.valor_adicional ?? 0;
+      const descuentoContrato = preliminaryContract.descuento_contrato ?? 0;
       const subtotalCalc = valorDias + valorAdicional;
       const totalConDescuento = subtotalCalc - descuentoContrato;
       // IVA: con prefijo = 19% sobre (valorDias - descuento). Sin prefijo = 0.
-      // Valor adicional SIEMPRE exento de IVA.
       const baseIva = esFacturacion ? Math.max(0, valorDias - descuentoContrato) : 0;
       const ivaCalc = Math.round(baseIva * 0.19);
       const totalCalc = totalConDescuento + ivaCalc;
+
+      console.log("[ConvertToFinal] Valores financieros:", {
+        valorDia, dias, valorDias, valorAdicional, descuentoContrato,
+        subtotalCalc, totalConDescuento, ivaCalc, totalCalc, esFacturacion,
+        fromDB: { tarifa: preliminaryContract.tarifa_diaria, adicional: preliminaryContract.valor_adicional, descuento: preliminaryContract.descuento_contrato }
+      });
 
       console.log("[ConvertToFinal] Financieros reconstruidos:", {
         valorDia, dias, valorDias, valorAdicional, subtotalCalc,
