@@ -13,7 +13,8 @@ import {
   DollarSign, 
   Settings,
   LogOut,
-  Menu
+  Menu,
+  ClipboardCheck
 } from "lucide-react";
 import { toast } from "sonner";
 import { logAudit } from "@/lib/audit";
@@ -94,6 +95,7 @@ const DashboardLayout = ({ children, user }: DashboardLayoutProps) => {
       path: "/maintenance", 
       badge: stats?.mantenimientosPendientes ? stats.mantenimientosPendientes.toString() : undefined 
     },
+    { icon: ClipboardCheck, label: "Inspecciones", path: "/inspections" },
     { icon: DollarSign, label: "Finanzas", path: "/finance" },
     { icon: Settings, label: "Configuración", path: "/settings" },
   ];

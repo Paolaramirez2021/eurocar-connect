@@ -21,6 +21,7 @@ import Contracts from "./pages/Contracts";
 import Customers from "./pages/Customers";
 import Settings from "./pages/Settings";
 import AdminExport from "./pages/AdminExport";
+import VehicleInspections from "./pages/VehicleInspections";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -83,6 +84,7 @@ const App = () => {
           <Route path="/contracts" element={<Contracts />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/admin/export" element={<AdminExport />} />
+          <Route path="/inspections" element={<VehicleInspections />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
