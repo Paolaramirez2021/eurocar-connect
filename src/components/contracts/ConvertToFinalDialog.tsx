@@ -171,10 +171,15 @@ export const ConvertToFinalDialog = ({
 
       const startDateRaw = preliminaryContract.start_date;
       const endDateRaw = preliminaryContract.end_date;
-      const startDatePart = startDateRaw.split('T')[0];
-      const startTimePart = startDateRaw.includes('T') ? startDateRaw.split('T')[1].substring(0, 5) : '00:00';
-      const endDatePart = endDateRaw.split('T')[0];
-      const endTimePart = endDateRaw.includes('T') ? endDateRaw.split('T')[1].substring(0, 5) : '00:00';
+      // Extraer fecha (YYYY-MM-DD) y hora (HH:MM) del string, soportando ambos formatos:
+      // "2026-07-26T13:00:00" (ISO) y "2026-07-26 13:00:00+00" (PostgreSQL)
+      const extractDateParts = (raw: string) => {
+        const datePart = raw.substring(0, 10); // "2026-07-26" (siempre primeros 10 chars)
+        const timePart = raw.length > 10 ? raw.substring(11, 16) : '00:00'; // "13:00"
+        return { datePart, timePart };
+      };
+      const { datePart: startDatePart, timePart: startTimePart } = extractDateParts(startDateRaw);
+      const { datePart: endDatePart, timePart: endTimePart } = extractDateParts(endDateRaw);
       const formatDateStr = (ds: string) => { const [y, m, d] = ds.split('-'); return `${d}/${m}/${y}`; };
       const startDate = new Date(startDatePart + 'T12:00:00');
       const endDate = new Date(endDatePart + 'T12:00:00');
@@ -197,7 +202,7 @@ export const ConvertToFinalDialog = ({
         cliente_documento: preliminaryContract.customer_document,
         cliente_licencia: customerData?.licencia_numero || 'N/A',
         cliente_licencia_vencimiento: customerData?.licencia_fecha_vencimiento
-          ? formatDateStr(customerData.licencia_fecha_vencimiento.split('T')[0])
+          ? formatDateStr(customerData.licencia_fecha_vencimiento.substring(0, 10))
           : 'N/A',
         cliente_direccion: customerData?.direccion_residencia || 'N/A',
         cliente_telefono: preliminaryContract.customer_phone || 'N/A',
@@ -470,16 +475,20 @@ export const ConvertToFinalDialog = ({
       }
 
       // Calcular días - extraer hora directamente del string para evitar problemas de timezone
-      const startDateRaw = preliminaryContract.start_date || ''; // e.g. "2026-05-14T05:00"
+      const startDateRaw = preliminaryContract.start_date || '';
       const endDateRaw = preliminaryContract.end_date || '';
       
-      // Extraer fecha y hora del string original (sin parsear con Date para evitar timezone shift)
-      const startDatePart = startDateRaw.split('T')[0] || ''; // "2026-05-14"
-      const startTimePart = startDateRaw.includes('T') ? startDateRaw.split('T')[1].substring(0, 5) : '00:00';
-      const endDatePart = endDateRaw.split('T')[0] || '';
-      const endTimePart = endDateRaw.includes('T') ? endDateRaw.split('T')[1].substring(0, 5) : '00:00';
+      // Extraer fecha (YYYY-MM-DD) y hora (HH:MM) del string, soportando ambos formatos:
+      // "2026-07-26T13:00:00" (ISO con T) y "2026-07-26 13:00:00+00" (PostgreSQL con espacio)
+      const extractDateParts = (raw: string) => {
+        const datePart = raw.substring(0, 10); // "2026-07-26" (siempre primeros 10 chars)
+        const timePart = raw.length > 10 ? raw.substring(11, 16) : '00:00'; // "13:00"
+        return { datePart, timePart };
+      };
+      const { datePart: startDatePart, timePart: startTimePart } = extractDateParts(startDateRaw);
+      const { datePart: endDatePart, timePart: endTimePart } = extractDateParts(endDateRaw);
       
-      if (!startDatePart || !endDatePart) {
+      if (!startDatePart || !endDatePart || startDatePart.length < 10) {
         throw new Error("Fechas de inicio o fin del contrato no válidas");
       }
       
@@ -535,7 +544,7 @@ export const ConvertToFinalDialog = ({
         cliente_documento: preliminaryContract.customer_document,
         cliente_licencia: customerData?.licencia_numero || 'N/A',
         cliente_licencia_vencimiento: customerData?.licencia_fecha_vencimiento
-          ? (() => { try { const dp = customerData.licencia_fecha_vencimiento.split('T')[0]; const [y,m,d] = dp.split('-'); return `${d}/${m}/${y}`; } catch { return 'N/A'; } })()
+          ? (() => { try { const dp = customerData.licencia_fecha_vencimiento.substring(0, 10); const [y,m,d] = dp.split('-'); return `${d}/${m}/${y}`; } catch { return 'N/A'; } })()
           : 'N/A',
         cliente_direccion: customerData?.direccion_residencia || 'N/A',
         cliente_telefono: preliminaryContract.customer_phone || 'N/A',
@@ -825,9 +834,9 @@ export const ConvertToFinalDialog = ({
               <div>
                 <span className="text-muted-foreground">Periodo:</span>
                 <p className="font-medium">
-                  {(() => { try { return format(new Date(preliminaryContract.start_date), "dd MMM yyyy", { locale: es }); } catch { return preliminaryContract.start_date?.split('T')[0] || 'N/A'; } })()}
+                  {(() => { try { return format(new Date(preliminaryContract.start_date), "dd MMM yyyy", { locale: es }); } catch { return preliminaryContract.start_date?.substring(0, 10) || 'N/A'; } })()}
                   {' - '}
-                  {(() => { try { return format(new Date(preliminaryContract.end_date), "dd MMM yyyy", { locale: es }); } catch { return preliminaryContract.end_date?.split('T')[0] || 'N/A'; } })()}
+                  {(() => { try { return format(new Date(preliminaryContract.end_date), "dd MMM yyyy", { locale: es }); } catch { return preliminaryContract.end_date?.substring(0, 10) || 'N/A'; } })()}
                 </p>
               </div>
               <div>
