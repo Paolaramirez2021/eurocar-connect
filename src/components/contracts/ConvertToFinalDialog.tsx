@@ -470,24 +470,35 @@ export const ConvertToFinalDialog = ({
       }
 
       // Calcular días - extraer hora directamente del string para evitar problemas de timezone
-      const startDateRaw = preliminaryContract.start_date; // e.g. "2026-05-14T05:00"
-      const endDateRaw = preliminaryContract.end_date;
+      const startDateRaw = preliminaryContract.start_date || ''; // e.g. "2026-05-14T05:00"
+      const endDateRaw = preliminaryContract.end_date || '';
       
       // Extraer fecha y hora del string original (sin parsear con Date para evitar timezone shift)
-      const startDatePart = startDateRaw.split('T')[0]; // "2026-05-14"
+      const startDatePart = startDateRaw.split('T')[0] || ''; // "2026-05-14"
       const startTimePart = startDateRaw.includes('T') ? startDateRaw.split('T')[1].substring(0, 5) : '00:00';
-      const endDatePart = endDateRaw.split('T')[0];
+      const endDatePart = endDateRaw.split('T')[0] || '';
       const endTimePart = endDateRaw.includes('T') ? endDateRaw.split('T')[1].substring(0, 5) : '00:00';
+      
+      if (!startDatePart || !endDatePart) {
+        throw new Error("Fechas de inicio o fin del contrato no válidas");
+      }
       
       // Formatear fechas manualmente para evitar timezone: "2026-05-14" -> "14/05/2026"
       const formatDateStr = (dateStr: string) => {
-        const [y, m, d] = dateStr.split('-');
+        const parts = dateStr.split('-');
+        if (parts.length !== 3) return dateStr;
+        const [y, m, d] = parts;
         return `${d}/${m}/${y}`;
       };
       
       // Para cálculo de días, parsear las fechas (solo parte fecha, sin hora)
       const startDate = new Date(startDatePart + 'T12:00:00'); // usar mediodía para evitar timezone shift
       const endDate = new Date(endDatePart + 'T12:00:00');
+      
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        throw new Error(`Formato de fecha no válido: inicio=${startDatePart}, fin=${endDatePart}`);
+      }
+      
       const dias = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 
       // === VALORES FINANCIEROS: Usar campos guardados si existen, reconstruir si no ===
@@ -524,7 +535,7 @@ export const ConvertToFinalDialog = ({
         cliente_documento: preliminaryContract.customer_document,
         cliente_licencia: customerData?.licencia_numero || 'N/A',
         cliente_licencia_vencimiento: customerData?.licencia_fecha_vencimiento
-          ? format(new Date(customerData.licencia_fecha_vencimiento + 'T12:00:00'), "dd/MM/yyyy")
+          ? (() => { try { const dp = customerData.licencia_fecha_vencimiento.split('T')[0]; const [y,m,d] = dp.split('-'); return `${d}/${m}/${y}`; } catch { return 'N/A'; } })()
           : 'N/A',
         cliente_direccion: customerData?.direccion_residencia || 'N/A',
         cliente_telefono: preliminaryContract.customer_phone || 'N/A',
@@ -814,7 +825,9 @@ export const ConvertToFinalDialog = ({
               <div>
                 <span className="text-muted-foreground">Periodo:</span>
                 <p className="font-medium">
-                  {format(new Date(preliminaryContract.start_date), "dd MMM yyyy", { locale: es })} - {format(new Date(preliminaryContract.end_date), "dd MMM yyyy", { locale: es })}
+                  {(() => { try { return format(new Date(preliminaryContract.start_date), "dd MMM yyyy", { locale: es }); } catch { return preliminaryContract.start_date?.split('T')[0] || 'N/A'; } })()}
+                  {' - '}
+                  {(() => { try { return format(new Date(preliminaryContract.end_date), "dd MMM yyyy", { locale: es }); } catch { return preliminaryContract.end_date?.split('T')[0] || 'N/A'; } })()}
                 </p>
               </div>
               <div>
