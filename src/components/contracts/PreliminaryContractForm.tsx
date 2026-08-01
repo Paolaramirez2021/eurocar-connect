@@ -704,12 +704,12 @@ export const PreliminaryContractForm = () => {
       return new Blob([new Uint8Array(byteNumbers)], { type: 'application/pdf' });
       
     } catch (railwayError: any) {
-      // FALLBACK: Generar PDF localmente con html2pdf.js
-      console.warn('[generatePreliminaryPDF] Railway no disponible, usando generador local:', railwayError.message);
+      // FALLBACK: Abrir ventana de impresión del navegador (formato perfecto)
+      console.warn('[generatePreliminaryPDF] Railway no disponible, usando impresión del navegador:', railwayError.message);
       try {
-        toast.info("Generando PDF localmente...");
+        toast.info("Servidor PDF no disponible. Se abrirá ventana de impresión — guarde como PDF.", { duration: 6000 });
         const localBlob = await generatePdfFromHtml(html);
-        console.log('[generatePreliminaryPDF] PDF local generado, tamaño:', localBlob.size);
+        console.log('[generatePreliminaryPDF] Ventana de impresión abierta, HTML guardado como respaldo');
         return localBlob;
       } catch (localError: any) {
         console.error('[generatePreliminaryPDF] Error local también:', localError);
