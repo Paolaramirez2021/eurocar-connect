@@ -11,6 +11,7 @@ import { DocumentPhotoCapture } from "./DocumentPhotoCapture";
 import { LegalDocumentsModal, TERMINOS_CONDICIONES } from "./LegalDocumentsModal";
 import { generateContractHTML, ContractData } from "@/utils/contractTemplate";
 import { getApiUrl } from "@/utils/apiUrl";
+import { generatePdfFromHtml } from "@/utils/pdfGenerator";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, FileSignature, ArrowRight, FileText, Shield, MessageCircle, CheckCircle, X, Eye, Download } from "lucide-react";
@@ -607,45 +608,51 @@ export const ConvertToFinalDialog = ({
       // Generar HTML del contrato final
       const html = generateContractHTML(templateData);
 
-      // Llamar al backend (Railway) para generar el PDF con Puppeteer
-      const pdfResponse = await fetch(getApiUrl('/api/generate-pdf'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          html: html,
-          options: {
-            format: 'Letter',
-            printBackground: true,
-            margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' }
-          }
-        })
-      });
-
-      if (!pdfResponse.ok) {
-        const errorText = await pdfResponse.text().catch(() => 'Sin detalle');
-        console.error(`PDF generation failed: ${pdfResponse.status} - ${errorText}`);
-        throw new Error(`Error al generar PDF final (${pdfResponse.status})`);
-      }
-
+      // Llamar al backend (Railway) para generar el PDF con Puppeteer, con fallback local
       let pdfBlob: Blob;
-      const contentType = pdfResponse.headers.get('content-type') || '';
-      
-      // Railway devuelve PDF binario directo
-      if (contentType.includes('application/pdf')) {
-        pdfBlob = await pdfResponse.blob();
-        console.log("[ConvertToFinal] PDF binario recibido, tamaño:", pdfBlob.size);
-      } else {
-        // Formato JSON con base64
-        const pdfResult = await pdfResponse.json();
-        if (!pdfResult.pdf_base64) {
-          throw new Error('No se recibió el PDF del servidor');
+      try {
+        const pdfResponse = await fetch(getApiUrl('/api/generate-pdf'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            html: html,
+            options: {
+              format: 'Letter',
+              printBackground: true,
+              margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' }
+            }
+          })
+        });
+
+        if (!pdfResponse.ok) {
+          const errorText = await pdfResponse.text().catch(() => 'Sin detalle');
+          console.error(`PDF Railway failed: ${pdfResponse.status} - ${errorText}`);
+          throw new Error('Railway error');
         }
-        const byteCharacters = atob(pdfResult.pdf_base64);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
+
+        const contentType = pdfResponse.headers.get('content-type') || '';
+        
+        if (contentType.includes('application/pdf')) {
+          pdfBlob = await pdfResponse.blob();
+          console.log("[ConvertToFinal] PDF binario recibido, tamaño:", pdfBlob.size);
+        } else {
+          const pdfResult = await pdfResponse.json();
+          if (!pdfResult.pdf_base64) {
+            throw new Error('No se recibió el PDF del servidor');
+          }
+          const byteCharacters = atob(pdfResult.pdf_base64);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          pdfBlob = new Blob([new Uint8Array(byteNumbers)], { type: 'application/pdf' });
         }
-        pdfBlob = new Blob([new Uint8Array(byteNumbers)], { type: 'application/pdf' });
+      } catch (railwayErr) {
+        // FALLBACK: Generar PDF localmente
+        console.warn("[ConvertToFinal] Railway no disponible, usando generador local:", railwayErr);
+        toast.info("Generando PDF localmente...");
+        pdfBlob = await generatePdfFromHtml(html);
+        console.log("[ConvertToFinal] PDF local generado, tamaño:", pdfBlob.size);
       }
 
       // Subir PDF final

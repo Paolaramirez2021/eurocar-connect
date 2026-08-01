@@ -12,6 +12,7 @@ import { FileText, Loader2, Search, Send, MessageCircle, CheckCircle, X, Eye } f
 import { Checkbox } from "@/components/ui/checkbox";
 import { generateContractHTML, ContractData } from "@/utils/contractTemplate";
 import { getApiUrl } from "@/utils/apiUrl";
+import { generatePdfFromHtml } from "@/utils/pdfGenerator";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -657,6 +658,7 @@ export const PreliminaryContractForm = () => {
     console.log('[generatePreliminaryPDF] HTML generado, longitud:', html.length);
 
     try {
+      // Intentar Railway primero
       const response = await fetch(getApiUrl('/api/generate-pdf'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -674,8 +676,8 @@ export const PreliminaryContractForm = () => {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('[generatePreliminaryPDF] Error response:', errorText);
-        throw new Error(`Error del servidor: ${response.status} - ${errorText}`);
+        console.error('[generatePreliminaryPDF] Railway falló:', errorText);
+        throw new Error('Railway error');
       }
 
       const contentType = response.headers.get('content-type') || '';
@@ -701,11 +703,19 @@ export const PreliminaryContractForm = () => {
       }
       return new Blob([new Uint8Array(byteNumbers)], { type: 'application/pdf' });
       
-    } catch (error: any) {
-      console.error('[generatePreliminaryPDF] Error completo:', error);
-      const errorMsg = error.message || 'Error desconocido al generar PDF';
-      toast.error(`Error generando PDF: ${errorMsg}`);
-      throw error;
+    } catch (railwayError: any) {
+      // FALLBACK: Generar PDF localmente con html2pdf.js
+      console.warn('[generatePreliminaryPDF] Railway no disponible, usando generador local:', railwayError.message);
+      try {
+        toast.info("Generando PDF localmente...");
+        const localBlob = await generatePdfFromHtml(html);
+        console.log('[generatePreliminaryPDF] PDF local generado, tamaño:', localBlob.size);
+        return localBlob;
+      } catch (localError: any) {
+        console.error('[generatePreliminaryPDF] Error local también:', localError);
+        toast.error(`Error generando PDF: ${localError.message || 'Error desconocido'}`);
+        throw localError;
+      }
     }
   };
 
