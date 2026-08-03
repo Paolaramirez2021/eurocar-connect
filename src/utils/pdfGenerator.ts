@@ -1,66 +1,55 @@
 /**
  * Genera PDF desde HTML directamente en el navegador.
- * Usa html2pdf.js con iframe visible para renderizado correcto.
+ * Renderiza en un div visible (fuera de pantalla) para que html2canvas funcione.
  */
 import html2pdf from 'html2pdf.js';
 
 export async function generatePdfFromHtml(htmlString: string): Promise<Blob> {
-  const iframe = document.createElement('iframe');
-  iframe.style.position = 'fixed';
-  iframe.style.left = '0';
-  iframe.style.top = '0';
-  iframe.style.width = '816px';
-  iframe.style.height = '1200px';
-  iframe.style.opacity = '0.01';
-  iframe.style.pointerEvents = 'none';
-  iframe.style.zIndex = '99999';
-  iframe.style.border = 'none';
-  document.body.appendChild(iframe);
+  // Extraer body content y styles del HTML completo
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlString, 'text/html');
+  
+  // Crear wrapper visible pero fuera de vista
+  const wrapper = document.createElement('div');
+  wrapper.id = 'pdf-render-wrapper';
+  wrapper.style.cssText = 'position:fixed; top:0; left:0; width:816px; z-index:99999; background:white; overflow:hidden;';
+  
+  // Copiar estilos del HTML del contrato
+  const styles = doc.querySelectorAll('style');
+  styles.forEach(s => wrapper.appendChild(s.cloneNode(true)));
+  
+  // Copiar el contenido del body
+  const content = document.createElement('div');
+  content.innerHTML = doc.body.innerHTML;
+  // Aplicar estilos inline del body del template
+  content.style.cssText = 'font-family:Arial,sans-serif; font-size:11px; line-height:1.4; color:#333; padding:15mm; max-width:215.9mm; box-sizing:border-box;';
+  wrapper.appendChild(content);
+  
+  document.body.appendChild(wrapper);
 
   try {
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!iframeDoc) throw new Error('No se pudo acceder al iframe');
-
-    iframeDoc.open();
-    iframeDoc.write(htmlString);
-    iframeDoc.close();
-
-    // Esperar renderizado e imágenes
+    // Esperar imágenes
     await new Promise<void>((resolve) => {
-      const imgs = iframeDoc.querySelectorAll('img');
-      if (imgs.length === 0) {
-        setTimeout(resolve, 1000);
-        return;
-      }
+      const imgs = wrapper.querySelectorAll('img');
+      if (imgs.length === 0) { setTimeout(resolve, 800); return; }
       let loaded = 0;
-      const total = imgs.length;
-      const checkDone = () => { if (++loaded >= total) setTimeout(resolve, 800); };
+      const check = () => { if (++loaded >= imgs.length) setTimeout(resolve, 500); };
       imgs.forEach(img => {
-        if (img.complete) checkDone();
-        else {
-          img.onload = checkDone;
-          img.onerror = checkDone;
-        }
+        if (img.complete) check();
+        else { img.onload = check; img.onerror = check; }
       });
-      setTimeout(resolve, 6000);
+      setTimeout(resolve, 5000);
     });
-
-    const body = iframeDoc.body;
-    if (!body || body.scrollHeight < 50) {
-      throw new Error('Contenido HTML no se renderizó correctamente');
-    }
 
     const pdfBlob: Blob = await html2pdf()
       .set({
-        margin: [8, 6, 8, 6],
-        image: { type: 'jpeg', quality: 0.95 },
+        margin: [2, 2, 2, 2],
+        image: { type: 'jpeg', quality: 0.92 },
         html2canvas: {
           scale: 2,
           useCORS: true,
           allowTaint: true,
-          letterRendering: true,
           logging: false,
-          width: 816,
           windowWidth: 816,
         },
         jsPDF: {
@@ -70,12 +59,12 @@ export async function generatePdfFromHtml(htmlString: string): Promise<Blob> {
         },
         pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.section-title'] }
       })
-      .from(body)
+      .from(content)
       .outputPdf('blob');
 
     console.log('[PDF Local] Generado, tamaño:', pdfBlob.size);
     return pdfBlob;
   } finally {
-    document.body.removeChild(iframe);
+    document.body.removeChild(wrapper);
   }
 }
