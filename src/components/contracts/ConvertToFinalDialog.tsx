@@ -648,11 +648,11 @@ export const ConvertToFinalDialog = ({
           pdfBlob = new Blob([new Uint8Array(byteNumbers)], { type: 'application/pdf' });
         }
       } catch (railwayErr) {
-        // FALLBACK: Abrir ventana de impresión del navegador (formato perfecto)
-        console.warn("[ConvertToFinal] Railway no disponible, usando impresión del navegador:", railwayErr);
-        toast.info("Servidor PDF no disponible. Se abrirá ventana de impresión — guarde como PDF.", { duration: 6000 });
+        // FALLBACK: Generar PDF localmente con html2pdf.js
+        console.warn("[ConvertToFinal] Railway no disponible, usando generador local:", railwayErr);
+        toast.info("Generando PDF localmente...", { duration: 3000 });
         pdfBlob = await generatePdfFromHtml(html);
-        console.log("[ConvertToFinal] Ventana de impresión abierta");
+        console.log("[ConvertToFinal] PDF local generado, tamaño:", pdfBlob.size);
       }
 
       // Subir PDF final
