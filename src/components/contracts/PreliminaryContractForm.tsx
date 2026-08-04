@@ -795,7 +795,7 @@ export const PreliminaryContractForm = () => {
           .from("reservations")
           .insert([{
             vehicle_id: data.vehicleId,
-            customer_id: data.customerId,
+            customer_id: data.customerId || null,
             cliente_nombre: data.customerName,
             cliente_contacto: data.customerPhone || '',
             cliente_documento: data.customerDocument || '',
@@ -858,9 +858,9 @@ export const PreliminaryContractForm = () => {
       // Guardar contrato
       const { error: insertError } = await supabase.from("contracts").insert([{
         contract_number: contractNumber,
-        reservation_id: finalReservationId,
+        reservation_id: finalReservationId || null,
         vehicle_id: data.vehicleId || null,
-        customer_id: data.customerId,
+        customer_id: data.customerId || null,
         customer_name: data.customerName,
         customer_document: data.customerDocument,
         customer_email: data.customerEmail,
@@ -883,7 +883,7 @@ export const PreliminaryContractForm = () => {
         conductor3_licencia_vencimiento: data.conductor3LicenciaVencimiento || null,
         terms_text: "Acepto los términos y condiciones del contrato de arrendamiento de vehículo automotor de EUROCAR RENTAL SAS según las cláusulas establecidas en www.eurocarental.com",
         terms_accepted: false,
-        signed_by: user?.id,
+        signed_by: user?.id || null,
         status: "preliminary",
         pdf_url: pdfUrl.publicUrl,
         signature_url: '',
