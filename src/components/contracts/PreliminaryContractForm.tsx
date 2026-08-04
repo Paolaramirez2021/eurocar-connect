@@ -787,10 +787,76 @@ export const PreliminaryContractForm = () => {
 
       const { data: { user } } = await supabase.auth.getUser();
 
+      // Si es contrato directo (sin reserva), crear reserva automáticamente
+      let finalReservationId = data.reservationId || null;
+      if (!finalReservationId && data.vehicleId && data.customerId) {
+        console.log('[PreliminaryContract] Creando reserva automática para contrato directo...');
+        const { data: newReservation, error: resError } = await supabase
+          .from("reservations")
+          .insert([{
+            vehicle_id: data.vehicleId,
+            customer_id: data.customerId,
+            cliente_nombre: data.customerName,
+            cliente_contacto: data.customerPhone || '',
+            cliente_documento: data.customerDocument || '',
+            cliente_email: data.customerEmail || '',
+            cliente_telefono: data.customerPhone || '',
+            fecha_inicio: `${data.startDate}T${data.startTime || '08:00'}:00-05:00`,
+            fecha_fin: `${data.endDate}T${data.endTime || '08:00'}:00-05:00`,
+            dias_totales: days,
+            tarifa_diaria: data.dailyRate || 0,
+            tarifa_dia_iva: data.dailyRate || 0,
+            subtotal: data.dailyRate * days || 0,
+            iva: contractNumber.startsWith('EUROCAR-') ? Math.round((data.dailyRate * days) * 0.19) : 0,
+            valor_total: data.totalAmount || 0,
+            price_total: data.totalAmount || 0,
+            descuento: data.discount || 0,
+            estado: 'confirmed',
+            source: 'direct_contract',
+            notas: `Reserva creada automáticamente desde contrato ${contractNumber}`,
+            payment_status: 'pending',
+            created_by: user?.id || null,
+          }])
+          .select()
+          .single();
+
+        if (resError) {
+          console.error('[PreliminaryContract] Error creando reserva:', resError);
+          toast.warning("Contrato guardado sin reserva asociada");
+        } else if (newReservation) {
+          finalReservationId = newReservation.id;
+          console.log('[PreliminaryContract] Reserva creada:', newReservation.id);
+        }
+      }
+
+      // Actualizar datos del cliente (licencia, dirección, ciudad) si fueron editados
+      if (data.customerId) {
+        const updateFields: Record<string, any> = {};
+        if (data.customerLicense) updateFields.licencia_numero = data.customerLicense;
+        if (data.customerLicenseExpiry) {
+          // Convertir dd/mm/yyyy a yyyy-mm-dd si viene en formato colombiano
+          const parts = data.customerLicenseExpiry.split('/');
+          if (parts.length === 3) {
+            updateFields.licencia_fecha_vencimiento = `${parts[2]}-${parts[1]}-${parts[0]}`;
+          } else {
+            updateFields.licencia_fecha_vencimiento = data.customerLicenseExpiry;
+          }
+        }
+        if (data.customerAddress) updateFields.direccion_residencia = data.customerAddress;
+        if (data.customerCity) updateFields.ciudad = data.customerCity;
+        if (data.customerPhone) updateFields.celular = data.customerPhone;
+        if (data.customerEmail) updateFields.email = data.customerEmail;
+
+        if (Object.keys(updateFields).length > 0) {
+          await supabase.from("customers").update(updateFields).eq("id", data.customerId);
+          console.log('[PreliminaryContract] Datos del cliente actualizados');
+        }
+      }
+
       // Guardar contrato
       const { error: insertError } = await supabase.from("contracts").insert([{
         contract_number: contractNumber,
-        reservation_id: data.reservationId || null,
+        reservation_id: finalReservationId,
         vehicle_id: data.vehicleId || null,
         customer_id: data.customerId,
         customer_name: data.customerName,
