@@ -790,44 +790,47 @@ export const PreliminaryContractForm = () => {
       // Si es contrato directo (sin reserva), crear reserva automáticamente
       let finalReservationId = data.reservationId || null;
       if (!finalReservationId && data.vehicleId && data.customerId) {
-        console.log('[PreliminaryContract] Creando reserva automática para contrato directo...');
-        const { data: newReservation, error: resError } = await supabase
-          .from("reservations")
-          .insert([{
-            vehicle_id: data.vehicleId,
-            customer_id: data.customerId || null,
-            cliente_nombre: data.customerName,
-            cliente_contacto: data.customerPhone || '',
-            cliente_documento: data.customerDocument || '',
-            cliente_email: data.customerEmail || '',
-            cliente_telefono: data.customerPhone || '',
-            fecha_inicio: `${data.startDate}T${data.startTime || '08:00'}:00-05:00`,
-            fecha_fin: `${data.endDate}T${data.endTime || '08:00'}:00-05:00`,
-            hora_recogida: data.startTime || '08:00',
-            hora_devolucion: data.endTime || '08:00',
-            dias_totales: days,
-            tarifa_diaria: data.dailyRate || 0,
-            tarifa_dia_iva: data.dailyRate || 0,
-            subtotal: (data.dailyRate || 0) * days,
-            iva: contractNumber.startsWith('EUROCAR-') ? Math.round(((data.dailyRate || 0) * days) * 0.19) : 0,
-            valor_total: data.totalAmount || 0,
-            price_total: data.totalAmount || 0,
-            descuento: data.discount || 0,
-            estado: 'confirmed',
-            source: 'direct_contract',
-            notas: `Reserva creada desde contrato ${contractNumber}`,
-            payment_status: 'pending',
-            created_by: user?.id || null,
-          }])
-          .select()
-          .single();
+        try {
+          console.log('[PreliminaryContract] Creando reserva automática...');
+          const { data: newReservation, error: resError } = await supabase
+            .from("reservations")
+            .insert([{
+              vehicle_id: data.vehicleId,
+              customer_id: data.customerId,
+              cliente_nombre: data.customerName || '',
+              cliente_contacto: data.customerPhone || '',
+              cliente_documento: data.customerDocument || '',
+              cliente_email: data.customerEmail || '',
+              cliente_telefono: data.customerPhone || '',
+              fecha_inicio: `${data.startDate}T${data.startTime || '08:00'}:00-05:00`,
+              fecha_fin: `${data.endDate}T${data.endTime || '08:00'}:00-05:00`,
+              hora_recogida: data.startTime || '08:00',
+              hora_devolucion: data.endTime || '08:00',
+              dias_totales: days,
+              tarifa_diaria: data.dailyRate || 0,
+              tarifa_dia_iva: data.dailyRate || 0,
+              subtotal: (data.dailyRate || 0) * days,
+              iva: contractNumber.startsWith('EUROCAR-') ? Math.round(((data.dailyRate || 0) * days) * 0.19) : 0,
+              valor_total: data.totalAmount || 0,
+              price_total: data.totalAmount || 0,
+              descuento: data.discount || 0,
+              estado: 'confirmed',
+              source: 'direct_contract',
+              notas: `Reserva creada desde contrato ${contractNumber}`,
+              payment_status: 'pending',
+              created_by: user?.id || null,
+            }])
+            .select()
+            .single();
 
-        if (resError) {
-          console.error('[PreliminaryContract] Error creando reserva:', resError);
-          toast.warning("Contrato guardado sin reserva asociada");
-        } else if (newReservation) {
-          finalReservationId = newReservation.id;
-          console.log('[PreliminaryContract] Reserva creada:', newReservation.id);
+          if (resError) {
+            console.error('[PreliminaryContract] Error creando reserva:', JSON.stringify(resError));
+          } else if (newReservation) {
+            finalReservationId = newReservation.id;
+            console.log('[PreliminaryContract] Reserva creada:', newReservation.id);
+          }
+        } catch (reservaErr) {
+          console.error('[PreliminaryContract] Excepción creando reserva:', reservaErr);
         }
       }
 
@@ -855,16 +858,19 @@ export const PreliminaryContractForm = () => {
         }
       }
 
+      // Helper: convertir string vacío a null para campos UUID
+      const uuidOrNull = (val: any) => (val && typeof val === 'string' && val.length > 10) ? val : null;
+
       // Guardar contrato
       const { error: insertError } = await supabase.from("contracts").insert([{
         contract_number: contractNumber,
-        reservation_id: finalReservationId || null,
-        vehicle_id: data.vehicleId || null,
-        customer_id: data.customerId || null,
+        reservation_id: uuidOrNull(finalReservationId),
+        vehicle_id: uuidOrNull(data.vehicleId),
+        customer_id: uuidOrNull(data.customerId),
         customer_name: data.customerName,
         customer_document: data.customerDocument,
-        customer_email: data.customerEmail,
-        customer_phone: data.customerPhone,
+        customer_email: data.customerEmail || null,
+        customer_phone: data.customerPhone || null,
         start_date: `${data.startDate}T${data.startTime}:00-05:00`,
         end_date: `${data.endDate}T${data.endTime}:00-05:00`,
         total_amount: data.totalAmount,
@@ -883,7 +889,8 @@ export const PreliminaryContractForm = () => {
         conductor3_licencia_vencimiento: data.conductor3LicenciaVencimiento || null,
         terms_text: "Acepto los términos y condiciones del contrato de arrendamiento de vehículo automotor de EUROCAR RENTAL SAS según las cláusulas establecidas en www.eurocarental.com",
         terms_accepted: false,
-        signed_by: user?.id || null,
+        signed_by: uuidOrNull(user?.id),
+        created_by: uuidOrNull(user?.id),
         status: "preliminary",
         pdf_url: pdfUrl.publicUrl,
         signature_url: '',
