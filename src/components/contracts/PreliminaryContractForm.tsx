@@ -1127,7 +1127,12 @@ export const PreliminaryContractForm = () => {
             </div>
             <div>
               <Label className="text-xs">Vencimiento</Label>
-              <Input value={watch("customerLicenseExpiry")} disabled className="bg-gray-100 text-sm" />
+              <Input 
+                {...register("customerLicenseExpiry")} 
+                placeholder="dd/mm/aaaa"
+                className="text-sm" 
+                data-testid="customer-license-expiry-input"
+              />
             </div>
           </div>
         </div>
