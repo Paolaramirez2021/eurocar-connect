@@ -803,17 +803,19 @@ export const PreliminaryContractForm = () => {
             cliente_telefono: data.customerPhone || '',
             fecha_inicio: `${data.startDate}T${data.startTime || '08:00'}:00-05:00`,
             fecha_fin: `${data.endDate}T${data.endTime || '08:00'}:00-05:00`,
+            hora_recogida: data.startTime || '08:00',
+            hora_devolucion: data.endTime || '08:00',
             dias_totales: days,
             tarifa_diaria: data.dailyRate || 0,
             tarifa_dia_iva: data.dailyRate || 0,
-            subtotal: data.dailyRate * days || 0,
-            iva: contractNumber.startsWith('EUROCAR-') ? Math.round((data.dailyRate * days) * 0.19) : 0,
+            subtotal: (data.dailyRate || 0) * days,
+            iva: contractNumber.startsWith('EUROCAR-') ? Math.round(((data.dailyRate || 0) * days) * 0.19) : 0,
             valor_total: data.totalAmount || 0,
             price_total: data.totalAmount || 0,
             descuento: data.discount || 0,
             estado: 'confirmed',
             source: 'direct_contract',
-            notas: `Reserva creada automáticamente desde contrato ${contractNumber}`,
+            notas: `Reserva creada desde contrato ${contractNumber}`,
             payment_status: 'pending',
             created_by: user?.id || null,
           }])
@@ -895,7 +897,8 @@ export const PreliminaryContractForm = () => {
       }]);
 
       if (insertError) {
-        throw new Error(`Error al guardar contrato: ${insertError.message}`);
+        console.error('[PreliminaryContract] Error inserting contract:', JSON.stringify(insertError));
+        throw new Error(`Error al guardar contrato: ${insertError.message} (${insertError.code || ''} - ${insertError.details || ''})`);
       }
 
       // Enviar email si corresponde
