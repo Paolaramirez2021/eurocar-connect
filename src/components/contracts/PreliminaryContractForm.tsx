@@ -787,16 +787,80 @@ export const PreliminaryContractForm = () => {
 
       const { data: { user } } = await supabase.auth.getUser();
 
+      // Helper: convertir string vacío a null para campos UUID
+      const uuidOrNull = (val: any) => (val && typeof val === 'string' && val.length > 10) ? val : null;
+
+      // Resolver customer_id: buscar o crear si no existe
+      let finalCustomerId = uuidOrNull(data.customerId);
+      if (!finalCustomerId && data.customerDocument?.trim()) {
+        const docTrimmed = data.customerDocument.trim().toUpperCase();
+        const { data: existing } = await supabase
+          .from("customers")
+          .select("id")
+          .eq("cedula_pasaporte", docTrimmed)
+          .limit(1);
+
+        if (existing && existing.length > 0) {
+          finalCustomerId = existing[0].id;
+        } else {
+          const nameParts = (data.customerName || '').trim().split(' ');
+          const { data: newCustomer, error: custErr } = await supabase
+            .from("customers")
+            .insert([{
+              nombres: nameParts.slice(0, -1).join(' ') || nameParts[0] || 'Sin nombre',
+              primer_apellido: nameParts[nameParts.length - 1] || '',
+              tipo_documento: data.customerDocumentType || 'cedula',
+              cedula_pasaporte: docTrimmed,
+              celular: data.customerPhone || '',
+              email: data.customerEmail || null,
+              direccion_residencia: data.customerAddress || null,
+              ciudad: data.customerCity || null,
+              licencia_numero: data.customerLicense || null,
+              estado: 'activo',
+              created_by: user?.id || null,
+            }])
+            .select()
+            .single();
+          if (!custErr && newCustomer) {
+            finalCustomerId = newCustomer.id;
+          }
+        }
+      }
+
+      if (!finalCustomerId) {
+        throw new Error("No se pudo identificar el cliente. Busque por documento primero.");
+      }
+
+      // Actualizar datos del cliente si fueron editados
+      if (finalCustomerId) {
+        const updateFields: Record<string, any> = {};
+        if (data.customerLicense) updateFields.licencia_numero = data.customerLicense;
+        if (data.customerLicenseExpiry) {
+          const parts = data.customerLicenseExpiry.split('/');
+          if (parts.length === 3) {
+            updateFields.licencia_fecha_vencimiento = `${parts[2]}-${parts[1]}-${parts[0]}`;
+          } else {
+            updateFields.licencia_fecha_vencimiento = data.customerLicenseExpiry;
+          }
+        }
+        if (data.customerAddress) updateFields.direccion_residencia = data.customerAddress;
+        if (data.customerCity) updateFields.ciudad = data.customerCity;
+        if (data.customerPhone) updateFields.celular = data.customerPhone;
+        if (data.customerEmail) updateFields.email = data.customerEmail;
+        if (Object.keys(updateFields).length > 0) {
+          await supabase.from("customers").update(updateFields).eq("id", finalCustomerId);
+        }
+      }
+
       // Si es contrato directo (sin reserva), crear reserva automáticamente
-      let finalReservationId = data.reservationId || null;
-      if (!finalReservationId && data.vehicleId && data.customerId) {
+      let finalReservationId = uuidOrNull(data.reservationId);
+      if (!finalReservationId && data.vehicleId) {
         try {
-          console.log('[PreliminaryContract] Creando reserva automática...');
           const { data: newReservation, error: resError } = await supabase
             .from("reservations")
             .insert([{
               vehicle_id: data.vehicleId,
-              customer_id: data.customerId,
+              customer_id: finalCustomerId,
               cliente_nombre: data.customerName || '',
               cliente_contacto: data.customerPhone || '',
               cliente_documento: data.customerDocument || '',
@@ -834,39 +898,12 @@ export const PreliminaryContractForm = () => {
         }
       }
 
-      // Actualizar datos del cliente (licencia, dirección, ciudad) si fueron editados
-      if (data.customerId) {
-        const updateFields: Record<string, any> = {};
-        if (data.customerLicense) updateFields.licencia_numero = data.customerLicense;
-        if (data.customerLicenseExpiry) {
-          // Convertir dd/mm/yyyy a yyyy-mm-dd si viene en formato colombiano
-          const parts = data.customerLicenseExpiry.split('/');
-          if (parts.length === 3) {
-            updateFields.licencia_fecha_vencimiento = `${parts[2]}-${parts[1]}-${parts[0]}`;
-          } else {
-            updateFields.licencia_fecha_vencimiento = data.customerLicenseExpiry;
-          }
-        }
-        if (data.customerAddress) updateFields.direccion_residencia = data.customerAddress;
-        if (data.customerCity) updateFields.ciudad = data.customerCity;
-        if (data.customerPhone) updateFields.celular = data.customerPhone;
-        if (data.customerEmail) updateFields.email = data.customerEmail;
-
-        if (Object.keys(updateFields).length > 0) {
-          await supabase.from("customers").update(updateFields).eq("id", data.customerId);
-          console.log('[PreliminaryContract] Datos del cliente actualizados');
-        }
-      }
-
-      // Helper: convertir string vacío a null para campos UUID
-      const uuidOrNull = (val: any) => (val && typeof val === 'string' && val.length > 10) ? val : null;
-
       // Guardar contrato
       const { error: insertError } = await supabase.from("contracts").insert([{
         contract_number: contractNumber,
         reservation_id: uuidOrNull(finalReservationId),
         vehicle_id: uuidOrNull(data.vehicleId),
-        customer_id: uuidOrNull(data.customerId),
+        customer_id: finalCustomerId,
         customer_name: data.customerName,
         customer_document: data.customerDocument,
         customer_email: data.customerEmail || null,
